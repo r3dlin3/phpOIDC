@@ -1,0 +1,24 @@
+
+Requirements
+------------------
+MySQL
+
+Doctrine ORM 1.2.4
+
+
+phpseclib.sourceforge.net :
+-----------------------------
+Package         Version State
+Crypt_AES       0.3.1   stable
+Crypt_DES       0.3.1   stable
+Crypt_Hash      0.3.1   stable
+Crypt_RC4       0.3.1   stable
+Crypt_RSA       0.3.1   stable
+Crypt_Random    0.3.1   stable
+Crypt_Rijndael  0.3.1   stable
+Crypt_TripleDES 0.3.1   stable
+File_ANSI       0.3.1   stable
+File_ASN1       0.3.1   stable
+File_X509       0.3.1   stable
+Math_BigInteger 0.3.1   stable
+
