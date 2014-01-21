@@ -12,13 +12,13 @@
 
 include_once("abconstants.php");
 include_once("libjsoncrypto.php");
-include_once("libmysqlcrypt.php");
 include_once('libdb.php');
 include_once('logging.php');
+include_once('OidcException.php');
 
 define("DEBUG",0);
 
-define("OP_ENDPOINT", OP_URL . "/op.php");
+define("OP_ENDPOINT", OP_INDEX_PAGE);
 
 
 define("TOKEN_TYPE_AUTH_CODE", 0);
@@ -28,29 +28,20 @@ define("TOKEN_TYPE_REFRESH",   2);
 
 header('Content-Type: text/html; charset=utf8');
 
-$session_path = session_save_path() . '/abop';
+$session_path = session_save_path() . OP_PATH;
 if(!file_exists($session_path))
     mkdir($session_path);
 session_save_path($session_path);
 
-
-
-
 $path_info = NULL;
-if(substr($_SERVER['PATH_INFO'], 0, 2) == '/1') {
-    define("SERVER_ID", OP_URL );
-    $path_info = substr($_SERVER['PATH_INFO'], 2);
-}
-else {
-    define("SERVER_ID", OP_PROTOCOL . OP_SERVER_NAME . OP_PORT);
-    $path_info = $_SERVER['PATH_INFO'];
-}
+define("SERVER_ID", OP_URL );
+$path_info = $_SERVER['PATH_INFO'];
+
 
 switch($path_info) {
     case '/token':
     case '/userinfo':
     case '/distributedinfo':
-    case '/check_id':
     case '/registration':
     case '/sessioninfo':
     case '/client':    
@@ -76,6 +67,8 @@ elseif($path_info == '/distributedinfo')
     handle_distributedinfo();
 elseif($path_info == '/login')
     handle_login();
+elseif($path_info == '/oplogin')
+    echo loginform('', '', true);
 elseif($path_info == '/confirm_userinfo')
     handle_confirm_userinfo();
 elseif($path_info == '/registration')
@@ -84,6 +77,10 @@ elseif(strpos($path_info, '/client') !== false)
     handle_client_operations();
 elseif($path_info == '/sessioninfo')
     handle_session_info();
+elseif($path_info == '/endsession')
+    handle_end_session();
+elseif($path_info == '/logout')
+    handle_logout();
 elseif($path_info == '/test')
     handle_test();
 else
@@ -92,319 +89,19 @@ else
 exit();
 
 
-function send_trusted_site_token() {
-    error_log("SESSION = " . print_r($_SESSION, true));
-
-    $GET=$_SESSION['get'];
-    $rpfA=$_SESSION['rpfA'];
-    error_log('send_trusted_site_token rpfA = ' . print_r($rpfA, true));
-    error_log("AUTH_TIME = " . $_SESSION['auth_time']);
-    $rpep=$GET['redirect_uri'];
-    $atype = 'none';
-    $client_id = $GET['client_id'];
-    $response_types = explode(' ', $GET['response_type']);
-
-    $is_code_flow = in_array('code', $response_types);
-    $is_token_flow = in_array('token', $response_types );
-    $is_id_token = in_array('id_token', $response_types);
-
-    $trusted_site = $client_id;
-    $site = db_get_user_site($_SESSION['username'], $trusted_site);
-
-    $issue_at = strftime('%G-%m-%d %T');
-    $expiration_at = strftime('%G-%m-%d %T', time() + (2*60));
-    error_log('Sending Trusted Site Token');
-
-
-    if($site) {
-        $site_policies = db_get_user_site_policies($_SESSION['username'], $client_id);
-        $confirmed_attribute_list = array();
-        if($site_policies && $site_policies->count()) {
-            foreach($site_policies as $pol)
-                $confirmed_attribute_list[] = $pol['property'];
-        }
-        $persona = $site->Persona['persona_name'];
-        $rpfA['session_id'] = session_id();
-        $rpfA['auth_time'] = $_SESSION['auth_time'];
-        if($is_code_flow) {
-            $code_info = create_token_info($_SESSION['username'], $confirmed_attribute_list, $GET, $rpfA);
-            $code = $code_info['name'];
-            unset($code_info['name']);
-            $fields = array('client' => $GET['client_id'],
-                            'issued_at' => $issue_at,
-                            'expiration_at' => $expiration_at,
-                            'token' => $code,
-                            'details' => $details_str,
-                            'token_type' => TOKEN_TYPE_AUTH_CODE,
-                            'info' => json_encode($code_info)
-                           );
-            db_save_user_token($_SESSION['username'], $code, $fields);
-        }
-        if($is_token_flow) {
-            $code_info = create_token_info($_SESSION['username'], $confirmed_attribute_list, $GET, $rpfA);
-            $token = $code_info['name'];
-            unset($code_info['name']);
-            $issue_at = strftime('%G-%m-%d %T');
-            $expiration_at = strftime('%G-%m-%d %T', time() + (2*60));
-            $fields = array('client' => $GET['client_id'],
-                            'issued_at' => $issue_at,
-                            'expiration_at' => $expiration_at,
-                            'token' => $token,
-                            'details' => $details_str,
-                            'token_type' => TOKEN_TYPE_ACCESS,
-                            'info' => json_encode($code_info)
-                           );
-            db_save_user_token($_SESSION['username'], $token, $fields);
-        }
-    }  else if($GET['response_type'] == 'id_token' && $GET['scope'] == 'openid') {
-        // error_log('ONLY REQUESTING ID');
-    }
-    else {
-        return false;
-    }
-
-    if($error)
-        $url = "$rpep?error={$error}";
-    else {
-        $fragments = Array();
-        if($is_token_flow || $is_id_token) {
-            if($is_token_flow) {
-                $fragments[] = "access_token=$token";
-                $fragments[] = 'token_type=Bearer';
-                $fragments[] = 'expires_in=3600';
-            }
-            if($GET['state'])
-                $fragments[] = "state={$GET['state']}";
-        }
-        if($is_id_token) {
-            $client_secret = NULL;
-            $db_client = db_get_client($client_id);
-            $sig_param = Array('alg' => 'none');
-            $sig_key = NULL;
-            if($db_client) {
-                $client_secret = $db_client['client_secret'];
-                if(!$db_client['id_token_signed_response_alg'])
-                    $db_client['id_token_signed_response_alg'] = 'RS256';
-                if(in_array($db_client['id_token_signed_response_alg'], Array('HS256', 'HS384', 'HS512', 'RS256', 'RS384', 'RS512'))) {
-                    $sig_param['alg'] = $db_client['id_token_signed_response_alg'];
-                    if(substr($db_client['id_token_signed_response_alg'], 0, 2) == 'HS') {
-                        $sig_key = $db_client['client_secret'];
-                    } elseif(substr($db_client['id_token_signed_response_alg'], 0, 2) == 'RS') {
-                        $sig_param['jku'] = OP_JWK_URL;
-                        $sig_param['kid'] = OP_SIG_KID;
-                        $sig_key = array('key_file' => OP_PKEY, 'password' => OP_PKEY_PASSPHRASE);
-                    }
-                }
-            }
-
-            error_log("ID Token Using Sig Alg {$sig_param['alg']}");
-            $id_token_obj = array(
-                                    'iss' => SERVER_ID,
-                                    'sub' => wrap_userid($db_client, $_SESSION['username']),
-                                    'aud' => array($client_id),
-                                    'exp' => time() + 5*(60),
-                                    'iat' => time(),
-                                    'ops' => session_id() . '.' . $_SESSION['ops']
-                                 );
-            if($GET['nonce'])
-                $id_token_obj['nonce'] = $GET['nonce'];
-            error_log("userid = " . $id_token_obj['sub'] . ' unwrapped = ' . unwrap_userid($id_token_obj['sub']));
-            
-            if(isset($rpfA['claims']) && isset($rpfA['claims']['id_token'])) {
-                if((isset($rpfA['id_token']) && isset($rpfA['claims']['id_token'])) && array_key_exists('auth_time', $rpfA['claims']['id_token']))
-                    $id_token_obj['auth_time'] = (int) $_SESSION['auth_time'];
-                    
-                if(array_key_exists('acr', $rpfA['claims']['id_token'])) {
-                    if(array_key_exists('values', $rpfA['claims']['id_token']['acr'])) {
-                        if(is_array($rpfA['claims']['id_token']['acr']['values']) && count($rpfA['claims']['id_token']['acr']['values']))
-                            $id_token_obj['acr'] = $rpfA['claims']['id_token']['acr']['values'][0];
-                    } else
-                        $id_token_obj['acr'] = '0';
-                }
-            }
-            if($sig_param['alg']) {
-                $bit_length = substr($sig_param['alg'], 2);
-                switch($bit_length) {
-                    case '384':
-                        $hash_alg = 'sha384';
-                        break;
-                    case '512':
-                        $hash_alg = 'sha512';
-                        break;                        
-                    case '256':
-                    default:
-                        $hash_alg = 'sha256';
-                    break;
-                }
-                $hash_length = (int) ((int) $bit_length / 2) / 8;
-                if($code) {
-                    error_log("************** got code");
-                    $id_token_obj['c_hash'] = base64url_encode(substr(hash($hash_alg, $code, true), 0, $hash_length));
-                }
-                if($token) {
-                    error_log("************** got token");
-                    $id_token_obj['at_hash'] = base64url_encode(substr(hash($hash_alg, $token, true), 0, $hash_length));
-                }
-                error_log("hash size = {$hash_lenth}");
-            }
-            
-
-            $requested_id_token_claims = get_id_token_claims($rpfA);
-            if($requested_id_token_claims) {
-                $persona = db_get_user_persona($_SESSION['username'], $persona)->toArray();
-                $persona_custom_claims = db_get_user_persona_custom_claims($_SESSION['username'], $_POST['persona']);
-                foreach($persona_custom_claims as $pcc) {
-                    $persona_claims[$pcc['claim']] = $pcc->PersonaCustomClaim[0]['value'];
-                }
-                foreach($confirmed_attribute_list as $key) {
-                    if(array_key_exists($key, $requested_id_token_claims)) {
-                        $prefix = substr($key, 0, 3);
-                        if($prefix == 'ax.') {
-                            $key = substr($key, 3);
-                            $mapped_key = $key;
-                            $kana = strpos($key, '_ja_kana_jp');
-                            $hani = strpos($key, '_ja_hani_jp');
-                            if($kana !== false)
-                                $mapped_key = substr($key, 0, $kana) . '#ja-Kana-JP';
-                            if($hani !== false)
-                                $mapped_key = substr($key, 0, $hani) . '#ja-Hani-JP';
-                            switch($mapped_key) {
-                                case 'address' :
-                                    $id_token_obj[$mapped_key] = array(
-                                                                        'formatted' => $persona[$key]
-                                                                      );
-                                    break;
-                                
-                                case 'email_verified' :
-                                case 'phone_number_verified' :
-                                    if($persona[$key])
-                                        $id_token_obj[$mapped_key] = true;
-                                    else
-                                        $id_token_obj[$mapped_key] = false;
-                                    break;
-                                
-                                default :
-                                    $id_token_obj[$mapped_key] = $persona[$key];
-                                    break;
-                            }
-                        } elseif($prefix == 'cx.') {
-                            $key = substr($key, 3);
-                            $id_token_obj[$key] = $persona_claims[$key];
-                        }
-                    }                    
-                }
-            }                                 
-
-
-            $id_token = jwt_sign($id_token_obj, $sig_param, $sig_key);
-            if(!$id_token) {
-                error_log("Unable to sign response for ID Token");
-                send_bearer_error('400', 'invalid_request', 'Unable to sign response for ID Token');
-            }
-
-            if($db_client['id_token_encrypted_response_alg'] && $db_client['id_token_encrypted_response_enc']) {
-                error_log("ID Token Encryption Algs {$db_client['id_token_encrypted_response_alg']} {$db_client['id_token_encrypted_response_enc']}");
-                list($alg, $enc) = array($db_client['id_token_encrypted_response_alg'], $db_client['id_token_encrypted_response_enc']);
-                if(in_array($alg, Array('RSA1_5', 'RSA-OAEP')) && in_array($enc, Array('A128GCM', 'A256GCM', 'A128CBC-HS256', 'A256CBC-HS512'))) {
-                    $jwk_uri = '';
-                    $encryption_keys = NULL;
-                    if($db_client['jwks_uri']) {
-                        $jwk = get_url($db_client['jwks_uri']);
-                        if($jwk) {
-                            $jwk_uri = $db_client['jwks_uri'];
-                            $encryption_keys = jwk_get_keys($jwk, 'RSA', 'enc', NULL);
-                            if(!$encryption_keys || !count($encryption_keys))
-                                $encryption_keys = NULL;
-                        }
-                    }
-                    if(!$encryption_keys)
-                        send_bearer_error('400', 'invalid_request', 'Unable to retrieve JWK key for encryption');
-                    $id_token = jwt_encrypt($id_token, $encryption_keys[0], false, NULL, $jwk_uri, NULL, $alg, $enc, false);
-                    if(!$id_token) {
-                        error_log("Unable to encrypt response for ID Token");
-                        send_bearer_error('400', 'invalid_request', 'Unable to encrypt response for ID Token');
-                    }
-
-                } else {
-                    error_log("ID Token Encryption Algs $alg and $enc not supported");
-                    send_bearer_error('400', 'invalid_request', 'Client registered unsupported encryption algs for ID Token');
-                }
-            }
-
-            $fragments[] = "id_token=$id_token";
-        }
-        $queries = Array();
-        if($is_code_flow) {
-            if(count($fragments) == 0) {
-                $queries[] = "code=$code";
-                if($GET['state'])
-                    $queries[] = "state={$GET['state']}";
-            } else {
-                array_unshift($fragments, "code=$code");
-            }
-        }
-        
-        if(count($queries))
-            $query = '?' . implode('&', $queries);
-        if(count($fragments))
-            $fragment = '#' . implode('&', $fragments);
-        $url="$rpep{$query}{$fragment}";
-    }
-    if($_SESSION['persist']=='on'){
-        $username = $_SESSION['username'];
-        $auth_time = $_SESSION['auth_time'];
-        $ops = $_SESSION['ops'];
-        $login = $_SESSION['login'];
-        clean_session();
-        $_SESSION['lastlogin']=time();
-        $_SESSION['username']=$username;
-        $_SESSION['auth_time']=$auth_time;
-        $_SESSION['persist']='on';
-        $_SESSION['ops'] = $ops;
-        $_SESSION['login'] = $login;
-        setcookie('ops', $_SESSION['ops'], 0, '/');
-    } else {
-        session_destroy();
-    }
-    header("Location:$url");
-    return true;
-}
-
-/**
- * Read the identity file and compair password.
- * @param  String $username   Local ID of the user.
- * @param  String $password   User input password.
- * @return String true if OK, else false.
- */
-function check_credential($username, $password) {
-    $filename = "ids/" . $username . '.json';
-    if(file_exists($filename)) {
-  $jdentity = file_get_contents($filename);
-  $arr = json_decode($jdentity,1);
-  $sha1p = sha1($password);
-  $cred = $arr["openid"]["cd:sha1pass"];
-  if($sha1p==$cred){
-    return 1;
-  } else {
-    return 0;
-  }
-    } else {
-  echo $filename;
-  return 0;
-    }
-}
-
 /**
  * Show Login form.
  * @return String HTML Login form.
  */
-function loginform($display_name = '', $user_id = ''){
+function loginform($display_name = '', $user_id = '', $oplogin=false){
    
    if($display_name && $user_id) {
        $userid_field = " <b>{$display_name}</b><input type='hidden' name='username_display' value='{$display_name}'><input type='hidden' name='username' value='{$user_id}'><br/>";
    } else {
        $userid_field = '<input type="text" name="username" value="alice">(or bob)';
    }
+
+   $login_handler = $oplogin ? 'op' : '';
     
    $str='
   <html>
@@ -413,8 +110,8 @@ function loginform($display_name = '', $user_id = ''){
   </head>
   <body style="background-color:#FFEEEE;">
   <h1>' . OP_SERVER_NAME . ' OP Login</h1>
-  <form method="POST" action="' . $_SERVER['SCRIPT_NAME'] . '/login">
-  Username:' . $userid_field . '<br />
+  <form method="POST" action="' . $_SERVER['SCRIPT_NAME'] . "/{$login_handler}login\">
+  Username:" . $userid_field . '<br />
   Password:<input type="password" name="password" value="wonderland">(or underland)<br />
   <input type="checkbox" name="persist" checked>Keep me logged in. <br />
   <input type="submit">
@@ -437,88 +134,29 @@ function confirm_userinfo(){
   $response_types = explode(' ', $req['response_type']);
   $offline_access = in_array('offline_access', $scopes) && in_array('code', $response_types) ? 'YES' : 'NO';
   $axlabel=get_default_claims();
-  $claim_keys = array_keys($axlabel);
-  $custom_claim_keys = array();
-  $custom_claim_names = db_get_custom_claim_names();
-  foreach($custom_claim_names as $custom_claim_name) {
-    $custom_claim_keys[] = $custom_claim_name['claim'];
-  }
-  
-  $rl = array();
-  $requested_normal_claims = array();  
-  $requested_custom_claims = array();  
-  $requested_new_custom_claims = array();
-//  error_log('axlabel = ' . print_r($axlabel, true));
-//  error_log('claim_keys = '. print_r($claim_keys, true));
-//  error_log('custom claim keys = '. print_r($custom_claim_keys, true));
+
   $requested_claims = get_all_requested_claims($req, $req['scope']);
-  error_log('requested claims = ' . print_r($requested_claims, true));
+  log_info('requested claims = %s', print_r($requested_claims, true));
 
-  $tab_headers = array();
-  $tabs = array();
-
-  $personas = db_get_user_personas($_SESSION['username'])->toArray();
-
-  for($i = 0; $i < count($personas); $i++) {
-    if($personas[$i]['persona_name'] == 'Default') {
-        $temp = $personas[$i];
-        unset($personas[$i]);
-        array_unshift($personas, $temp);
-    }
-  }
-
-  $i = 0;
-  foreach($personas as $persona) {
-    ++$i;
-
-    $persona_name = $persona['persona_name'];
-    $persona_name_ui = ucfirst($persona_name);
-    if(!$persona_name) {
-        $persona_name_ui = 'Default';
-        $persona_name = '';
-    }
-    array_push($tab_headers, "<li><a href='#tabs-$i'>$persona_name_ui</a></li>");
-
-    $identity = $persona;
-    $attributes = NULL;
-    $persona_claims = array();
-    $persona_custom_claims = db_get_user_persona_custom_claims($_SESSION['username'], $persona_name);
-    foreach($persona_custom_claims as $pcc) {
-        $persona_claims[$pcc['claim']] = $pcc->PersonaCustomClaim[0]['value'];
-    }
-    
+    $attributes = '';
+    $account = db_get_account($_SESSION['username']);
     foreach($requested_claims as $claim => $required) {
         if($required == 1) {
-            $readonly = ' readonly="readonly" onclick="this.checked = !this.checked;"';
             $star = "<font color='red'>*</font>";
         } else {
-            $readonly = '';
             $star = '';
         }
-        $claim_prefix = substr($claim, 0, 3);
-        $claim_name = substr($claim, 3);
-        switch($claim_prefix) {
-            case 'ax.':
-            $claim_label = "{$axlabel[$claim]}{$star}";
-            $claim_value = $identity[$claim_name];
-            break;
-            
-            case 'cx.':
-            $claim_label = "cx-{$claim_name}{$star}";
-            $claim_value = $persona_claims[$claim_name];
-            break;
-        }
-//        error_log("claim = {$claim} label = {$claim_label} value = {$claim_value} $required $star");
+        $claim_label = "{$axlabel[$claim]}{$star}";
+        $claim_value = $account[$claim];
 
-        $attributes .= "<tr><td>{$claim_label}</td><td><input id='inputtext' name='$claim' type='text' value='{$claim_value}'></td><td><input type='checkbox' name='conf_{$claim}' value='1' checked {$readonly}></td></tr>\n";
+        $attributes .= "<tr><td>{$claim_label}</td><td>{$claim_value}</td><td></td></tr>\n";
     }
 
-$persona_form_template = <<<EOF
-  <div id='tabs-$i'>
-  <div class="persona">
+
+$attribute_form_template = <<<EOF
+  <div class='persona'>
   <form method="POST" action="{$_SERVER['SCRIPT_NAME']}/confirm_userinfo">
   <input type="hidden" name="mode" value="ax_confirm">
-  <input type="hidden" name="persona" value="$persona_name">
   <table cellspacing="0" cellpadding="0" width="600">
   <thead><tr><th>Attribute</th><th>Value</th><th>Confirm</th></tr></thead>
   $attributes
@@ -526,105 +164,34 @@ $persona_form_template = <<<EOF
   <thead><tr><td><b>Offline Access Requested</b></td><td>$offline_access</td><td></td></tr></thead>
   <tr><td colspan="3">&nbsp;</td></tr>
   <tr><td colspan="3">&nbsp;</td></tr>
-  <tr><td colspan="3"><input type="checkbox" name="agreed" value="1" checked> Agree to Provide the above selected attributes. <br/>
+  <tr><td colspan="3"><input type="checkbox" name="agreed" value="1" checked>I Agree to provide the above information. <br/>
   <input type="radio" name="trust" value="once" checked>Trust this site this time only <br />
   <input type="radio" name="trust" value="always" >Trust this site always <br/>
   </td></tr>
-  <tr><td colspan="3"><input type="submit" name="confirm" value="confirmed"> <input type="submit" name="confirm" value="cancel" title="title"></td></tr></table>
+  <tr><td colspan="3"><input type="submit" name="confirm" value="confirmed"> </td></tr></table>
   </form>
-  </div>
   </div>
 EOF;
 
-    array_push($tabs, $persona_form_template);
 
-
-  }
-
-        if(DEBUG){
-    echo "<pre>";
-    echo "<h4>rpfA</h4>";
-    print_r($rpfA);
-    echo "<h4>axlabel</h4>";
-    print_r($axlabel);
-    echo "<h4>intersect</h4>";
-    print_r($rl);
-
-
-    echo "<h4>session</h4>";
-    print_r($_SESSION);
-
-
-    echo "<h4>identity assertion</h4>";
-    print_r($identity);
-
-    echo "<h4>return attributes</h4>";
-    print_r($attribs);
-
-    echo "</pre>";
-
-
-  }
-
-    $dirname = dirname($_SERVER['SCRIPT_NAME']);
-$jquery = <<<EOF
-    <link type="text/css" href="{$dirname}/css/smoothness/jquery-ui-1.8.6.custom.css" rel="stylesheet" />
-    <script type="text/javascript" src="{$dirname}/js/jquery-1.4.2.min.js"></script>
-    <script type="text/javascript" src="{$dirname}/js/jquery-ui-1.8.6.custom.min.js"></script>
-    <script type="text/javascript">
-      $(function(){
-
-        // Tabs
-        $('#tabs').tabs();
-
-        //hover states on the static widgets
-        $('#dialog_link, ul#icons li').hover(
-          function() { $(this).addClass('ui-state-hover'); },
-          function() { $(this).removeClass('ui-state-hover'); }
-        );
-
-      });
-    </script>
+$styles = <<<EOF
 
     <style type="text/css">
       /*demo page css*/
       body{ font: 80% "Trebuchet MS", sans-serif; margin: 50px;}
-      .demoHeaders { margin-top: 2em; }
-      #dialog_link {padding: .4em 1em .4em 20px;text-decoration: none;position: relative;}
-      #dialog_link span.ui-icon {margin: 0 5px 0 0;position: absolute;left: .2em;top: 50%;margin-top: -8px;}
-      ul#icons {margin: 0; padding: 0;}
-      ul#icons li {margin: 2px; position: relative; padding: 4px 0; cursor: pointer; float: left;  list-style: none;}
-      ul#icons span.ui-icon {float: left; margin: 0 4px;}
-
-      .persona table{ font: 80% "verdana", san-serif; }
-      .persona td { font: 80% "verdana", san-serif;}
-      .persona input#inputtext {font: 100% "verdana", san-serif; width: 460px;}
-
+      .persona table{ font: 100% "verdana", san-serif; }
+      .persona td { font: 100% "verdana", san-serif;}
     </style>
-EOF;
-
-$headers = implode("\n", $tab_headers);
-$personas = implode("\n", $tabs);
-$tabs = <<<EOF
-    <h2 class="demoHeaders">Personas</h2>
-    <div id="tabs" style='width:700'>
-      <ul>
-        $headers
-      </ul>
-      $personas
-
-    </div>
-
 EOF;
 
   $str= '
   <html>
   <head><title>' . OP_SERVER_NAME . ' AX Confirm</title>
-  <meta name="viewport" content="width=620">' . $jquery . '
+  <meta name="viewport" content="width=620">' . $styles . '
   </head>
   <body style="background-color:#FFEEEE;">
   <h1>' . OP_SERVER_NAME . ' AX Confirm</h1>
-  <h2>RP requests following AX values...</h2>' . $tabs . '
+  <h2>RP requests following AX values...</h2>' . $attribute_form_template . '
   </body>
   </html>
   ';
@@ -665,10 +232,12 @@ function get_url($url) {
     $http_status = curl_getinfo($ch, CURLINFO_HTTP_CODE);
     curl_close($ch);
     if($http_status != 200) {
-        error_log("Unable to fetch URL $url status = $http_status");
+        if($responseText && substr($url, 0, 7) == 'file://')
+            return $responseText;
+        log_error("Unable to fetch URL %s status = %d", $url, $http_status);
         return NULL;
     } else {
-        error_log("GOT $responseText");
+        log_debug("get_url:\n%s", $responseText);
         return $responseText;
     }
 }
@@ -691,16 +260,8 @@ function clean_session($persist=0){
 }
 
 
-
-
-function preprint($str) {
-    echo "<p><pre>\n";
-    print_r($str);
-    echo "\n</pre></p>\n";
-}
-
 function send_error($url, $error, $description=NULL, $error_uri=NULL, $state=NULL, $query=true, $http_error_code = '400') {
-    error_log("url:{$url} error:{$error} desc:{$description} uri:{$error_uri} state:{$state} code:{$http_error_code}");
+    log_error("url:%s error:%s desc:%s uri:%s state:%s code:%d", $url, $error, $description, $error_uri, $state, $http_error_code);
     if($url) {
         if($query) $separator = '?';
             else $separator = '#';
@@ -712,7 +273,6 @@ function send_error($url, $error, $description=NULL, $error_uri=NULL, $state=NUL
         header("Location: $url");
         exit;
     } else {
-        // echo "Error : $error : $description\n";
         $json = array();
         if($error)
             $json['error'] = $error;
@@ -731,41 +291,16 @@ function send_error($url, $error, $description=NULL, $error_uri=NULL, $state=NUL
                         '405' => 'Method Not Allowed'
                       );
     
-        error_log("HTTP/1.0 {$http_error_code} {$codes[$http_error_code]}");
         header("HTTP/1.0 {$http_error_code} {$codes[$http_error_code]}");
         header('Content-Type: application/json');
         header("Cache-Control: no-store");
         header("Pragma: no-cache");
         echo json_encode($json);
-        error_log(json_encode($json));
+        log_error("HTTP/1.0 %d %s\n%s", $http_error_code, $codes[$http_error_code], json_encode($json));
         exit;
     }
 }
 
-/*
-400 Bad Request
-The request could not be understood by the server due to malformed syntax. The client SHOULD NOT repeat the request without modifications.
-
-401 Unauthorized
-The request requires user authentication. The response MUST include a WWW-Authenticate header field (section 14.47) containing a challenge applicable to the requested resource. The client MAY repeat the request with a suitable Authorization header field (section 14.8). If the request already included Authorization credentials, then the 401 response indicates that authorization has been refused for those credentials. If the 401 response contains the same challenge as the prior response, and the user agent has already attempted authentication at least once, then the user SHOULD be presented the entity that was given in the response, since that entity might include relevant diagnostic information. HTTP access authentication is explained in "HTTP Authentication: Basic and Digest Access Authentication" [43].
-
-402 Payment Required
-This code is reserved for future use.
-
-403 Forbidden
-The server understood the request, but is refusing to fulfill it. Authorization will not help and the request SHOULD NOT be repeated. If the request method was not HEAD and the server wishes to make public why the request has not been fulfilled, it SHOULD describe the reason for the refusal in the entity. If the server does not wish to make this information available to the client, the status code 404 (Not Found) can be used instead.
-
-404 Not Found
-The server has not found anything matching the Request-URI. No indication is given of whether the condition is temporary or permanent. The 410 (Gone) status code SHOULD be used if the server knows, through some internally configurable mechanism, that an old resource is permanently unavailable and has no forwarding address. This status code is commonly used when the server does not wish to reveal exactly why the request has been refused, or when no other response is applicable.
-
-405 Method Not Allowed
-The method specified in the Request-Line is not allowed for the resource identified by the Request-URI. The response MUST include an Allow header containing a list of valid methods for the requested resource.
-
-406 Not Acceptable
-The resource identified by the request is only capable of generating response entities which have content characteristics not acceptable according to the accept headers sent in the request.
-
-
-*/
 
 function send_bearer_error($http_error_code, $error, $description=NULL) {
 
@@ -777,7 +312,7 @@ function send_bearer_error($http_error_code, $error, $description=NULL) {
                     '405' => 'Method Not Allowed'
                   );
 
-    error_log("HTTP/1.0 {$http_error_code} {$codes[$http_error_code]}");
+    log_error("HTTP/1.0 %d %s", $http_error_code, $codes[$http_error_code]);
     header('WWW-Authenticate: Bearer error="' . $error . '"' . ($description ? ', error_description="' . $description . '"' : ''));
     header("HTTP/1.0 {$http_error_code} {$codes[$http_error_code]}");
 //    header("Cache-Control: no-store");
@@ -927,17 +462,17 @@ function handle_auth() {
                 }
                 $_SESSION['rpfA'] = $merged_req;
 
-                log_debug("rpfA = " . print_r($_SESSION['rpfA'], true));
+                log_debug("rpfA = %s", print_r($_SESSION['rpfA'], true));
                 foreach(Array('client_id', 'response_type', 'scope', 'nonce', 'redirect_uri') as $key) {
                     if(!isset($payload[$key]))
-                        log_error("missing {$key} in payload => " . print_r($payload, true));
+                        log_error("missing %s in payload => %s", $key, print_r($payload, true));
 //                      throw new OidcException('invalid_request', 'Request Object missing required parameters');
                 }
 
-                log_debug("payload => " . print_r($payload, true));
+                log_debug("payload => %s", print_r($payload, true));
                 foreach($payload as $key => $value) {
                     if(isset($_REQUEST[$key]) && (strcmp($_REQUEST[$key],$value))) {
-                        log_debug("key : {$key} value:%s", print_r($value, true));
+                        log_debug("key : %s value:%s", $key, print_r($value, true));
                         throw new OidcException('invalid_request', "Request Object Param Values do not match request '{$key}' '{$_REQUEST[$key]}' != '{$value}'");
                     }
                 }
@@ -974,16 +509,16 @@ function handle_auth() {
 
             $_SESSION['rpfA'] = $_REQUEST;
         }
-        log_debug("prompt = " . $_SESSION['rpfA']['prompt']);
+        log_debug("prompt = %s", $_SESSION['rpfA']['prompt']);
         $prompt = $_SESSION['rpfA']['prompt'] ? explode(' ', $_SESSION['rpfA']['prompt']) : array();
         $num_prompts = count($prompt);
         if($num_prompts > 1 && in_array('none', $prompt))
             throw new OidcException('interaction_required', "conflicting prompt parameters {$_SESSION['rpfA']['prompt']}");
-        if($num_prompts == 1 && in_array('none', $prompt))
+        if(in_array('none', $prompt))
             $showUI = false;
         else
             $showUI = true;
-        log_debug("num prompt = {$num_prompts}" . print_r($prompt, true));
+        log_debug("num prompt = %d %s", $num_prompts,  print_r($prompt, true));
         if($_SESSION['username']) {
             if(in_array('login', $prompt)){
                 echo loginform($requested_userid_display, $requested_userid);
@@ -1012,7 +547,7 @@ function handle_auth() {
                 echo confirm_userinfo();
                 exit();
             }
-            if(db_get_user_trusted_client($_SESSION['username'], $_REQUEST['client_id'])) {
+            if(!db_get_user_trusted_client($_SESSION['username'], $_REQUEST['client_id'])) {
                 if(!$showUI)
                     throw new OidcException('interaction_required', 'consent needed and prompt set to none');
                 echo confirm_userinfo();
@@ -1039,7 +574,7 @@ function is_client_authenticated() {
     $auth_type = '';
     if(isset($_REQUEST['client_assertion_type'])) {
         $auth_type = $_REQUEST['client_assertion_type'];
-        error_log("client_assertion_type auth $auth_type\n");
+        log_debug("client_assertion_type auth %s", $auth_type);
         if($auth_type != 'urn:ietf:params:oauth:client-assertion-type:jwt-bearer')
             send_error(NULL, 'unauthorized_client', 'Unknown client_assertion_type');
         $jwt_assertion = $_REQUEST['client_assertion'];
@@ -1049,8 +584,14 @@ function is_client_authenticated() {
         if($jwt_payload['iss'] != $jwt_payload['sub'])
             send_error(NULL, 'invalid request', 'JWT iss and prn mismatch');
         $client_id = $jwt_payload['iss'];
-        error_log('header = ' . print_r($jwt_header, true) . "\npayload = " . print_r($jwt_payload, true) . "\nSig = " . print_r($jwt_sig, true));
-        error_log("assertion = $jwt_assertion\n");
+        log_debug("header = %s\npayload = %s\n", print_r($jwt_header, true), print_r($jwt_payload, true));
+        log_debug("assertion = %s", $jwt_assertion);
+        $alg_prefix = substr($jwt_header['alg'], 0, 2);
+        if($alg_prefix == "HS")
+            $auth_type = 'client_secret_jwt';
+        elseif($alg_prefix == "RS")
+            $auth_type = 'private_key_jwt';
+        log_debug("auth_type = %s", $auth_type);
     } elseif(isset($_SERVER['PHP_AUTH_USER'])) {
         $client_id = $_SERVER['PHP_AUTH_USER'];
         if(isset($_SERVER['PHP_AUTH_PW']))
@@ -1070,21 +611,21 @@ function is_client_authenticated() {
     // perform client_id and client_secret check
     $db_client = db_get_client($client_id);
     if($db_client) {
-        error_log("**********************{$db_client['client_id']}\n{$db_client['x509_uri']}\n{$db_client['id_token_signed_response_alg']}");
+        log_debug("{$db_client['client_id']}\n{$db_client['x509_uri']}\n{$db_client['token_endpoint_auth_method']}");
         $db_client = $db_client->toArray();
         $token_endpoint_auth_method = $db_client['token_endpoint_auth_method'];
         if(!$token_endpoint_auth_method)
             $token_endpoint_auth_method = 'client_secret_basic';
     } else send_error(NULL, 'unauthorized_client', 'client_id not found');
 
-//    if($token_endpoint_auth_method != $auth_type)
-//        send_error(NULL, 'unauthorized_client', 'mismatched token endpoint auth type');
+    if($token_endpoint_auth_method != $auth_type)
+        send_error(NULL, 'unauthorized_client', "mismatched token endpoint auth type {$auth_type} != {$db_client['token_endpoint_auth_method']}");
 
     switch($token_endpoint_auth_method) {
         case 'client_secret_basic':
         case 'client_secret_post' :
             $client_authenticated = db_check_client_credential($client_id, $client_secret);
-            error_log("authenticating client_id $client_id with client_secret $client_secret\nResult : $client_authenticated");
+            log_info("authenticating client_id %s with client_secret %s\nResult : %d", $client_id, $client_secret, $client_authenticated);
         break;
 
         case 'client_secret_jwt' :
@@ -1093,40 +634,39 @@ function is_client_authenticated() {
                 $audience = OP_ENDPOINT . '/1/token';
             else
                 $audience = OP_ENDPOINT . '/token';
-            $aud_verified = $jwt_payload['aud'] == $audience;
+            $aud_verified = (is_array($jwt_payload['aud']) ? $jwt_payload['aud'][0] : $jwt_payload['aud'])  == $audience;
             $now = time();
             $time_verified = ($now >= $jwt_payload['iat']) && ($now <= $jwt_payload['exp']);
             if(!$sig_verified)
-                error_log("Sig not verified");
+                log_info("Sig not verified");
             if(!$aud_verified)
-                error_log('Aud not verified');
+                log_info("Aud not verified %s != %s", $jwt_payload['aud'], $audience);
             if(!$time_verified)
-                error_log('Time not verified');
+                log_info('Time not verified');
             $client_authenticated = $sig_verified && $aud_verified && $time_verified;
-            error_log(" client_secret_jwt Result : $client_authenticated $sig_verified $aud_verified $time_verified");
+            log_info(" client_secret_jwt Result : %d %d %d %d", $client_authenticated, $sig_verified, $aud_verified, $time_verified);
         break;
 
         case 'private_key_jwt' :
-                $pubkeys = array();
-                if($db_client['jwks_uri'])
-                    $pubkeys['jku'] = $db_client['jwks_uri'];
+            $pubkeys = array();
+            if($db_client['jwks_uri'])
+                $pubkeys['jku'] = $db_client['jwks_uri'];
             $sig_verified = jwt_verify($jwt_assertion, $pubkeys);
-//            $sig_verified = jwt_verify($jwt_assertion, $pem);
             if(substr($_SERVER['PATH_INFO'], 0, 2) == '/1')
                 $audience = OP_ENDPOINT . '/1/token';
             else
                 $audience = OP_ENDPOINT . '/token';
-            $aud_verified = $jwt_payload['aud'] == $audience;
+            $aud_verified = (is_array($jwt_payload['aud']) ? $jwt_payload['aud'][0] : $jwt_payload['aud']) == $audience;
             $now = time();
             $time_verified = ($now >= $jwt_payload['iat']) && ($now <= $jwt_payload['exp']);
             if(!$sig_verified)
-                error_log("Sig not verified");
+                log_info("Sig not verified");
             if(!$aud_verified)
-                error_log('Aud not verified');
+                log_info('Aud not verified');
             if(!$time_verified)
-                error_log('Time not verified');
+                log_info('Time not verified');
             $client_authenticated = $sig_verified && $aud_verified && $time_verified;
-            error_log(" private_key_jwt Result : $client_authenticated $sig_verified $aud_verified $time_verified");
+            log_info("private_key_jwt Result : %d %d %d %d", $client_authenticated, $sig_verified, $aud_verified, $time_verified);
         break;
 
         default :
@@ -1140,7 +680,6 @@ function handle_token() {
 
     try
     {
-        $redirect_uri = $_REQUEST['redirect_uri'];
         $grant_type = strtolower($_REQUEST['grant_type']);
         if(!$grant_type || $grant_type != 'authorization_code')
             throw new OidcException('unsupported_grant_type', "{$grant_type} is not supported");
@@ -1154,9 +693,6 @@ function handle_token() {
         $request_info = json_decode($auth_code['info'], true);
         $client_authenticated = is_client_authenticated();
         if($client_authenticated) {
-            // TODO
-            // lookup authorization code
-
             while(true) {
                 $token_name = base64url_encode(mcrypt_create_iv(32, MCRYPT_DEV_URANDOM));
                 if(!db_find_token($token_name))
@@ -1181,7 +717,7 @@ function handle_token() {
             if(in_array('openid', $scopes)) {
 
                 $client_secret = null;
-                $nonce = isset($GET['nonce']) ? $GET['nonce'] : null;
+                $nonce = null;
                 $c_hash = null;
                 $at_hash = null;
                 $ops = null;
@@ -1195,8 +731,6 @@ function handle_token() {
                 $jwk_uri = null;
 
                 $db_client = db_get_client($auth_code['client']);
-                $sig_param = Array('alg' => 'none');
-                $sig_key = NULL;
                 if(!$db_client)
                     throw new OidcException('invalid_request', 'invalid client');
                 $sig = $db_client['id_token_signed_response_alg'];
@@ -1207,14 +741,6 @@ function handle_token() {
                 $client_secret = $db_client['client_secret'];
                 $jwk_uri = $db_client['jwks_uri'];
 
-                error_log("ID Token Using Sig Alg {$sig_param['alg']}");
-//                $id_token_obj = array(
-//                    'iss' => SERVER_ID,
-//                    'sub' => wrap_userid($db_client, $request_info['u']),
-//                    'aud' => array($auth_code['client']),
-//                    'exp' => time() + 5*(60),
-//                    'iat' => time()
-//                );
 
                 if(isset($request_info['r']['session_id'])) {
                     session_id($request_info['r']['session_id']);
@@ -1222,14 +748,13 @@ function handle_token() {
                         if(isset($_SESSION['ops'])) {
                             $id_token_obj['ops'] = $request_info['r']['session_id'] . '.' . $_SESSION['ops'];
                         } else {
-                            error_log("********** no ops in sessionid {$request_info['r']['session_id']} => " . print_r($_SESSION, true) );
+                            log_debug("no ops in sessionid %s", $request_info['r']['session_id']);
                         }
                     }
                 }
 
                 if($request_info['g']['nonce'])
                     $nonce = $request_info['g']['nonce'];
-                error_log("userid = " . $id_token_obj['sub'] . ' unwrapped = ' . unwrap_userid($id_token_obj['sub']));
                 if($sig) {
                     $bit_length = substr($sig, 2);
                     switch($bit_length) {
@@ -1376,9 +901,6 @@ function get_default_claims()
 
 
 function get_requested_claims($request, $subkeys) {
-    
-//    $default_claims=get_default_claims();
-
     $requested_claims = array();
     foreach($subkeys as $subkey) {
         if(isset($request['claims']) && is_array($request['claims']) && $request['claims'][$subkey] &&  is_array($request['claims'][$subkey]) && count($request['claims'][$subkey])) {
@@ -1392,8 +914,6 @@ function get_requested_claims($request, $subkeys) {
                         $key_name = $temp . '_ja_kana_jp';
                     elseif($locale == 'ja_Hani-JP')
                         $key_name = $temp . '_ja_hani_jp';
-//                    if(!array_key_exists('ax.' . $key_name, $default_claims))
-//                        $key_name = $key;
                 }
                 if(in_array($key_name, array('auth_time', 'acr', 'sub')))
                     continue;
@@ -1403,7 +923,7 @@ function get_requested_claims($request, $subkeys) {
                 $requested_claims[$key_name] = max($requested_claims[$key_name], $required);
             }
         } else {
-            error_log("get_requested_claims [{$subkey}] = " . isset($request['claims'][$subkey]) . "  count = " . count($request['claims'][$subkey]) . ' claims = ' . print_r($request['claims'][$subkey], true));
+            log_debug("get_requested_claims [%s] = %d count = %d claims = %s", $subkey, isset($request['claims'][$subkey]), count($request['claims'][$subkey]), print_r($request['claims'][$subkey], true));
         }
     }
     return $requested_claims;
@@ -1412,14 +932,12 @@ function get_requested_claims($request, $subkeys) {
 function get_userinfo_claims($request, $scopes) {
     $requested_claims = array();
     $profile_claims = array();
-    error_log("get_userinfo_claims " . print_r($request, true) . "scopes = " . print_r($scopes, true));
+    log_debug("get_userinfo_claims %s scopes = %s", print_r($request, true), print_r($scopes, true));
     if(isset($request['claims']) && isset($request['claims']['userinfo']))
         $requested_claims = get_requested_claims($request, array('userinfo'));
     if(is_string($scopes))
         $scopes = explode(' ', $scopes);
-    error_log("** scopes = " . print_r($scopes, true));
     if(!is_array($scopes)) {
-        error_log(!!!'returning empty array');
         return array();
     }
     if(in_array('email', $scopes)) {
@@ -1467,19 +985,19 @@ function get_id_token_claims($request) {
 
 function get_all_requested_claims($request, $scope) {
     $userinfo_claims = get_userinfo_claims($request, $scope);
-    error_log("userinfo claims = " . print_r($userinfo_claims, true));
+    log_debug("userinfo claims = %s", print_r($userinfo_claims, true));
     $id_token_claims = get_id_token_claims($request);
-    error_log("id_token claims = " . print_r($id_token_claims, true));
+    log_debug("id_token claims = %s", print_r($id_token_claims, true));
     $userinfo_keys = array_keys($userinfo_claims);
     $id_token_keys = array_keys($id_token_claims);
     $all_keys = array_unique(array_merge($userinfo_keys, $id_token_keys));
     sort($all_keys, SORT_STRING);
-    error_log("unique keys = " . print_r($all_keys, true));
+    log_debug("unique keys = %s", print_r($all_keys, true));
     $requested_claims = array();
     foreach($all_keys as $key) {
         $requested_claims[$key] = max($userinfo_claims[$key], $id_token_claims[$key]);
     }
-    error_log("requested_claims = " . print_r($requested_claims, true));
+    log_debug("requested_claims = %s", print_r($requested_claims, true));
     return $requested_claims;
 }
 
@@ -1507,7 +1025,7 @@ function handle_userinfo() {
         if(in_array('openid', $scopes)) {
             $userinfo['sub'] = wrap_userid($db_client, $tinfo['u']);
         }
-        log_debug("userid = %s  unwrapped = %s" . $userinfo['sub'], unwrap_userid($userinfo['sub']));
+        log_debug("userid = %s  unwrapped = %s", $userinfo['sub'], unwrap_userid($userinfo['sub']));
         $requested_userinfo_claims = get_userinfo_claims($tinfo['r'], $tinfo['r']['scope']);
 
         log_debug("ALLOWED CLAIMS = %s", print_r($tinfo['l'], true));
@@ -1559,15 +1077,15 @@ function get_bearer_token()
     $headers = array();
     $tmp_headers = apache_request_headers();
     foreach ($tmp_headers as $header => $value) {
-        log_debug("$header: $value\n");
+        log_debug("$header: %s", $value);
         $headers[strtolower($header)] = $value;
     }
     $authorization = $headers['authorization'];
     log_debug('headers = %s', print_r($headers, true));
-    log_debug("authorization header = $authorization \n");
+    log_debug("authorization header = %s", $authorization);
     if($authorization) {
         $pieces = explode(' ', $authorization);
-        log_debug('pieces = ', print_r($pieces, true));
+        log_debug('pieces = %s', print_r($pieces, true));
         if(strcasecmp($pieces[0], 'bearer') != 0) {
             log_error('No Bearer Access Token in Authorization Header');
             return null;
@@ -1607,15 +1125,15 @@ function handle_distributedinfo() {
         if(in_array('openid', $scopes)) {
             $userinfo['sub'] = wrap_userid($db_client, $tinfo['u']);
         }
-        error_log("userid = " . $userinfo['sub'] . ' unwrapped = ' . unwrap_userid($userinfo['sub']));
+        log_debug("userid = %s unwrapped = %s", $userinfo['sub'], unwrap_userid($userinfo['sub']));
         $requested_userinfo_claims = get_userinfo_claims($tinfo['r'], $tinfo['r']['scope']);
         $persona_custom_claims = db_get_user_persona_custom_claims($tinfo['u'], $tinfo['p']);
         foreach($persona_custom_claims as $pcc) {
             $persona_claims[$pcc['claim']] = $pcc->PersonaCustomClaim[0]['value'];
         }
 
-        error_log("ALLOWED CLAIMS = " . print_r($tinfo['l'], true));
-        error_log("REQUESTED_USER_INFO = \n" . print_r($requested_userinfo_claims, true));
+        log_debug("ALLOWED CLAIMS = %s", print_r($tinfo['l'], true));
+        log_debug("REQUESTED_USER_INFO = %s", print_r($requested_userinfo_claims, true));
         $src = 0;
         foreach($tinfo['l'] as $key) {
             if(array_key_exists($key, $requested_userinfo_claims)) {
@@ -1668,15 +1186,15 @@ function handle_distributedinfo() {
                     $sig_param['kid'] = OP_SIG_KID;
                     $sig_key = array('key_file' => OP_PKEY, 'password' => OP_PKEY_PASSPHRASE);
                 }
-                error_log("DistributedInfo Using Sig Alg {$sig_param['alg']}");
+                log_debug("DistributedInfo Using Sig Alg %s", $sig_param['alg'] );
                 $userinfo_jwt = jwt_sign($userinfo, $sig_param, $sig_key);
                 if(!$userinfo_jwt) {
-                    error_log("Unable to sign response for DistributedInfo");
+                    log_error("Unable to sign response for DistributedInfo");
                     send_bearer_error('400', 'invalid_request', 'Unable to sign response for DistributedInfo');
                 }
 
                 if($db_client['userinfo_encrypted_response_alg'] && $db_client['userinfo_encrypted_response_enc']) {
-                    error_log("UserInfo Encryption Algs {$db_client['userinfo_encrypted_response_alg']} {$db_client['userinfo_encrypted_response_enc']}");
+                    log_debug("UserInfo Encryption Algs %s %s", $db_client['userinfo_encrypted_response_alg'], $db_client['userinfo_encrypted_response_enc']);
                     list($alg, $enc) = array($db_client['userinfo_encrypted_response_alg'], $db_client['userinfo_encrypted_response_enc']);
                     if(in_array($alg, Array('RSA1_5', 'RSA-OAEP')) && in_array($enc, Array('A128GCM', 'A256GCM', 'A128CBC-HS256', 'A256CBC-HS512'))) {
                         $jwk_uri = '';
@@ -1694,12 +1212,12 @@ function handle_distributedinfo() {
                             send_bearer_error('400', 'invalid_request', 'Unable to retrieve JWK key for encryption');
                         $userinfo_jwt = jwt_encrypt($userinfo_jwt, $encryption_keys[0], false, NULL, $jwk_uri, NULL, $alg, $enc, false);
                         if(!$userinfo_jwt) {
-                            error_log("Unable to encrypt response for DistributedInfo");
+                            log_error("Unable to encrypt response for DistributedInfo");
                             send_bearer_error('400', 'invalid_request', 'Unable to encrypt response for DistributedInfo');
                         }
 
                     } else {
-                        error_log("UserInfo Encryption Algs $alg and $enc not supported");
+                        log_error("UserInfo Encryption Algs %s and %s not supported", $alg, $enc);
                         send_bearer_error('400', 'invalid_request', 'Client registered unsupported encryption algs for UserInfo');
                     }
                 }
@@ -1708,32 +1226,28 @@ function handle_distributedinfo() {
                 header("Cache-Control: no-store");
                 header("Pragma: no-cache");
 
-                error_log('DistributedInfo response = ' . $userinfo_jwt);
+                log_debug('DistributedInfo response = %s', $userinfo_jwt);
                 echo $userinfo_jwt;
             } else {
-                error_log("UserInfo Sig Alg {$db_client['userinfo_signed_response_alg']} not supported");
+                log_error("UserInfo Sig Alg %s not supported", $db_client['userinfo_signed_response_alg'] );
                 send_bearer_error('400', 'invalid_request', "UserInfo Sig Alg {$db_client['userinfo_signed_response_alg']} not supported");
             }
         } else {
             header("Cache-Control: no-store");
             header("Pragma: no-cache");
             header("Content-Type: application/json");
-            error_log('DistributedInfo response = ' . json_encode($userinfo));
+            log_debug('DistributedInfo response = %s', json_encode($userinfo));
             echo json_encode($userinfo);
         }
     }
     catch(BearerException $e)
     {
         send_bearer_error('401', $e->error_code, $e->desc);
-
     }
     catch(OidcException $e)
     {
         send_error('', $e->error_code, $e->desc);
     }
-
-
-
 }
 
 
@@ -1743,417 +1257,71 @@ function handle_login() {
     // check Proof of Posession (pop)
     $pop=0;
     $username=preg_replace('/[^\w=_@]/','_',$_POST['username']);
-    if(db_check_credential($username,$_POST['password'])){
-        $_SESSION['login']=1;
-        $_SESSION['username']=$username;
-        $_SESSION['persist']=$_POST['persist'];
-        $_SESSION['auth_time'] = time();
-        $_SESSION['ops'] = bin2hex(mcrypt_create_iv(16, MCRYPT_DEV_URANDOM));
-        setcookie('ops', $_SESSION['ops'], 0, '/');
-        setcookie('test', time(), 0);
-        error_log("Auth_time = " . $_SESSION['auth_time']);
-        $GET=$_SESSION['get'];
-        error_log("session id = " . session_id());
-        $display = $_SESSION['rpfA']['display'];
-        error_log("prompt = " . $_SESSION['rpfA']['prompt']);
-        $prompt = isset($_SESSION['rpfA']['prompt']) ? explode(' ', $_SESSION['rpfA']['prompt']) : array();
-        $num_prompts = count($prompt);
-        error_log("num prompt = {$num_prompts}" . print_r($prompt, true));
-        if($num_prompts > 1 && in_array('none', $prompt)) {
-            send_error($_REQUEST['redirect_uri'], 'interaction_required', "conflicting prompt parameters {$_SESSION['rpfA']['prompt']}", NULL, $_REQUEST['state']);
-            exit();
+    try {
+        if(db_check_credential($username,$_POST['password'])){
+            $_SESSION['login']=1;
+            $_SESSION['username']=$username;
+            $_SESSION['persist']=$_POST['persist'];
+            $_SESSION['auth_time'] = time();
+            $_SESSION['ops'] = bin2hex(mcrypt_create_iv(16, MCRYPT_DEV_URANDOM));
+            setcookie('ops', $_SESSION['ops'], 0, '/');
+            log_debug("Auth_time = %s", $_SESSION['auth_time']);
+            $GET=$_SESSION['get'];
+            log_debug("session id = %s", session_id());
+            $display = $_SESSION['rpfA']['display'];
+            log_debug("prompt = %s", $_SESSION['rpfA']['prompt']);
+            $prompt = isset($_SESSION['rpfA']['prompt']) ? explode(' ', $_SESSION['rpfA']['prompt']) : array();
+            $num_prompts = count($prompt);
+            if($num_prompts > 1 && in_array('none', $prompt)) {
+                throw new OidcException('interaction_required', "conflicting prompt parameters {$_SESSION['rpfA']['prompt']}" );
+            }
+            if(in_array('none', $prompt))
+                $showUI = false;
+            else
+                $showUI = true;
+            if(in_array('consent', $prompt) || !db_get_user_trusted_client($username, $_SESSION['rpfA']['client_id'])) {
+                if(!$showUI)
+                    throw new OidcException('interaction_required', "Unable to show consent page, prompt set to none");
+                echo confirm_userinfo();
+            } else
+                send_response($username, true);
+        } else { // Credential did not match so try again.
+            echo loginform($_REQUEST['username_display'], $_REQUEST['username']);
         }
-        if($num_prompts == 1 && in_array('none', $prompt))
-            $showUI = false;
-        else
-            $showUI = true;        
-        if(in_array('consent', $prompt)){
-            echo confirm_userinfo($rpf);
-            exit();
-        }
-        if(db_get_user_trusted_client($username, $_SESSION['rpfA']['client_id'])) {
-            if(!$showUI)
-                send_error($_REQUEST['redirect_uri'], 'interaction_required', "consent needed and prompt set to none", NULL, $_REQUEST['state']);
-            echo confirm_userinfo($rpf);
-        } else
-            send_response($username, true);
-//        if(!send_trusted_site_token()) {
-//            if(!$showUI)
-//                send_error($_REQUEST['redirect_uri'], 'interaction_required', "consent needed and prompt set to none", NULL, $_REQUEST['state']);
-//            echo confirm_userinfo($rpf);
-//        }
-    } else { // Credential did not match so try again.
-        echo loginform($_REQUEST['username_display'], $_REQUEST['username']);
     }
+    catch(OidcException $e)
+    {
+        send_error($_REQUEST['redirect_uri'], $e->error_code, $e->desc, NULL, $_REQUEST['state']);
+    }
+
 }
 
 
 function handle_confirm_userinfo() {
 
-    if(DEBUG) {
-      echo "<pre>"; var_dump($_SESSION['rpfA']); echo "</pre>";
-      echo "<pre>"; var_dump($_POST); echo "</pre>";
-    }
-
-    $GET=$_SESSION['get'];
     $rpfA=$_SESSION['rpfA'];
-    $rpep=$GET['redirect_uri'];
-    $atype = 'none';
-    $client_id = $GET['client_id'];
-    $response_types = explode(' ', $GET['response_type']);
-    $scopes = explode(' ', $GET['scope']);
-    $prompts = explode(' ', $GET['prompt']);
-
-    $is_code_flow = in_array('code', $response_types);
-    $is_token_flow = in_array('token', $response_types );
-    $is_id_token = in_array('id_token', $response_types);
-    
-    $offline_access = $is_code_flow && !$is_token_flow && in_array('consent', $prompts) && in_array('offline_access', $scopes);
-
-    $issue_at = strftime('%G-%m-%d %T');
-    $expiration_at = strftime('%G-%m-%d %T', time() + (2*60));
-    error_log('Confirming UserInfo ' . print_r($_REQUEST, true));
-
-
+    $client_id = $rpfA['client_id'];
+    $authorized = false;
     if($_REQUEST['confirm'] == 'confirmed') {
-        $rpfA['session_id'] = session_id();
-        $rpfA['auth_time'] = $_SESSION['auth_time'];
         if ($_REQUEST['agreed']=="1") {
-
-            $attribs = array();
-            $custom_claims = array();
-            $confirmed_attribute_list = array();
-            $policy_list = array();
-            foreach($_POST as $key => $value) {
-                if(strncasecmp($key, "conf_ax_", 8) == 0) {
-                    array_push($confirmed_attribute_list, 'ax.' . substr($key, 8));
-                    array_push($policy_list, 'ax.'. substr($key, 8));
-                }else if(strncasecmp($key, "conf_cx_", 8) == 0) {
-                    array_push($confirmed_attribute_list, 'cx.' . substr($key, 8));
-                    array_push($policy_list, 'cx.' . substr($key, 8));
-                } elseif(strncmp($key, 'ax_', 3) == 0) {
-                    $attribs[substr($key, 3)] = $value;
-                } elseif(strncmp($key, 'cx_', 3) == 0) {
-                    $custom_claims[substr($key, 3)] = $value;
-                }
-            }
-            db_save_user_persona($_SESSION['username'], $_POST['persona'], $attribs);
-            db_save_user_persona_custom_claims($_SESSION['username'], $_POST['persona'], $custom_claims);
-
-            if($is_code_flow) {
-                $code_info = create_token_info($_SESSION['username'], $confirmed_attribute_list, $GET, $rpfA);
-                $code = $code_info['name'];
-                unset($code_info['name']);
-                $fields = array('client' => $GET['client_id'],
-                                'issued_at' => $issue_at,
-                                'expiration_at' => $expiration_at,
-                                'token' => $code,
-                                'details' => $details_str,
-                                'token_type' => TOKEN_TYPE_AUTH_CODE,
-                                'info' => json_encode($code_info)
-                               );
-                db_save_user_token($_SESSION['username'], $code, $fields);
-            }
-            if($is_token_flow) {
-                $code_info = create_token_info($_SESSION['username'], $confirmed_attribute_list, $GET, $rpfA);
-                $token = $code_info['name'];
-                unset($code_info['name']);
-                $issue_at = strftime('%G-%m-%d %T');
-                $expiration_at = strftime('%G-%m-%d %T', time() + (2*60));
-                $fields = array('client' => $GET['client_id'],
-                                'issued_at' => $issue_at,
-                                'expiration_at' => $expiration_at,
-                                'token' => $token,
-                                'details' => $details_str,
-                                'token_type' => TOKEN_TYPE_ACCESS,
-                                'info' => json_encode($code_info)
-                               );
-                db_save_user_token($_SESSION['username'], $token, $fields);
-            }
-            
-            if($offline_access) {
-                while(true) {
-                        $refresh_token_name = base64url_encode(mcrypt_create_iv(32, MCRYPT_DEV_URANDOM));
-                        if(!db_find_token($refresh_token_name))
-                            break;
-                }
-                $fields = array('client' => $GET['client_id'],
-                                'issued_at' => $issue_at,
-                                'expiration_at' => $expiration_at,
-                                'token' => $refresh_token_name,
-                                'details' => $details_str,
-                                'token_type' => TOKEN_TYPE_REFRESH,
-                                'info' => json_encode($code_info)
-                               );
-                $fields['expiration_at'] = strftime('%G-%m-%d %T', time() + (24*60*60));
-                db_save_user_token($_SESSION['username'], $refresh_token_name, $fields);
-            }
-
-            if($_REQUEST['trust'] == 'always') {
-                error_log("Trust = Always for {$rpfA['client_id']}" . print_r($rpfA, true));
-                $persona = db_get_user_persona($_SESSION['username'], $_POST['persona']);
-                if($persona) {
-                    db_save_user_site($_SESSION['username'], $rpfA['client_id'], array('url' => $rpfA['client_id'], 'persona_id' => $persona['id']));
-                    $site = db_get_user_site($_SESSION['username'], $rpfA['client_id']);
-                    if($site)
-                        db_save_user_site_policies($_SESSION['username'], $rpfA['client_id'], $policy_list);
-                }
-            }
-        } else {
-            if($is_code_flow) {
-                $code_info = create_token_info($_SESSION['username'], $confirmed_attribute_list, $GET, $rpfA);
-                $code = $code_info['name'];
-                unset($code_info['name']);
-                $fields = array('client' => $GET['client_id'],
-                                'issued_at' => $issue_at,
-                                'expiration_at' => $expiration_at,
-                                'token' => $code,
-                                'details' => $details_str,
-                                'token_type' => TOKEN_TYPE_AUTH_CODE,
-                                'info' => json_encode($code_info)
-                               );
-                db_save_user_token($_SESSION['username'], $code, $fields);
-            }
-            if($is_token_flow) {
-                $code_info = create_token_info($_SESSION['username'], $confirmed_attribute_list, $GET, $rpfA);
-                $token = $code_info['name'];
-                unset($code_info['name']);
-                $fields = array('client' => $GET['client_id'],
-                                'issued_at' => $issue_at,
-                                'expiration_at' => $expiration_at,
-                                'token' => $token,
-                                'details' => $details_str,
-                                'token_type' => TOKEN_TYPE_ACCESS,
-                                'info' => json_encode($code_info)
-                               );
-                db_save_user_token($_SESSION['username'], $token, $fields);
-            }
+            $authorized = true;
         }
     }
-    else {
-        $error = array( 
-                        'error' => 'access_denied',
-                        'error_description' => 'User declined request'
-                      );
-        if($rpfA['state'])
-            $error['state'] = $rpfA['state'];
-    }
-
-    // TODO
-    // Handle response_type for code or token
-    if($error)
-        $url = "$rpep?" . http_build_query($error);
-    else {
-        $fragments = Array();
-        if($is_token_flow || $is_id_token) {
-            $fragments[] = "access_token=$token";
-            $fragments[] = 'token_type=Bearer';
-            if($offline_access)
-                $fragments[] = "refresh_token=$refresh_token_name";
-            $fragments[] = 'expires_in=3600';
-            if($GET['state'])
-                $fragments[] = "state={$GET['state']}";
-        }
-        if($is_id_token) {
-            $client_secret = NULL;
-            $db_client = db_get_client($client_id);
-            $sig_param = Array('alg' => 'none');
-            $sig_key = NULL;
-            if($db_client) {
-                $client_secret = $db_client['client_secret'];
-                if(!$db_client['id_token_signed_response_alg'])
-                    $db_client['id_token_signed_response_alg'] = 'RS256';
-                if(in_array($db_client['id_token_signed_response_alg'], Array('HS256', 'HS384', 'HS512', 'RS256', 'RS384', 'RS512'))) {
-                    $sig_param['alg'] = $db_client['id_token_signed_response_alg'];
-                    if(substr($db_client['id_token_signed_response_alg'], 0, 2) == 'HS') {
-                        $sig_key = $db_client['client_secret'];
-                    } elseif(substr($db_client['id_token_signed_response_alg'], 0, 2) == 'RS') {
-                        $sig_param['jku'] = OP_JWK_URL;
-                        $sig_param['kid'] = OP_SIG_KID;
-                        $sig_key = array('key_file' => OP_PKEY, 'password' => OP_PKEY_PASSPHRASE);
-                    }
-                } else {
-                    error_log("ID Token sig alg {{$db_client['id_token_signed_response_alg']} not supported");
-                    send_bearer_error('400', 'invalid_request', "ID Token Sig Alg {$db_client['id_token_signed_response_alg']} not supported");
-                }
-            }
-
-            error_log("ID Token Using Sig Alg {$sig_param['alg']}");
-            $id_token_obj = array(
-                                    'iss' => SERVER_ID,
-                                    'sub' => wrap_userid($db_client, $_SESSION['username']),
-                                    'aud' => array($client_id),
-                                    'exp' => time() + 5*(60),
-                                    'iat' => time(),
-                                    'ops' => session_id() . '.' . $_SESSION['ops']
-                                 );
-            if($GET['nonce'])
-                $id_token_obj['nonce'] = $GET['nonce'];
-            error_log("userid = " . $id_token_obj['sub'] . ' unwrapped = ' . unwrap_userid($id_token_obj['sub']));                                 
-                                 
-            if(isset($rpfA['claims']) && isset($rpfA['claims']['id_token'])) {
-                if(array_key_exists('auth_time', $rpfA['claims']['id_token']))
-                    $id_token_obj['auth_time'] = (int) $_SESSION['auth_time'];
-                    
-                if(array_key_exists('acr', $rpfA['claims']['id_token'])) {
-                    if(array_key_exists('values', $rpfA['claims']['id_token']['acr'])) {
-                        if(is_array($rpfA['claims']['id_token']['acr']['values']) && count($rpfA['claims']['id_token']['acr']['values']))
-                            $id_token_obj['acr'] = $rpfA['claims']['id_token']['acr']['values'][0];
-                    } else
-                        $id_token_obj['acr'] = '0';
-                        
-                }
-            }
-            if($sig_param['alg']) {
-                $bit_length = substr($sig_param['alg'], 2);
-                switch($bit_length) {
-                    case '384':
-                        $hash_alg = 'sha384';
-                        break;
-                    case '512':
-                        $hash_alg = 'sha512';
-                        break;                        
-                    case '256':
-                    default:
-                        $hash_alg = 'sha256';
-                    break;
-                }
-                $hash_length = (int) ((int) $bit_length / 2) / 8;
-                if($code) {
-                    error_log("************** got code");
-                    $id_token_obj['c_hash'] = base64url_encode(substr(hash($hash_alg, $code, true), 0, $hash_length));
-                }
-                if($token) {
-                    error_log("************** got token");
-                    $id_token_obj['at_hash'] = base64url_encode(substr(hash($hash_alg, $token, true), 0, $hash_length));
-                }
-                error_log("hash size = {$hash_length}");
-            }
-
-            $requested_id_token_claims = get_id_token_claims($rpfA);
-            if($requested_id_token_claims) {
-                $persona = db_get_user_persona($_SESSION['username'], $_POST['persona'])->toArray();
-                $persona_custom_claims = db_get_user_persona_custom_claims($_SESSION['username'], $_POST['persona']);
-                foreach($persona_custom_claims as $pcc) {
-                    $persona_claims[$pcc['claim']] = $pcc->PersonaCustomClaim[0]['value'];
-                }
-                foreach($confirmed_attribute_list as $key) {
-                    if(array_key_exists($key, $requested_id_token_claims)) {
-                        $prefix = substr($key, 0, 3);
-                        if($prefix == 'ax.') {
-                            $key = substr($key, 3);
-                            $mapped_key = $key;
-                            $kana = strpos($key, '_ja_kana_jp');
-                            $hani = strpos($key, '_ja_hani_jp');
-                            if($kana !== false)
-                                $mapped_key = substr($key, 0, $kana) . '#ja-Kana-JP';
-                            if($hani !== false)
-                                $mapped_key = substr($key, 0, $hani) . '#ja-Hani-JP';
-                            switch($mapped_key) {
-                                case 'address' :
-                                    $id_token_obj[$mapped_key] = array(
-                                                                        'formatted' => $persona[$key]
-                                                                      );
-                                    break;
-                                
-                                case 'email_verified' :
-                                case 'phone_number_verified' :
-                                    if($persona[$key])
-                                        $id_token_obj[$mapped_key] = true;
-                                    else
-                                        $id_token_obj[$mapped_key] = false;
-                                    break;
-                                
-                                default :
-                                    $id_token_obj[$mapped_key] = $persona[$key];
-                                    break;
-                            }
-                        } elseif($prefix == 'cx.') {
-                            $key = substr($key, 3);
-                            $id_token_obj[$key] = $persona_claims[$key];
-                        }
-                    }                    
-                }
-            }                                 
-            $id_token = jwt_sign($id_token_obj, $sig_param, $sig_key);
-
-            if(!$id_token) {
-                error_log("Unable to sign response for ID Token");
-                send_bearer_error('400', 'invalid_request', 'Unable to sign response for ID Token');
-            }
-
-            if($db_client['id_token_encrypted_response_alg'] && $db_client['id_token_encrypted_response_enc']) {
-                error_log("ID Token Encryption Algs {$db_client['id_token_encrypted_response_alg']} {$db_client['id_token_encrypted_response_enc']}");
-                list($alg, $enc) = array($db_client['id_token_encrypted_response_alg'], $db_client['id_token_encrypted_response_enc']);
-                if(in_array($alg, Array('RSA1_5', 'RSA-OAEP')) && in_array($enc, Array('A128GCM', 'A256GCM', 'A128CBC-HS256', 'A256CBC-HS512'))) {
-                    $jwk_uri = '';
-                    $encryption_keys = NULL;
-                    if($db_client['jwks_uri']) {
-                        $jwk = get_url($db_client['jwks_uri']);
-                        if($jwk) {
-                            $jwk_uri = $db_client['jwks_uri'];
-                            $encryption_keys = jwk_get_keys($jwk, 'RSA', 'enc', NULL);
-                            if(!$encryption_keys || !count($encryption_keys))
-                                $encryption_keys = NULL;
-                        }
-                    }
-                    if(!$encryption_keys)
-                        send_bearer_error('400', 'invalid_request', 'Unable to retrieve JWK key for encryption');
-                    $id_token = jwt_encrypt($id_token, $encryption_keys[0], false, NULL, $jwk_uri, NULL, $alg, $enc, false);
-                    if(!$id_token) {
-                        error_log("Unable to encrypt response for ID Token");
-                        send_bearer_error('400', 'invalid_request', 'Unable to encrypt response for ID Token');
-                    }
-
-                } else {
-                    error_log("ID Token Encryption Algs $alg and $enc not supported");
-                    send_bearer_error('400', 'invalid_request', 'Client registered unsupported encryption algs for ID Token');
-                }
-            }
-
-            $fragments[] = "id_token=$id_token";
-        }
-        $queries = Array();
-        if($is_code_flow) {
-            if(count($fragments) == 0) {
-                $queries[] = "code=$code";
-                if($GET['state'])
-                    $queries[] = "state={$GET['state']}";
-            } else {
-                array_unshift($fragments, "code=$code");
-            }
-        }
-
-        if(count($queries))
-            $query = '?' . implode('&', $queries);
-        if(count($fragments))
-            $fragment = '#' . implode('&', $fragments);
-        $url="$rpep{$query}{$fragment}";
-    }
-    if($_SESSION['persist']=='on') {
-        $username = $_SESSION['username'];
-        $auth_time = $_SESSION['auth_time'];
-        $ops = $_SESSION['ops'];
-        $login = $_SESSION['login'];
-        clean_session();
-        $_SESSION['lastlogin']=time();
-        $_SESSION['username']=$username;
-        $_SESSION['auth_time']=$auth_time;
-        $_SESSION['ops'] = $ops;
-        $_SESSION['login'] = $login;
-        $_SESSION['persist']='on';
+    $trusted_site = db_get_user_trusted_client($_SESSION['username'], $client_id);
+    if($_REQUEST['trust'] == 'always') {
+        log_debug("Trust = Always for %s", $client_id);
+        if(!$trusted_site)
+            db_save_user_trusted_client($_SESSION['username'], $client_id);
     } else {
-        session_destroy();
+        if($trusted_site)
+            db_delete_user_trusted_client($_SESSION['username'], $client_id);
     }
-    error_log('redirect to ' . $url . "\n");
-    header("Location:$url");
+
+    send_response($_SESSION['username'], $authorized);
+
 }
 
 function handle_test() {
-    $url = 'https://mgi1.gotdns.com:8443';
-    $provider = db_get_provider_by_url($url);
-    if($provider)
-        preprint($provider->toArray());
 }
 
 function handle_file($file)
@@ -2221,14 +1389,14 @@ function handle_client_registration() {
         send_error(NULL, 'invalid_client_metadata', 'Unexpected content type');
     }
     $json = file_get_contents('php://input');
-    error_log('Registration data ' . $json);
+    log_debug('Registration data %s', $json);
     if(!$json) {
-        error_log('No JSON body in registration');
+        log_error('No JSON body in registration');
         send_error(NULL, 'invalid_client_metadata', 'No JSON body');
     }
     $data = json_decode($json, true);
     if(!$data) {
-        error_log('Invalid JSON');
+        log_error('Invalid JSON');
         send_error(NULL, 'invalid_client_metadata', 'Invalid JSON');
     }
     
@@ -2237,6 +1405,7 @@ function handle_client_registration() {
                    'client_name' => NULL,
                    'logo_uri' => NULL,
                    'redirect_uris' => NULL,
+                   'post_logout_redirect_uris' => NULL,
                    'token_endpoint_auth_method' => NULL,
                    'policy_uri' => NULL,
                    'tos_uri' => NULL,
@@ -2275,7 +1444,7 @@ function handle_client_registration() {
                    );
     foreach($keys as $key => $default) {
         if(isset($data[$key])) {
-            if(in_array($key, array('contacts', 'redirect_uris', 'request_uris', 'grant_types', 'response_types', 'default_acr_values')))
+            if(in_array($key, array('contacts', 'redirect_uris', 'request_uris', 'post_logout_redirect_uris', 'grant_types', 'response_types', 'default_acr_values')))
                 $params[$key] = implode('|', $data[$key]);
             else
                 $params[$key] = $data[$key];
@@ -2284,15 +1453,19 @@ function handle_client_registration() {
     if(!check_redirect_uris($data['redirect_uris'])) {
         send_error(NULL, 'invalid_redirect_uri', 'redirect_uris is invalid');
     }
+    if(isset($data['post_logout_redirect_uris']) && !check_redirect_uris($data['post_logout_redirect_uris'])) {
+        send_error(NULL, 'invalid_post_logout_redirect_uri', 'post_logout_redirect_uris is invalid');
+    }
+
     if(isset($params['require_auth_time'])) {
          if($params['require_auth_time'])
             $params['require_auth_time'] = 1;
          else
             $params['require_auth_time'] = 0;
     }
-    error_log("client registration params = " . print_r($params, true));
+    log_debug("client registration params = %s", print_r($params, true));
     db_save_client($client_id, $params);
-    $reg_uri = OP_URL . '/client/' . $reg_client_uri_path;
+    $reg_uri = OP_ENDPOINT . '/client/' . $reg_client_uri_path;
 
     $client_json = Array(
                      'client_id' => $client_id,
@@ -2305,7 +1478,7 @@ function handle_client_registration() {
     header("Cache-Control: no-store");
     header("Pragma: no-cache");
     header('Content-Type: application/json');
-    $array_params = array('contacts', 'redirect_uris', 'request_uris', 'response_types', 'grant_types', 'default_acr_values');
+    $array_params = array('contacts', 'redirect_uris', 'request_uris', 'post_logout_redirect_uris', 'response_types', 'grant_types', 'default_acr_values');
     foreach($array_params as $aparam) {
         if(isset($params[$aparam]))
             $params[$aparam] = explode('|', $params[$aparam]);
@@ -2344,7 +1517,7 @@ function handle_client_operations() {
         unset($params['jwk_encryption_uri']);
         unset($params['x509_uri']);
         unset($params['x509_encryption_uri']);
-        $array_params = array('contacts', 'redirect_uris', 'request_uris', 'response_types', 'grant_types', 'default_acr_values');
+        $array_params = array('contacts', 'redirect_uris', 'request_uris', 'post_logout_redirect_uris', 'response_types', 'grant_types', 'default_acr_values');
         foreach($params as $key => $value) {
             if($value) {
                 if(in_array($key, $array_params))
@@ -2374,10 +1547,8 @@ function wrap_userid($dbclient, $userid) {
         return $userid;
     else {  // generate pairwise
         $str = gzencode($dbclient['id'] . ':' . $userid, 9);
-        error_log("zipped = " . bin2hex($str));
-
         $wrapped = bin2hex(aes_128_cbc_encrypt($str, '1234567890123456', '0101010101010101'));
-        error_log("wrapped = " . $wrapped);
+        log_debug("user id %s wrapped = %s", $userid, $wrapped);
         return $wrapped;
     }
 }
@@ -2388,11 +1559,10 @@ function unwrap_userid($userid) {
         return $userid;
     } else {
         $str = pack("H*" , $userid);
-        error_log("wrapped = " . $str);
-        
-        $wrapped_name = gzdecode(aes_128_cbc_decrypt($str, '1234567890123456', '0101010101010101'));
-        error_log("unwrapped = " . $wrapped_name);
-        $parts = explode(':', $wrapped_name);
+
+        $unwrapped_name = gzdecode(aes_128_cbc_decrypt($str, '1234567890123456', '0101010101010101'));
+        log_debug("wrapped %s unwrapped = %s", $str, $unwrapped_name);
+        $parts = explode(':', $unwrapped_name);
         return $parts[1];
     }
     return NULL;
@@ -2472,25 +1642,40 @@ function handle_session_info() {
 //    }
 //    echo json_encode($res);
 
-error_log("cookie = " . print_r($_COOKIE, true));
+    log_debug("cookie = %s", print_r($_COOKIE, true));
 
 
     header('Content-Type: application/json');
     setcookie('mycookie', 'hello', 0, '/');
     $res = array();
     if(session_start()) {
-        error_log('session = ' . print_r($_SESSION, true));
+        log_debug('session = %s', print_r($_SESSION, true));
         if($_SESSION['username'] && $_SESSION['login']) {
             $res = array(
                           'ops' => session_id() . '.' . $_SESSION['ops']
                         );
         } else {
-            error_log('session info user no longer logged in ' . print_r(_SESSION, true));
+            log_debug('session info user no longer logged in %s', print_r(_SESSION, true));
         }
     } else {
-        error_log('Unable to start session');
+        log_debug('Unable to start session');
     }
     echo json_encode($res);
+}
+
+function handle_end_session() {
+    $id_token = isset($_REQUEST['id_token']) ? $_REQUEST['id_token'] : '';
+    $post_logout_url = isset($_REQUEST['post_logout_redirect_uri']) ? $_REQUEST['post_logout_redirect_uri'] : '';
+    setcookie('ops', "", time() - 3600, '/');
+    session_destroy();
+    if($post_logout_url)
+        header('Location:' . $post_logout_url);
+}
+
+function handle_logout() {
+    clean_session();
+    setcookie('ops', "", time() - 3600, '/');
+    session_destroy();
 }
 
 
@@ -2724,20 +1909,31 @@ function send_response($username, $authorize = false)
             $id_token = sign_encrypt($id_token_obj, $sig, $alg, $enc, $jwk_uri, $client_secret, $cryptoError);
 
             if(!$id_token) {
-                log_error("Unable to sign encrypt response for ID Token {$cryptoError}");
+                log_error("Unable to sign encrypt response for ID Token %s", $cryptoError);
                 throw new OidcException('invalid_request', "idtoken crypto error {$cryptoError}");
             }
             $fragments[] = "id_token=$id_token";
         }
         $queries = Array();
+        $url_parts = parse_url($rpep);
+        $origin = sprintf("%s://%s%s", $url_parts['scheme'], $url_parts['host'], isset($url_parts['port']) ? ':' . $url_parts['port'] : '');
+        $salt = bin2hex(mcrypt_create_iv(16, MCRYPT_DEV_URANDOM));
+        log_debug("ss = sha256(%s%s%s%s).%s", $client_id, $origin, $_SESSION['ops'], $salt, $salt);
+        $session_state = hash('sha256', "{$client_id}{$origin}{$_SESSION['ops']}{$salt}") . '.' . $salt;
+
         if($is_code_flow) {
+            log_debug('url parts = %s', print_r($url_parts, true));
             if(count($fragments) == 0) {
                 $queries[] = "code=$code";
                 if($GET['state'])
                     $queries[] = "state={$GET['state']}";
+                $queries[] = "session_state={$session_state}";
             } else {
                 array_unshift($fragments, "code=$code");
+                $fragments[] = "session_state={$session_state}";
             }
+        } else {
+            $fragments[] = "session_state={$session_state}";
         }
 
         if(count($queries))
@@ -2789,10 +1985,11 @@ function sign_encrypt($payload, $sig, $alg, $enc, $jwks_uri = null, $client_secr
                 $sig_key = $client_secret;
             } elseif(substr($sig, 0, 2) == 'RS') {
                 $sig_param['kid'] = OP_SIG_KID;
+                $sig_param['jku'] = OP_JWK_URL;
                 $sig_key = array('key_file' => OP_PKEY, 'password' => OP_PKEY_PASSPHRASE);
             }
         } else {
-            log_error("sig alg {$sig} not supported");
+            log_error("sig alg %s not supported", $sig);
             if($cryptoError)
                 $cryptoError = 'error_sig';
             return null;
@@ -2801,7 +1998,7 @@ function sign_encrypt($payload, $sig, $alg, $enc, $jwks_uri = null, $client_secr
         if(!$jwt) {
             if($cryptoError)
                 $cryptoError = 'error_sig';
-            log_error("Unable to sign payload {$jwt}");
+            log_error("Unable to sign payload %s", $jwt);
             return null;
         }
 
@@ -2831,16 +2028,18 @@ function sign_encrypt($payload, $sig, $alg, $enc, $jwks_uri = null, $client_secr
             if(!$jwt) {
                 if($cryptoError)
                     $cryptoError = 'error_enc';
-                log_error("Unable to encrypt {jwt}");
+                log_error("Unable to encrypt %s", $jwt);
                 return null;
             }
             log_debug('jwe = %s', $jwt);
 
         } else {
             $cryptoError  = 'error_enc';
-            log_error("encryption algs not supported {$alg} {$enc}");
+            log_error("encryption algs not supported %s %s", $alg, $enc);
             return null;
         }
     }
     return $jwt;
 }
+
+

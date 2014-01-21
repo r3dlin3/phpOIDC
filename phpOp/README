@@ -22,3 +22,8 @@ File_ASN1       0.3.1   stable
 File_X509       0.3.1   stable
 Math_BigInteger 0.3.1   stable
 
+
+
+Composer
+
+-- Run composer install to install components

@@ -6,6 +6,7 @@
  * 
  * @property integer $id
  * @property string $name
+ * @property string $url
  * @property string $issuer
  * @property string $client_id
  * @property string $client_secret
@@ -79,7 +80,7 @@ abstract class BaseProvider extends Doctrine_Record
              'notnull' => true,
              'autoincrement' => false,
              ));
-        $this->hasColumn('issuer', 'string', 255, array(
+        $this->hasColumn('url', 'string', 255, array(
              'type' => 'string',
              'length' => 255,
              'fixed' => false,
@@ -88,6 +89,15 @@ abstract class BaseProvider extends Doctrine_Record
              'notnull' => true,
              'autoincrement' => false,
              ));
+        $this->hasColumn('issuer', 'string', 255, array(
+            'type' => 'string',
+            'length' => 255,
+            'fixed' => false,
+            'unsigned' => false,
+            'primary' => false,
+            'notnull' => true,
+            'autoincrement' => false,
+        ));
         $this->hasColumn('client_id', 'string', 255, array(
              'type' => 'string',
              'length' => 255,

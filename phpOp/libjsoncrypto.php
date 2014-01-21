@@ -478,14 +478,6 @@ function jwt_verify($jwt, $sig_hints = NULL) {
  * @return String Response Text. 
  */
 function get_url_contents($url) {
-//    $ch = curl_init();
-//    curl_setopt($ch, CURLOPT_URL, $url);
-//    curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
-//    curl_setopt($ch, CURLOPT_RETURNTRANSFER, 1);
-//    $responseText = curl_exec($ch);
-//    curl_close($ch);
-//    return $responseText;
-
     $ch = curl_init();
     curl_setopt($ch, CURLOPT_URL, $url);
     curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
@@ -494,6 +486,8 @@ function get_url_contents($url) {
     $http_status = curl_getinfo($ch, CURLINFO_HTTP_CODE);
     curl_close($ch);
     if($http_status != 200) {
+        if($responseText && substr($url,0, 7) == 'file://')
+            return $responseText;
         error_log("Unable to fetch URL $url status = $http_status");
         return NULL;
     } else {
