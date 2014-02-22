@@ -1,13 +1,18 @@
 <?php
 /**
- * op.php
+ * Copyright 2013 Nomura Research Institute, Ltd.
  *
- * This is a sample implementation of OpenID/AB1.0 draft12 provider.
- * License: GPL v.3
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
  *
- * @author Nat Sakimura (http://www.sakimura.org/)
- * @version 0.6
- * @create 2010-06-12
+ * http://www.apache.org/licenses/LICENSE-2.0
+
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
  */
 
 include_once("abconstants.php");
@@ -68,15 +73,13 @@ elseif($path_info == '/distributedinfo')
 elseif($path_info == '/login')
     handle_login();
 elseif($path_info == '/oplogin')
-    echo loginform('', '', true);
+    echo loginform('', '', null, true);
 elseif($path_info == '/confirm_userinfo')
     handle_confirm_userinfo();
 elseif($path_info == '/registration')
     handle_client_registration();
 elseif(strpos($path_info, '/client') !== false)
     handle_client_operations();
-elseif($path_info == '/sessioninfo')
-    handle_session_info();
 elseif($path_info == '/endsession')
     handle_end_session();
 elseif($path_info == '/logout')
@@ -93,13 +96,21 @@ exit();
  * Show Login form.
  * @return String HTML Login form.
  */
-function loginform($display_name = '', $user_id = '', $oplogin=false){
+function loginform($display_name = '', $user_id = '', $client = null, $oplogin=false){
    
    if($display_name && $user_id) {
        $userid_field = " <b>{$display_name}</b><input type='hidden' name='username_display' value='{$display_name}'><input type='hidden' name='username' value='{$user_id}'><br/>";
    } else {
        $userid_field = '<input type="text" name="username" value="alice">(or bob)';
    }
+    $logo_uri = '';
+    $policy_uri = '';
+    if($client) {
+        if($client['policy_uri'])
+            $policy_uri = sprintf('<a href="%s">Policy</a>', $client['policy_uri']);
+        if($client['logo_uri'])
+            $logo_uri = sprintf('<img src="%s">', $client['logo_uri']);
+    }
 
    $login_handler = $oplogin ? 'op' : '';
     
@@ -109,13 +120,13 @@ function loginform($display_name = '', $user_id = '', $oplogin=false){
   <meta name="viewport" content="width=320">
   </head>
   <body style="background-color:#FFEEEE;">
-  <h1>' . OP_SERVER_NAME . ' OP Login</h1>
+  <h1>' . OP_SERVER_NAME . ' OP Login</h1>' . "\n  " . $logo_uri . '
   <form method="POST" action="' . $_SERVER['SCRIPT_NAME'] . "/{$login_handler}login\">
   Username:" . $userid_field . '<br />
   Password:<input type="password" name="password" value="wonderland">(or underland)<br />
   <input type="checkbox" name="persist" checked>Keep me logged in. <br />
   <input type="submit">
-  </form>
+  </form>' . "\n  " . $policy_uri . '
   </body>
   </html>
   ';
@@ -386,14 +397,8 @@ function handle_auth() {
             if(!is_valid_registered_redirect_uri($client['redirect_uris'], $_REQUEST['redirect_uri']))
                 throw new OidcException('invalid_request', 'no matching redirect_uri');
         } else {
-            if($client['redirect_uris']) {
-                $uris = explode('|', $client['redirect_uris']);
-                if(count($uris) > 1)
-                    throw new OidcException('invalid_request', 'no redirect_uri, but multiple registered');
-                $_REQUEST['redirect_uri'] = $uris[0];
-                $_GET['redirect_uri'] = $uris[0];
-            } else
-                throw new OidcException('invalid_request', 'no redirect_uris registered');
+            $error_page = null;
+            throw new OidcException('invalid_request', 'no redirect_uris registered');
         }
 
         if(!isset($_REQUEST['response_type']))
@@ -521,14 +526,14 @@ function handle_auth() {
         log_debug("num prompt = %d %s", $num_prompts,  print_r($prompt, true));
         if($_SESSION['username']) {
             if(in_array('login', $prompt)){
-                echo loginform($requested_userid_display, $requested_userid);
+                echo loginform($requested_userid_display, $requested_userid, $client);
                 exit();
             }
             if(isset($_SESSION['rpfA']['max_age'])) {
                 if((time() - $_SESSION['auth_time']) > $_SESSION['rpfA']['max_age']) {
                     if(!$showUI)
                         throw new OidcException('interaction_required', 'max_age exceeded and prompt set to none');
-                    echo loginform($requested_userid_display, $requested_userid);
+                    echo loginform($requested_userid_display, $requested_userid, $client);
                     exit;
                 }
             }
@@ -537,7 +542,7 @@ function handle_auth() {
                     if(!$showUI)
                         throw new OidcException('interaction_required', 'requested account is different from logged in account, no UI requested');
                     else {
-                        echo loginform($requested_userid_display, $requested_userid);
+                        echo loginform($requested_userid_display, $requested_userid, $client);
                         exit;
                     }
                 }
@@ -556,7 +561,7 @@ function handle_auth() {
         } else {
             if(!$showUI)
                 throw new OidcException('interaction_required', 'unauthenticated and prompt set to none');
-            echo loginform($requested_userid_display, $requested_userid);
+            echo loginform($requested_userid_display, $requested_userid, $client);
         }
     }
     catch(OidcException $e) {
@@ -571,108 +576,119 @@ function handle_auth() {
 
 
 function is_client_authenticated() {
-    $auth_type = '';
-    if(isset($_REQUEST['client_assertion_type'])) {
-        $auth_type = $_REQUEST['client_assertion_type'];
-        log_debug("client_assertion_type auth %s", $auth_type);
-        if($auth_type != 'urn:ietf:params:oauth:client-assertion-type:jwt-bearer')
-            send_error(NULL, 'unauthorized_client', 'Unknown client_assertion_type');
-        $jwt_assertion = $_REQUEST['client_assertion'];
-        if(!isset($jwt_assertion))
-            send_error(NULL, 'unauthorized_client', 'client_assertion not available');
-        list($jwt_header, $jwt_payload, $jwt_sig) = jwt_to_array($jwt_assertion);
-        if($jwt_payload['iss'] != $jwt_payload['sub'])
-            send_error(NULL, 'invalid request', 'JWT iss and prn mismatch');
-        $client_id = $jwt_payload['iss'];
-        log_debug("header = %s\npayload = %s\n", print_r($jwt_header, true), print_r($jwt_payload, true));
-        log_debug("assertion = %s", $jwt_assertion);
-        $alg_prefix = substr($jwt_header['alg'], 0, 2);
-        if($alg_prefix == "HS")
-            $auth_type = 'client_secret_jwt';
-        elseif($alg_prefix == "RS")
-            $auth_type = 'private_key_jwt';
-        log_debug("auth_type = %s", $auth_type);
-    } elseif(isset($_SERVER['PHP_AUTH_USER'])) {
-        $client_id = $_SERVER['PHP_AUTH_USER'];
-        if(isset($_SERVER['PHP_AUTH_PW']))
-          $client_secret = $_SERVER['PHP_AUTH_PW'];
-        $auth_type = 'client_secret_basic';
-    } elseif(isset($_REQUEST['client_id'])) {
-        $client_id = $_REQUEST['client_id'];
-        if(isset($_REQUEST['client_secret']))
-          $client_secret = $_REQUEST['client_secret'];
-        $auth_type = 'client_secret_post';
-    } else
-        send_error(NULL, 'invalid_request', 'Unknown authentication type');
 
-    if(!$client_id || !($client_secret || $jwt_assertion))
-         send_error(NULL, 'invalid_client', 'no client or secret');
+    try {
+        $auth_type = '';
+        if(isset($_REQUEST['client_assertion_type'])) {
+            $auth_type = $_REQUEST['client_assertion_type'];
+            log_debug("client_assertion_type auth %s", $auth_type);
+            if($auth_type != 'urn:ietf:params:oauth:client-assertion-type:jwt-bearer')
+                throw new OidcException('unauthorized_client', 'Unknown client_assertion_type');
+            $jwt_assertion = $_REQUEST['client_assertion'];
+            if(!isset($jwt_assertion))
+                throw new OidcException('unauthorized_client', 'client_assertion not available');
+            list($jwt_header, $jwt_payload, $jwt_sig) = jwt_to_array($jwt_assertion);
+            if($jwt_payload['iss'] != $jwt_payload['sub'])
+                throw new OidcException('invalid request', 'JWT iss and prn mismatch');
+            $client_id = $jwt_payload['iss'];
+            log_debug("header = %s\npayload = %s\n", print_r($jwt_header, true), print_r($jwt_payload, true));
+            log_debug("assertion = %s", $jwt_assertion);
+            $alg_prefix = substr($jwt_header['alg'], 0, 2);
+            if($alg_prefix == "HS")
+                $auth_type = 'client_secret_jwt';
+            elseif($alg_prefix == "RS")
+                $auth_type = 'private_key_jwt';
+            log_debug("auth_type = %s", $auth_type);
+        } elseif(isset($_SERVER['PHP_AUTH_USER'])) {
+            $client_id = $_SERVER['PHP_AUTH_USER'];
+            if(isset($_SERVER['PHP_AUTH_PW']))
+                $client_secret = $_SERVER['PHP_AUTH_PW'];
+            $auth_type = 'client_secret_basic';
+        } elseif(isset($_REQUEST['client_id'])) {
+            $client_id = $_REQUEST['client_id'];
+            if(isset($_REQUEST['client_secret']))
+                $client_secret = $_REQUEST['client_secret'];
+            $auth_type = 'client_secret_post';
+        } else
+            throw new OidcException('invalid_request', 'Unknown authentication type');
 
-    // perform client_id and client_secret check
-    $db_client = db_get_client($client_id);
-    if($db_client) {
-        log_debug("{$db_client['client_id']}\n{$db_client['x509_uri']}\n{$db_client['token_endpoint_auth_method']}");
-        $db_client = $db_client->toArray();
-        $token_endpoint_auth_method = $db_client['token_endpoint_auth_method'];
-        if(!$token_endpoint_auth_method)
-            $token_endpoint_auth_method = 'client_secret_basic';
-    } else send_error(NULL, 'unauthorized_client', 'client_id not found');
+        if(!$client_id || !($client_secret || $jwt_assertion))
+            throw new OidcException('invalid_client', 'no client or secret');
 
-    if($token_endpoint_auth_method != $auth_type)
-        send_error(NULL, 'unauthorized_client', "mismatched token endpoint auth type {$auth_type} != {$db_client['token_endpoint_auth_method']}");
+        // perform client_id and client_secret check
+        $db_client = db_get_client($client_id);
+        if($db_client) {
+            log_debug("%s\n%s", $db_client['client_id'], $db_client['token_endpoint_auth_method']);
+            $db_client = $db_client->toArray();
+            $token_endpoint_auth_method = $db_client['token_endpoint_auth_method'];
+            if(!$token_endpoint_auth_method)
+                $token_endpoint_auth_method = 'client_secret_basic';
+        } else throw new OidcException('unauthorized_client', 'client_id not found');
 
-    switch($token_endpoint_auth_method) {
-        case 'client_secret_basic':
-        case 'client_secret_post' :
-            $client_authenticated = db_check_client_credential($client_id, $client_secret);
-            log_info("authenticating client_id %s with client_secret %s\nResult : %d", $client_id, $client_secret, $client_authenticated);
-        break;
+        if($token_endpoint_auth_method != $auth_type)
+            throw new OidcException('unauthorized_client', "mismatched token endpoint auth type {$auth_type} != {$db_client['token_endpoint_auth_method']}");
 
-        case 'client_secret_jwt' :
-            $sig_verified = jwt_verify($jwt_assertion, $db_client['client_secret']);
-            if(substr($_SERVER['PATH_INFO'], 0, 2) == '/1')
-                $audience = OP_ENDPOINT . '/1/token';
-            else
-                $audience = OP_ENDPOINT . '/token';
-            $aud_verified = (is_array($jwt_payload['aud']) ? $jwt_payload['aud'][0] : $jwt_payload['aud'])  == $audience;
-            $now = time();
-            $time_verified = ($now >= $jwt_payload['iat']) && ($now <= $jwt_payload['exp']);
-            if(!$sig_verified)
-                log_info("Sig not verified");
-            if(!$aud_verified)
-                log_info("Aud not verified %s != %s", $jwt_payload['aud'], $audience);
-            if(!$time_verified)
-                log_info('Time not verified');
-            $client_authenticated = $sig_verified && $aud_verified && $time_verified;
-            log_info(" client_secret_jwt Result : %d %d %d %d", $client_authenticated, $sig_verified, $aud_verified, $time_verified);
-        break;
+        switch($token_endpoint_auth_method) {
+            case 'client_secret_basic':
+            case 'client_secret_post' :
+                $client_authenticated = db_check_client_credential($client_id, $client_secret);
+                log_info("authenticating client_id %s with client_secret %s\nResult : %d", $client_id, $client_secret, $client_authenticated);
+                break;
 
-        case 'private_key_jwt' :
-            $pubkeys = array();
-            if($db_client['jwks_uri'])
-                $pubkeys['jku'] = $db_client['jwks_uri'];
-            $sig_verified = jwt_verify($jwt_assertion, $pubkeys);
-            if(substr($_SERVER['PATH_INFO'], 0, 2) == '/1')
-                $audience = OP_ENDPOINT . '/1/token';
-            else
-                $audience = OP_ENDPOINT . '/token';
-            $aud_verified = (is_array($jwt_payload['aud']) ? $jwt_payload['aud'][0] : $jwt_payload['aud']) == $audience;
-            $now = time();
-            $time_verified = ($now >= $jwt_payload['iat']) && ($now <= $jwt_payload['exp']);
-            if(!$sig_verified)
-                log_info("Sig not verified");
-            if(!$aud_verified)
-                log_info('Aud not verified');
-            if(!$time_verified)
-                log_info('Time not verified');
-            $client_authenticated = $sig_verified && $aud_verified && $time_verified;
-            log_info("private_key_jwt Result : %d %d %d %d", $client_authenticated, $sig_verified, $aud_verified, $time_verified);
-        break;
+            case 'client_secret_jwt' :
+                $sig_verified = jwt_verify($jwt_assertion, $db_client['client_secret']);
+                if(substr($_SERVER['PATH_INFO'], 0, 2) == '/1')
+                    $audience = OP_ENDPOINT . '/1/token';
+                else
+                    $audience = OP_ENDPOINT . '/token';
+                $aud_verified = (is_array($jwt_payload['aud']) ? $jwt_payload['aud'][0] : $jwt_payload['aud'])  == $audience;
+                $now = time();
+                $time_verified = ($now >= $jwt_payload['iat']) && ($now <= $jwt_payload['exp']);
+                if(!$sig_verified)
+                    log_info("Sig not verified");
+                if(!$aud_verified)
+                    log_info("Aud not verified %s != %s", $jwt_payload['aud'], $audience);
+                if(!$time_verified)
+                    log_info('Time not verified');
+                $client_authenticated = $sig_verified && $aud_verified && $time_verified;
+                log_info(" client_secret_jwt Result : %d %d %d %d", $client_authenticated, $sig_verified, $aud_verified, $time_verified);
+                break;
 
-        default :
-            send_error(NULL, 'invalid_request', 'Unknown authentication type');
+            case 'private_key_jwt' :
+                $pubkeys = array();
+                if($db_client['jwks_uri'])
+                    $pubkeys['jku'] = $db_client['jwks_uri'];
+                $sig_verified = jwt_verify($jwt_assertion, $pubkeys);
+                if(substr($_SERVER['PATH_INFO'], 0, 2) == '/1')
+                    $audience = OP_ENDPOINT . '/1/token';
+                else
+                    $audience = OP_ENDPOINT . '/token';
+                $aud_verified = (is_array($jwt_payload['aud']) ? $jwt_payload['aud'][0] : $jwt_payload['aud']) == $audience;
+                $now = time();
+                $time_verified = ($now >= $jwt_payload['iat']) && ($now <= $jwt_payload['exp']);
+                if(!$sig_verified)
+                    log_info("Sig not verified");
+                if(!$aud_verified)
+                    log_info('Aud not verified');
+                if(!$time_verified)
+                    log_info('Time not verified');
+                $client_authenticated = $sig_verified && $aud_verified && $time_verified;
+                log_info("private_key_jwt Result : %d %d %d %d", $client_authenticated, $sig_verified, $aud_verified, $time_verified);
+                break;
+
+            default :
+                throw new OidcException('invalid_request', 'Unknown authentication type');
+        }
+        return $client_authenticated;
     }
-    return $client_authenticated;
+    catch(OidcException $e) {
+        send_error(NULL, $e->error_code, $e->desc);
+    }
+    catch(Exception $e) {
+        send_error(NULL, '', $e->getMessage() . ' ' . $e->getTraceAsString());
+    }
+    return false;
+
 }
 
 
@@ -850,6 +866,7 @@ function handle_token() {
             if($id_token)
                 $token_response['id_token'] = $id_token;
             log_debug('token response = %s',  print_r($token_response, true));
+            $auth_code->delete();
             echo json_encode($token_response);
         } else
             send_error(NULL, 'invalid_client', 'invalid client credentials');
@@ -1102,8 +1119,6 @@ function handle_distributedinfo() {
 
     try
     {
-        //TODO
-        // Add stuff here
         $token = $_REQUEST['access_token'];
         if(!$token) {
             $token = get_bearer_token();
@@ -1119,7 +1134,6 @@ function handle_distributedinfo() {
             throw new BearerException('invalid_request', 'Invalid Client ID');
         $tinfo = json_decode($token['info'], true);
         $userinfo = Array();
-//    $persona = Array();
         $persona = db_get_user_persona($tinfo['u'], $tinfo['p'])->toArray();
         $scopes = explode(' ', $tinfo['g']['scope']);
         if(in_array('openid', $scopes)) {
@@ -1254,8 +1268,6 @@ function handle_distributedinfo() {
 
 
 function handle_login() {
-    // check Proof of Posession (pop)
-    $pop=0;
     $username=preg_replace('/[^\w=_@]/','_',$_POST['username']);
     try {
         if(db_check_credential($username,$_POST['password'])){
@@ -1380,116 +1392,135 @@ function check_redirect_uris($uris) {
 }
 
 function handle_client_registration() {
-    $tmp_headers = apache_request_headers();
-    foreach ($tmp_headers as $header => $value) {
-        $headers[strtolower($header)] = $value;
-    }
-    if(!$headers['content-type'] || $headers['content-type'] != 'application/json') {
-        echo print("unexpected content type");
-        send_error(NULL, 'invalid_client_metadata', 'Unexpected content type');
-    }
-    $json = file_get_contents('php://input');
-    log_debug('Registration data %s', $json);
-    if(!$json) {
-        log_error('No JSON body in registration');
-        send_error(NULL, 'invalid_client_metadata', 'No JSON body');
-    }
-    $data = json_decode($json, true);
-    if(!$data) {
-        log_error('Invalid JSON');
-        send_error(NULL, 'invalid_client_metadata', 'Invalid JSON');
-    }
-    
-    $keys = Array( 'contacts' => NULL,
-                   'application_type' => NULL,
-                   'client_name' => NULL,
-                   'logo_uri' => NULL,
-                   'redirect_uris' => NULL,
-                   'post_logout_redirect_uris' => NULL,
-                   'token_endpoint_auth_method' => NULL,
-                   'policy_uri' => NULL,
-                   'tos_uri' => NULL,
-                   'jwks_uri' => NULL,
-                   'sector_identifier_uri' => NULL,
-                   'subject_type' => NULL,
-                   'request_object_signing_alg' => NULL,
-                   'userinfo_signed_response_alg' => NULL,
-                   'userinfo_encrypted_response_alg' => NULL,
-                   'userinfo_encrypted_response_enc' => NULL,
-                   'id_token_signed_response_alg' => NULL,
-                   'id_token_encrypted_response_alg' => NULL,
-                   'id_token_encrypted_response_enc' => NULL,
-                   'default_max_age' => NULL,
-                   'require_auth_time' => NULL,
-                   'default_acr_values' => NULL,
-                   'initiate_login_uri' => NULL,
-                   'post_logout_redirect_uri' => NULL,
-                   'request_uris' => NULL, 
-                   'response_types' => NULL, 
-                   'grant_types' => NULL, 
-                   
-                  );
-
-    $client_id = base64url_encode(mcrypt_create_iv(16, MCRYPT_DEV_URANDOM));
-    $client_secret = base64url_encode(mcrypt_create_iv(10, MCRYPT_DEV_URANDOM));
-    $reg_token = base64url_encode(mcrypt_create_iv(10, MCRYPT_DEV_URANDOM));
-    $reg_client_uri_path = base64url_encode(mcrypt_create_iv(16, MCRYPT_DEV_URANDOM));
-    $params = Array(
-                     'client_id' => $client_id,
-                     'client_id_issued_at' => time(),                     
-                     'client_secret' => $client_secret,
-                     'client_secret_expires_at' => 0,
-                     'registration_access_token' => $reg_token,
-                     'registration_client_uri_path' => $reg_client_uri_path
-                   );
-    foreach($keys as $key => $default) {
-        if(isset($data[$key])) {
-            if(in_array($key, array('contacts', 'redirect_uris', 'request_uris', 'post_logout_redirect_uris', 'grant_types', 'response_types', 'default_acr_values')))
-                $params[$key] = implode('|', $data[$key]);
-            else
-                $params[$key] = $data[$key];
+    try {
+        $tmp_headers = apache_request_headers();
+        foreach ($tmp_headers as $header => $value) {
+            $headers[strtolower($header)] = $value;
         }
-    }
-    if(!check_redirect_uris($data['redirect_uris'])) {
-        send_error(NULL, 'invalid_redirect_uri', 'redirect_uris is invalid');
-    }
-    if(isset($data['post_logout_redirect_uris']) && !check_redirect_uris($data['post_logout_redirect_uris'])) {
-        send_error(NULL, 'invalid_post_logout_redirect_uri', 'post_logout_redirect_uris is invalid');
-    }
+        if(!$headers['content-type'] || $headers['content-type'] != 'application/json') {
+            throw new OidcException('invalid_client_metadata', 'Unexpected content type');
+        }
+        $json = file_get_contents('php://input');
+        log_debug('Registration data %s', $json);
+        if(!$json) {
+            log_error('No JSON body in registration');
+            throw new OidcException('invalid_client_metadata', 'No JSON body');
+        }
+        $data = json_decode($json, true);
+        if(!$data) {
+            log_error('Invalid JSON');
+            throw new OidcException('invalid_client_metadata', 'Invalid JSON');
+        }
 
-    if(isset($params['require_auth_time'])) {
-         if($params['require_auth_time'])
-            $params['require_auth_time'] = 1;
-         else
-            $params['require_auth_time'] = 0;
-    }
-    log_debug("client registration params = %s", print_r($params, true));
-    db_save_client($client_id, $params);
-    $reg_uri = OP_ENDPOINT . '/client/' . $reg_client_uri_path;
+        $keys = Array( 'contacts' => NULL,
+            'application_type' => NULL,
+            'client_name' => NULL,
+            'logo_uri' => NULL,
+            'redirect_uris' => NULL,
+            'post_logout_redirect_uris' => NULL,
+            'token_endpoint_auth_method' => NULL,
+            'policy_uri' => NULL,
+            'tos_uri' => NULL,
+            'jwks_uri' => NULL,
+            'sector_identifier_uri' => NULL,
+            'subject_type' => NULL,
+            'request_object_signing_alg' => NULL,
+            'userinfo_signed_response_alg' => NULL,
+            'userinfo_encrypted_response_alg' => NULL,
+            'userinfo_encrypted_response_enc' => NULL,
+            'id_token_signed_response_alg' => NULL,
+            'id_token_encrypted_response_alg' => NULL,
+            'id_token_encrypted_response_enc' => NULL,
+            'default_max_age' => NULL,
+            'require_auth_time' => NULL,
+            'default_acr_values' => NULL,
+            'initiate_login_uri' => NULL,
+            'request_uris' => NULL,
+            'response_types' => NULL,
+            'grant_types' => NULL,
 
-    $client_json = Array(
-                     'client_id' => $client_id,
-                     'client_secret' => $client_secret,
-                     'registration_access_token' => $reg_token,
-                     'registration_client_uri' => $reg_uri,
-                     'client_id_issued_at' => time(),
-                     'client_secret_expires_at' => 0
-                   );
-    header("Cache-Control: no-store");
-    header("Pragma: no-cache");
-    header('Content-Type: application/json');
-    $array_params = array('contacts', 'redirect_uris', 'request_uris', 'post_logout_redirect_uris', 'response_types', 'grant_types', 'default_acr_values');
-    foreach($array_params as $aparam) {
-        if(isset($params[$aparam]))
-            $params[$aparam] = explode('|', $params[$aparam]);
+        );
+
+        $client_id = base64url_encode(mcrypt_create_iv(16, MCRYPT_DEV_URANDOM));
+        $client_secret = base64url_encode(mcrypt_create_iv(10, MCRYPT_DEV_URANDOM));
+        $reg_token = base64url_encode(mcrypt_create_iv(10, MCRYPT_DEV_URANDOM));
+        $reg_client_uri_path = base64url_encode(mcrypt_create_iv(16, MCRYPT_DEV_URANDOM));
+        $params = Array(
+            'client_id' => $client_id,
+            'client_id_issued_at' => time(),
+            'client_secret' => $client_secret,
+            'client_secret_expires_at' => 0,
+            'registration_access_token' => $reg_token,
+            'registration_client_uri_path' => $reg_client_uri_path
+        );
+        foreach($keys as $key => $default) {
+            if(isset($data[$key])) {
+                if(in_array($key, array('contacts', 'redirect_uris', 'request_uris', 'post_logout_redirect_uris', 'grant_types', 'response_types', 'default_acr_values')))
+                    $params[$key] = implode('|', $data[$key]);
+                else
+                    $params[$key] = $data[$key];
+            }
+        }
+        if(!check_redirect_uris($data['redirect_uris'])) {
+            throw new OidcException('invalid_redirect_uri', 'redirect_uris is invalid');
+        }
+        if(isset($data['post_logout_redirect_uris']) && !check_redirect_uris($data['post_logout_redirect_uris'])) {
+            throw new OidcException('invalid_client_metadata', 'post_logout_redirect_uris is invalid');
+        }
+        if($data['sector_identifier_uri']) {
+            $sectorUris = get_url($data['sector_identifier_uri']);
+            if(!$sectorUris)
+                throw new OidcException('invalid_client_metadata', 'blank sector_identifier_uri contents');
+            $sectorJson = json_decode($sectorUris, true);
+            log_debug("sectorUris = %s redirectUris = %s", print_r($sectorJson, true), print_r($data['redirect_uris'], true));
+            if(!is_array($sectorJson))
+                throw new OidcException('invalid_client_metadata', 'invalid sector_identifier_uri contents');
+            if(count($data['redirect_uris']) != count($sectorJson))
+                throw new OidcException('invalid_client_metadata', 'sector_identifier_uri count mismatch');
+            foreach($sectorJson as $sectorId) {
+                if(!in_array($sectorId, $data['redirect_uris']))
+                    throw new OidcException('invalid_client_metadata', 'sector_identifier_uri contents mismatch');
+            }
+        }
+        if(isset($params['require_auth_time'])) {
+            if($params['require_auth_time'])
+                $params['require_auth_time'] = 1;
+            else
+                $params['require_auth_time'] = 0;
+        }
+        log_debug("client registration params = %s", print_r($params, true));
+        db_save_client($client_id, $params);
+        $reg_uri = OP_ENDPOINT . '/client/' . $reg_client_uri_path;
+
+        $client_json = Array(
+            'client_id' => $client_id,
+            'client_secret' => $client_secret,
+            'registration_access_token' => $reg_token,
+            'registration_client_uri' => $reg_uri,
+            'client_id_issued_at' => time(),
+            'client_secret_expires_at' => 0
+        );
+        header("Cache-Control: no-store");
+        header("Pragma: no-cache");
+        header('Content-Type: application/json');
+        $array_params = array('contacts', 'redirect_uris', 'request_uris', 'post_logout_redirect_uris', 'response_types', 'grant_types', 'default_acr_values');
+        foreach($array_params as $aparam) {
+            if(isset($params[$aparam]))
+                $params[$aparam] = explode('|', $params[$aparam]);
+        }
+        if(isset($params['require_auth_time']))
+            $params['require_auth_time'] = $params['require_auth_time'] == 1;
+        echo json_encode(array_merge($client_json, $params));
     }
-    if(isset($params['require_auth_time']))
-        $params['require_auth_time'] = $params['require_auth_time'] == 1;
-    echo json_encode(array_merge($client_json, $params));
+    catch(OidcException $e) {
+        send_error(NULL, $e->error_code, $e->desc);
+    }
+    catch(Exception $e) {
+        send_error(NULL, 'invalid_client_metadata', $e->desc . ' ' . $e->getTraceAsString());
+    }
 }
 
 function handle_client_operations() {
-    // TODO test this part
     try
     {
         $token = $_REQUEST['access_token'];
@@ -1568,100 +1599,6 @@ function unwrap_userid($userid) {
     return NULL;
 }
 
-
-function handle_session_info() {
-//    header('Content-Type: application/json');
-//    $id_token = $_REQUEST['idtoken'];
-//    $id_token = 'eyJhbGciOiJSUzI1NiIsIng1dSI6Imh0dHBzOlwvXC9vcGVuaWQuZ290ZG5zLmNvbVwvYWJvcFwvb3AucGVtIn0.eyJpc3MiOiJodHRwczpcL1wvb3BlbmlkLmdvdGRucy5jb21cL2Fib3AiLCJ1c2VyX2lkIjoiYWxpY2UiLCJhdWQiOiJSTldyd0kzOFhBNnZpbzhuUWNtT3BRIiwiZXhwIjoxMzQzNjk2OTMwLCJpYXQiOjEzNDM2OTY2MzAsIm9wcyI6IjkyOWQ1MTcyZTQzMDE2OTRhOTJiYzlkMmE3MWE3MmMzLmM4N2I5YWU1MmM5NGE3ZWNiOWExNzk3NjE5Y2QwZmFhIiwibm9uY2UiOiJmMjNkNzU5YzkyZGM0MTNkNzE3MzU2OTM3NmE1YmE4MCIsImNfaGFzaCI6Ilh4SUxtVjZWdGpySzNabTJSZXB1LWcifQ.Bd_p1DaE7g4S6SPFiiFEeH1RdwVHZDHK8ch9iFPk4x8VRXJiprgLEXJDfMFCO-C6xUjViTG6A9fRIjbxDveNBR8M88QQc1IPFChH6ZguHZiS_DoeWVCjtv7QjeBchT-fz3HifpG6yWeLHT84bjfnrpL7-lPJjmfuD9lEsjJSTio';
-//    error_log("id_token = {$id_token}");
-//    
-//    list($header, $payload, $sig) = jwt_to_array($id_token);
-//    $client_id = $payload['aud'];
-//    if(!$client_id) {
-//        error_log("handle_session_info missing client_id");
-//        exit;
-//    }
-//    $client = db_get_client($client_id);
-//    if(!$client) {
-//        error_log("handle_session_info invalid client_id");
-//        exit;
-//    }
-//
-//    if(substr($header['alg'], 0, 2) == 'HS') {
-//        $verified = jwt_verify($id_token, $client['client_secret']);
-//    } elseif(substr($header['alg'], 0, 2) == 'RS') {
-//        $pub = file_get_contents(OP_PCERT);
-//        $verified = jwt_verify($id_token, $pub);
-//    } elseif($header['alg'] == 'none')
-//        $verified = true;
-//        
-//    error_log("{$header['alg']} Signature Verification = $verified");
-//    if(!$verified) {
-//        error_log('idtoken sig failed');
-//        exit;
-//    }
-//
-//    error_log("id token payload = " . print_r($payload, true));
-//
-//    $ops_str = $payload['ops'];
-//    if(!$ops_str) {
-//        error_log('no ops string');
-//        exit;
-//    }
-//    
-//    $res = array();
-//    $index = strrpos($ops_str, '.');
-//    if($index !== false) {
-//        $session_id = substr($ops_str, 0, $index);
-//        $ops = substr($ops_str, $index+1);
-//        error_log("session id = {$session_id} ops = {$ops}");
-//        if(!$session_id || !$ops) {
-//            error_log('invalid session id or ops');
-//            exit;
-//        }
-////        session_id($session_id);
-//        if(session_start()) {
-//            error_log('session = ' . print_r($_SESSION, true));
-//            if($_SESSION['username'] && $_SESSION['login']) {
-//                $res = array(
-//                              'sessionid' => $session_id,
-//                              'ops' => $_SESSION['ops']
-//                            );
-//                if($_SESSION['ops'] != $ops)
-//                    error_log("ops changed from {$ops} to {$_SESSION['ops']}");
-//                else
-//                    error_log("ops {$ops} unchanged");
-//            } else {
-//                error_log('session info user no longer logged in');
-//            }
-//        } else {
-//            error_log('Unable to start session');
-//        }
-//    } else {
-//        error_log('invalid ops string');
-//    }
-//    echo json_encode($res);
-
-    log_debug("cookie = %s", print_r($_COOKIE, true));
-
-
-    header('Content-Type: application/json');
-    setcookie('mycookie', 'hello', 0, '/');
-    $res = array();
-    if(session_start()) {
-        log_debug('session = %s', print_r($_SESSION, true));
-        if($_SESSION['username'] && $_SESSION['login']) {
-            $res = array(
-                          'ops' => session_id() . '.' . $_SESSION['ops']
-                        );
-        } else {
-            log_debug('session info user no longer logged in %s', print_r(_SESSION, true));
-        }
-    } else {
-        log_debug('Unable to start session');
-    }
-    echo json_encode($res);
-}
 
 function handle_end_session() {
     $id_token = isset($_REQUEST['id_token']) ? $_REQUEST['id_token'] : '';

@@ -1,3 +1,20 @@
+/**
+ * Copyright 2013 Nomura Research Institute, Ltd.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ * http://www.apache.org/licenses/LICENSE-2.0
+
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+
 /*
 DROP DATABASE IF EXISTS `abop_db`;
 CREATE DATABASE `abop_db`;
@@ -48,16 +65,6 @@ CREATE TABLE `account` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8;
 
 
---
--- Dumping data for table `accounts`
---
-
--- LOCK TABLES `accounts` WRITE;
--- !40000 ALTER TABLE `accounts` DISABLE KEYS */;
--- INSERT INTO `accounts` VALUES (1,1,'alice','b6263bb14858294c08e4bdfceba90363e10d72b4'),(2,1,'bob','cc8684eed2b6544e89242558df73a7208c9391b4');
--- !40000 ALTER TABLE `accounts` ENABLE KEYS */;
--- UNLOCK TABLES;
-
 
 --
 -- Table structure for table `clients`
@@ -106,16 +113,6 @@ CREATE TABLE `client` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8;
 
 
-
---
--- Dumping data for table `personas`
---
-
--- LOCK TABLES `personas` WRITE;
--- /*!40000 ALTER TABLE `personas` DISABLE KEYS */;
--- INSERT INTO `personas` VALUES (1,1,'Default','Alice Yamada','ãƒ¤ãƒžãƒ€ã‚¢ãƒªã‚µ','å±±ç”°äºœç†ç´—','Alice','ã‚¢ãƒªã‚µ','äºœç†ç´—','Yamada','ãƒ¤ãƒžãƒ€','å±±ç”°','','','','Standard Alice','=Alice1','http://www.wonderland.com/alice','https://mgi1.gotdns.com:8443/abop/profiles/smiling_woman.jpg','http://www.wonderland.com','alice@wonderland.com',1,'female','2000-01-01','some zone','some locale','1-81-234-234234234','123 wonderland way','2010-12-10 14:00:00'),(2,1,'Shopping','Shopping Alice Yamada','ãƒ¤ãƒžãƒ€ã‚¢ãƒªã‚µ','å±±ç”°äºœç†ç´—','Alice','ã‚¢ãƒªã‚µ','äºœç†ç´—','Yamada','ãƒ¤ãƒžãƒ€','å±±ç”°','','','','Shopping Alice',NULL,'http://www.wonderland.com/alice','https://mgi1.gotdns.com:8443/abop/profiles/smiling_woman.jpg','http://www.wonderland.com','alice@wonderland.com',1,'female','2000-01-01','some zone','some locale','1-81-234-234234234','123 wonderland way','2010-12-10 14:00:00'),(3,1,'Browsing','Alice Yamada','ãƒ¤ãƒžãƒ€ã‚¢ãƒªã‚µ','å±±ç”°äºœç†ç´—','Alice','ã‚¢ãƒªã‚µ','äºœç†ç´—','Yamada','ãƒ¤ãƒžãƒ€','å±±ç”°','','','','Browsing Alice','BAlice','http://www.wonderland.com/alice','https://mgi1.gotdns.com:8443/abop/profiles/smiling_woman.jpg','http://www.wonderland.com','alice@wonderland.com',1,'female','2000-01-01','some zone','some locale','1-81-234-234234234','123 wonderland way','2010-12-10 14:00:00'),(4,2,'Default','Bob Ikeda','ã‚¤ã‚±ãƒ€ãƒœãƒ–','æ± ç”°ä¿å¤«','Bob','ãƒœãƒ–','ä¿å¤«','Ikeda','ã‚¤ã‚±ãƒ€','æ± ç”°','',NULL,NULL,'Standard Bob','','http://www.underland.com/bob','http://www.costumzee.com/users/Barbaro-2770-full.gif','http://www.underland.com','bob@underland.com',1,'male','1980-11-11','some zone','some locale','1-81-234-234234234','456 underland ct.','2010-12-10 14:00:00'),(5,2,'Shopping','Bob Ikeda','ã‚¤ã‚±ãƒ€ãƒœãƒ–','æ± ç”°ä¿å¤«','Bob','ãƒœãƒ–','ä¿å¤«','Ikeda','ã‚¤ã‚±ãƒ€','æ± ç”°',NULL,NULL,NULL,'Shopping Bob',NULL,'http://www.underland.com/bob','http://www.costumzee.com/users/Barbaro-2770-full.gif','http://www.underland.com','bob@underland.com',1,'male','1980-11-11','some zone','some locale','1-81-234-234234234','456 underland ct.','2010-12-10 14:00:00'),(6,1,'test','','','','','','','','','','','','','',NULL,'','','','',0,'','1980-11-11','','','','','0000-00-00 00:00:00');
--- /*!40000 ALTER TABLE `personas` ENABLE KEYS */;
--- UNLOCK TABLES;
 
 --
 -- Table structure for table `providers`

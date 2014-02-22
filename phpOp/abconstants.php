@@ -1,8 +1,20 @@
 <?php
+/**
+ * Copyright 2013 Nomura Research Institute, Ltd.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ * http://www.apache.org/licenses/LICENSE-2.0
 
-// define('OP_SERVER_NAME', 'openid.gotdns.com');
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
 
-// define('RP_SERVER_NAME', 'mgi1.gotdns.com');
 
 define("LOGFILE", dirname($_SERVER['SCRIPT_FILENAME']) . '/app.log');
 define("LOGLEVEL", 'DEBUG');
@@ -158,15 +170,7 @@ define("RP_ENC_KID", 'ABRP-00');
 * OP endpoints and metadata
 *
 */
-
-// define("SERVER_ID", OP_URL);
-
-
-//define('OP_INDEX_PAGE', OP_URL . '/op.php');
-//define('OP_INDEX_PAGE', 'https://mgi1.gotdns.com:8443/abop/op.php');
-//define('OP_INDEX_PAGE', OP_URL . '/op.php');
 define('OP_INDEX_PAGE', OP_URL . '/index.php');
-
 define('OP_AUTH_EP', OP_INDEX_PAGE . '/auth');
 define('OP_TOKEN_EP', OP_INDEX_PAGE . '/token');
 define('OP_USERINFO_EP', OP_INDEX_PAGE . '/userinfo');
@@ -178,13 +182,10 @@ define('OP_SESSIONINFO_EP', OP_INDEX_PAGE . '/sessioninfo');
 * RP endpoints and Metadata
 *
 */
-//define('RP_INDEX_PAGE', RP_URL . '/index.php');
-//define('RP_INDEX_PAGE', 'https://mgi1.gotdns.com:8443/abrp/index.php');
 define('RP_INDEX_PAGE', RP_URL . '/index.php');
 define('RP_REDIRECT_URI', RP_INDEX_PAGE . '/callback');
 define('RP_AUTHCHECK_REDIRECT_URI', RP_URL . '/authcheck.php/authcheckcb');
 define('RP_POST_LOGOUT_REDIRECT_URI', RP_INDEX_PAGE . '/logoutcb');
-
 define('RP_CLIENT_ID', RP_URL . '/');
 define('RP_CLIENT_SECRET', 'shared_secret_is_not_so_secure');
 
