@@ -1,16 +1,20 @@
 <?php
 /**
- * OpenID Connect 1.0 Standard 
+ * Copyright 2013 Nomura Research Institute, Ltd.
  *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
  *
- * This is a sample implementation of OpenID/AB 1.0d06.
- * For the informatiion about the spec, go to https://openid4.us/
- * License: GPL v.3
- *
- * @author Nat Sakimura (http://www.sakimura.org/)
- * @version 0.6
- * @create 2010-06-12
-**/
+ * http://www.apache.org/licenses/LICENSE-2.0
+
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
 include_once("abconstants.php");
 include_once('libjsoncrypto.php');
 include_once("base64url.php");
@@ -76,7 +80,7 @@ header('Content-Type: text/html; charset=utf-8');
 <!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01//EN" "http://www.w3.org/TR/html4/strict.dtd">
 <html>
 <head>
-<title>OpenID Connect Standard Draft 21 RP</title>
+<title>OpenID Connect Core Draft 17 RP</title>
 <meta name = "viewport" content = "width = device-width, initial-scale = 1, user-scalable = yes">
 
 <style type="text/css" title="currentStyle">
@@ -87,7 +91,6 @@ header('Content-Type: text/html; charset=utf-8');
 <script type="text/javascript" src="<?php echo RP_PATH?>/js/jquery-1.4.2.min.js"></script>
 <script type="text/javascript" src="<?php echo RP_PATH?>/js/jquery-ui-1.8.6.custom.min.js"></script>
 <script type="text/javascript" language="javascript" src="<?php echo RP_PATH?>/media/js/jquery.dataTables.js"></script>
-<script type="text/javascript" language="javascript" src="<?php echo RP_PATH?>/js/base64.js"></script>
 <script type='text/javascript' charset="utf-8">//<![CDATA[
   
 <?php 
@@ -137,7 +140,7 @@ header('Content-Type: text/html; charset=utf-8');
 <img src="<?php echo RP_PATH?>/openid_connect.png" style="width:100%">
 
 <div style="background-color:#dddddd;">
-OpenID Connect Standard Draft 21
+OpenID Connect Core Draft 17
 <form name='op_form' method='post' action='<? echo RP_INDEX_PAGE ?>/start'>
 Select your OP : &nbsp;
 <select size="1" name='provider'>
@@ -1107,13 +1110,13 @@ function register_client($url, $options = array()) {
             'contacts' => array('me@example.com'),
             'application_type' => 'web',
             'client_name' => 'ABRP-17',
-            'logo_uri' => RP_URL . '/logo.jpg',
+            'logo_uri' => RP_URL . '/media/logo.png',
             'redirect_uris' => array(RP_REDIRECT_URI, RP_AUTHCHECK_REDIRECT_URI),
             'post_logout_redirect_uris' => array(RP_POST_LOGOUT_REDIRECT_URI),
             'jwks_uri' => RP_JWK_URL,
-            'sector_identifier_uri' => RP_INDEX_PAGE . '/sector_id',
-//                  'policy_uri' => RP_INDEX_PAGE . '/policy',
-            'request_uris' => $request_uris,
+//            'sector_identifier_uri' => RP_INDEX_PAGE . '/sector_id',
+            'policy_uri' => RP_INDEX_PAGE . '/policy',
+//            'request_uris' => $request_uris,
             'grant_types' => array('authorization_code', 'implicit'),
             'response_types' => array('code', 'token', 'id_token', 'code token', 'code id_token', 'id_token token', 'code id_token token')
 
@@ -1362,6 +1365,10 @@ function get_update_options($request, $provider_info = array()) {
             $update['require_auth_time'] = true;
         else
             $update['require_auth_time'] = false;
+    }
+
+    if($update['default_acr_values']) {
+        $update['default_acr_values'] = explode(' ', $update['default_acr_values']);
     }
 
     
@@ -2111,7 +2118,7 @@ $tabs = <<<EOF
                     $req_obj_enc_options
                     <tr><td colspan='3'><p/></td></tr>
                     <tr><td>Default Max Age</td><td>&nbsp;&nbsp;</td>
-                        <td><input type='text' name='default_max_age'></td>
+                        <td><input type='text' name='default_max_age' value='{$_SESSION['default_max_age']}'></td>
                     </tr>
                     <tr><td colspan='3'><p/></td></tr>
                     <tr><td>Require Auth Time</td><td>&nbsp;&nbsp;</td>
@@ -2119,7 +2126,7 @@ $tabs = <<<EOF
                     </tr>
                     <tr><td colspan='3'><p/></td></tr>
                     <tr><td>Default ACR</td><td>&nbsp;&nbsp;</td>
-                        <td><input type='text' name='default_acr_values'></td>
+                        <td><input type='text' name='default_acr_values' value='{$_SESSION['default_acr_values']}'></td>
                     </tr>
                 </table>
 
@@ -2171,18 +2178,22 @@ function handle_reqfile() {
     exit;
 }
 
+
+function double_quote_string($str) {
+    return sprintf("\"%s\"", $str);
+}
+
 function handle_sector_id() {
     header("Content-Type: application/json");
 
-    $redirect_uri = RP_REDIRECT_URI;
-$redirect_uris = <<<EOF
-[ 
-  "$redirect_uri"
+    $redirect_uris = implode(",\n", array_map('double_quote_string', array(RP_REDIRECT_URI, RP_AUTHCHECK_REDIRECT_URI)));
+    $redirect_uris = <<<EOF
+[
+$redirect_uris
 ]
 EOF;
 
     echo $redirect_uris;
-
 }
 
 
@@ -2235,9 +2246,10 @@ if(isset($_SESSION['session_state']) && isset($_SESSION['provider']['check_sessi
 
     <iframe id='rpFrame' name='rpFrame' width='0' height='0' src='<?php echo RP_PROTOCOL . RP_SERVER_NAME . RP_PORT . RP_PATH?>/rpframe.php' style='visibility:hidden' >
     </iframe>
-
+    <!--
     <input type='button' value='Start' onclick="startRPTimers()"><br/>
     <input type='button' value='Stop' onclick="stopRPTimers()"><br/>
+    -->
 
 <?php
 } else {
@@ -2246,9 +2258,5 @@ if(isset($_SESSION['session_state']) && isset($_SESSION['provider']['check_sessi
 ?>
 
 
-
 </body>
 </html>
-<?php
-
-?>
