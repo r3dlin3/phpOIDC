@@ -65,7 +65,6 @@ function jwt_sign($data, $sig_param, $keys) {
     $jwt_payload = base64url_encode(is_array($data) ? json_encode($data) : $data);
     $jwt_header = '';
     $header = array();
-//    $header['typ'] = 'JWT';
     $sig = NULL;
     if(array_key_exists('alg', $sig_param)) {
         $alg = strtoupper($sig_param['alg']);
@@ -85,7 +84,6 @@ function jwt_sign($data, $sig_param, $keys) {
                         $priv_key_data = file_get_contents($keys['key_file']);
                         $pkey = openssl_pkey_get_private($priv_key_data, $keys['password']);
                         if($pkey) {
-//                            echo "data = {$jwt_header}.{$jwt_payload}\n";
                             digest_sign_data("{$jwt_header}.{$jwt_payload}" , $pkey, $sig, 'sha' . substr($alg, 2));
                             openssl_pkey_free($pkey);
                         }
@@ -100,7 +98,6 @@ function jwt_sign($data, $sig_param, $keys) {
                 if(isset($sig_param['kid']))
                     $header['kid'] = $sig_param['kid'];
                 $jwt_header = base64url_encode(json_encode($header));
-//                echo "data = {$jwt_header}.{$jwt_payload}\n";
                 $sig = hash_hmac('sha' . substr($alg, 2), "{$jwt_header}.{$jwt_payload}", $keys, true);
                 break;
 
@@ -169,17 +166,9 @@ function jwk_get_rsa_use_key($jwk, $use = NULL, $kid = NULL) {
         return NULL;
     }
     $rsa_key = $keys[0];
-//    foreach($keys as $key) {
-//        if(!strcmp($key['use'], $use)) {
-//            $rsa_key = $key;
-//            break;
-//        }
-//    }
     $rsa = NULL;
     if($rsa_key) {
-//        printf("use key = " . print_r($rsa_key, true));
         if(isset($rsa_key['n']) && isset($rsa_key['e'])) {
-            error_log("using JWK = " . print_r($rsa_key, true));
             $modulus = new Math_BigInteger('0x' . bin2hex(base64url_decode($rsa_key['n'])), 16);
             $exponent = new Math_BigInteger('0x' . bin2hex(base64url_decode($rsa_key['e'])), 16);
             $rsa = new Crypt_RSA();
@@ -189,7 +178,6 @@ function jwk_get_rsa_use_key($jwk, $use = NULL, $kid = NULL) {
             $rsa->k = strlen($rsa->modulus->toBytes());
         } else if(isset($rsa_key['x5c'])) {
             $key_contents = "-----BEGIN CERTIFICATE-----\n" . $rsa_key['x5c'][0] . "\n-----END CERTIFICATE-----\n";
-            error_log("using x5c = " . print_r($rsa_key['x5c'][0], true));
             $key = openssl_pkey_get_public($key_contents);
             if($key) {
                 $details = openssl_pkey_get_details($key);
@@ -232,10 +220,7 @@ function parse_key_hints($sig_hints) {
                 $pem = get_url_contents($value);
                 if($pem) {
                     $pems[] = $pem;
-                    error_log("added {$value} to pems");
                 }
-                else
-                    error_log("Unable to fetch {$value}");
             break;
             
             case 'pem': // x509 file or directory
@@ -253,10 +238,7 @@ function parse_key_hints($sig_hints) {
                 $jwk = get_url_contents($value);
                 if($jwk) {
                     $jwks[] = $jwk;
-                    error_log("added {$value} to JWKs");
                 }
-                else
-                    error_log("Unable to fetch {$value}");
             break;
             
             case 'jwk': // JWK 
@@ -312,18 +294,15 @@ function jwt_verify($jwt, $sig_hints = NULL) {
                 $json_obj['header'] = array($matches[1][0]);
                 $json_obj['payload'] = $matches[2][0];
                 $json_obj['signature'] = array($matches[3][0]);
-//                var_dump($json_obj);
             }
         }
     }
     else return false;
     if(!$json_obj) {
-        echo "no JSON obj\n";
         return false;
     }
         
     if(!isset($json_obj['header']) || !isset($json_obj['payload']) || !isset($json_obj['signature'])) {
-        echo "incorrect signature json object\n";
         return false;
     }
     
@@ -358,41 +337,32 @@ function jwt_verify($jwt, $sig_hints = NULL) {
                     }
                     else {
                         $pems[] = $sig_hints;
-                        error_log("Added to pems");
                     }
                 }
                 if(isset($header['x5u']) ) {
-                    error_log("^^^^^^^^^^^ x5u header = {$header['x5u']} ");
                     $pem = get_url_contents($header['x5u']);
                     if($pem) {
                         $pems[] = $pem;
-                        error_log("Added x5u {$header['x5u']}");
                     }
                 }
                 if(isset($header['x5c']) ) {
                     $pems[] = $header['x5c'];
-                    error_log("Added x5c {$header['x5c']}");
                 }
                 if(isset($header['jku']) ) {
-                    error_log("^^^^^^^^^^^ jku header = {$header['jku']} ");
                     $jwk = get_url_contents($header['jku']);
                     if($jwk) {
                         $jwks[] = $jwk;
-                        error_log("Added jwk {$header['jku']}");
                     }
                 }                
                 if(isset($header['jwk']) ) {
                     $jwks[] = $header['jwk'];
-                    error_log("Added jwk {$header['jwk']}");
-                }                
+                }
 
                 $verified = false;
                 $num_pems = count($pems);
                 foreach($pems as $pem) {
-                    error_log("############### using pem $pem");
                     $pubkeyid = openssl_get_publickey($pem);
                     if(!$pubkeyid) {
-                        echo "Unable to get public key id\n";
                         return false;
                     }
                     $status = digest_verify_data("{$json_obj['header'][$i]}.{$json_obj['payload']}", $sig, $pubkeyid, 'sha' . substr($header['alg'], 2) );
@@ -404,7 +374,6 @@ function jwt_verify($jwt, $sig_hints = NULL) {
                 }
                 if(!$verified) {
                     foreach($jwks as $jwk) {
-                        error_log("############### using jwk $jwk");
                         $rsa = jwk_get_rsa_sig_key($jwk, $header['kid']);
                         if($rsa) {
                             $rsa->setHash('sha' . substr($header['alg'], 2));
@@ -455,7 +424,6 @@ function jwt_verify($jwt, $sig_hints = NULL) {
                     $kid = $hint['secret'];
                 }
                 if(!$kid) {
-                    echo "no kid\n";
                     return false;
                 }
                 
@@ -465,8 +433,6 @@ function jwt_verify($jwt, $sig_hints = NULL) {
                 if(strcmp($sig, $calculated_sig) == 0) {
                     $verified = true;
                     break;
-                } else {
-                    // return false;
                 }
             }
             if(!$verified) {
@@ -503,10 +469,8 @@ function get_url_contents($url) {
     if($http_status != 200) {
         if($responseText && substr($url,0, 7) == 'file://')
             return $responseText;
-        error_log("Unable to fetch URL $url status = $http_status");
         return NULL;
     } else {
-        error_log("GOT $responseText");
         return $responseText;
     }
 }
@@ -531,7 +495,6 @@ function aes_cbc_encrypt($data, $key, $key_strength, $iv=NULL) {
 	if(!$iv) {
 	    $iv = str_repeat(chr(0), 16);  // initialize to 16 byte string of "0"s
 	} elseif($iv && $iv_size != strlen($iv)) {
-	    echo "Incorrect IV size.\n";
 	    return NULL;
 	}
 
@@ -592,7 +555,6 @@ function aes_cbc_decrypt($data, $key, $key_strength, $iv=NULL) {
 	if(!$iv) {
 	    $iv = str_repeat(chr(0), $iv_size);  // initialize to 16 byte string of "0"s
 	} elseif($iv && $iv_size != strlen($iv)) {
-	    echo "Incorrect IV size.\n";
 	    return NULL;
 	}
 
@@ -707,9 +669,6 @@ function encrypt_with_key($data, $key_file,  $is_private_key=true, $pass_phrase=
             $key = openssl_pkey_get_public($key_contents);
     }
     if(!$key && !$is_jwk) {
-        $msg = sprintf("encrypt_with_key -Unable to get %s key\n%s\n", $is_private_key ? 'private' : 'public', $key_file);
-        error_log($msg);
-        // printf("keycontents = %s\n", $key_contents);
         return false;
     }
     $cipherText = NULL;
@@ -734,7 +693,6 @@ function encrypt_with_key($data, $key_file,  $is_private_key=true, $pass_phrase=
                         if($is_jwk) {
                             if($key_contents['x5c']) {
                                 $cert = "-----BEGIN CERTIFICATE-----\n" . $key_contents['x5c'][0] . "\n-----END CERTIFICATE-----\n";
-                                error_log("using x5c = " . print_r($key_contents, true));
                                 $key = openssl_pkey_get_public($cert);
                                 if($key) {
                                     $details = openssl_pkey_get_details($key);
@@ -745,7 +703,6 @@ function encrypt_with_key($data, $key_file,  $is_private_key=true, $pass_phrase=
                     
                             } else {
                                 if(isset($key_contents['n']) && isset($key_contents['e'])) {
-                                    error_log("using JWK = " . print_r($key_contents, true));
                                     $modulus = new Math_BigInteger('0x' . bin2hex(base64url_decode($key_contents['n'])), 16);
                                     $exponent = new Math_BigInteger('0x' . bin2hex(base64url_decode($key_contents['e'])), 16);
                                     $rsa->modulus = $modulus;
@@ -758,7 +715,6 @@ function encrypt_with_key($data, $key_file,  $is_private_key=true, $pass_phrase=
                             
                         } else {
                             $details = openssl_pkey_get_details($key);
-                            // print_r($details);
                             $pubkey = $details['key'];
                             if(!$rsa->loadkey($pubkey, CRYPT_RSA_PUBLIC_FORMAT_PKCS1))
                                 return false;
@@ -784,7 +740,6 @@ function encrypt_with_key($data, $key_file,  $is_private_key=true, $pass_phrase=
                 if($is_jwk) {
                     if($key_contents['x5c']) {
                         $cert = "-----BEGIN CERTIFICATE-----\n" . $key_contents['x5c'][0] . "\n-----END CERTIFICATE-----\n";
-                        error_log("using x5c = " . print_r($key_contents, true));
                         $key = openssl_pkey_get_public($cert);
                         if($key) {
                             $details = openssl_pkey_get_details($key);
@@ -795,7 +750,6 @@ function encrypt_with_key($data, $key_file,  $is_private_key=true, $pass_phrase=
             
                     } else {
                         if(isset($key_contents['n']) && isset($key_contents['e'])) {
-                            error_log("using JWK = " . print_r($key_contents, true));
                             $modulus = new Math_BigInteger('0x' . bin2hex(base64url_decode($key_contents['n'])), 16);
                             $exponent = new Math_BigInteger('0x' . bin2hex(base64url_decode($key_contents['e'])), 16);
                             $rsa->modulus = $modulus;
@@ -808,7 +762,6 @@ function encrypt_with_key($data, $key_file,  $is_private_key=true, $pass_phrase=
                     
                 } else {
                     $details = openssl_pkey_get_details($key);
-                    // print_r($details);
                     $pubkey = $details['key'];
                     if(!$rsa->loadkey($pubkey, CRYPT_RSA_PUBLIC_FORMAT_PKCS1))
                         return false;
@@ -828,7 +781,6 @@ function encrypt_with_key($data, $key_file,  $is_private_key=true, $pass_phrase=
         break;
     }
     if(!$status) {
-        error_log("encrypt failed = " . openssl_error_string());
         if($use_openssl)
             openssl_free_key($key);
         return false;
@@ -851,14 +803,12 @@ function decrypt_with_key($data, $key_file, $is_private_key=true, $pass_phrase=N
         $key_contents = file_get_contents($key_file);
     } else
         $key_contents = $key_file;
-    // printf("key contents = %s\nis_private_key = %d\n", $key_contents, $is_private_key);
     if($is_private_key)
         $key = openssl_pkey_get_private($key_contents, $pass_phrase);
     else 
         $key = openssl_pkey_get_public($key_contents);
     if(!$key) {
         $msg = sprintf("decrypt_with_key - Unable to get %s key\n%s\n", $is_private_key ? 'private' : 'public', $key_file);
-        error_log($msg);
         return false;
     }
     $plainText = NULL;
@@ -882,7 +832,6 @@ function decrypt_with_key($data, $key_file, $is_private_key=true, $pass_phrase=N
                 }
                 else {
                     $details = openssl_pkey_get_details($key);
-                    // print_r($details);
                     $pubkey = $details['key'];
                     if(!$rsa->loadkey($pubkey, CRYPT_RSA_PUBLIC_FORMAT_PKCS1))
                         return false;
@@ -922,7 +871,6 @@ function decrypt_with_key($data, $key_file, $is_private_key=true, $pass_phrase=N
     }
     
     if(!$status) {
-        error_log("decrypt failed = " . openssl_error_string());
         if($use_openssl)
             openssl_free_key($key);
         return false;
@@ -934,16 +882,13 @@ function decrypt_with_key($data, $key_file, $is_private_key=true, $pass_phrase=N
 function jwt_encrypt($data, $key_file, $is_private_key=false, $pass_phrase=NULL, $public_cert_url=NULL, $enc_key=NULL, $alg='RSA1_5', $enc='A256CBC-HS512', $zip = true) {
     if(is_file($key_file)) {
         if(!file_exists($key_file)) {
-            printf("key file %s not found\n", $key_file);
             return false;
         }
     }
     if(!$alg || !in_array($alg, array('RSA1_5', 'RSA-OAEP'))) {
-        error_log("invalid alg {$alg}");
         return false;
     }
     if(!$enc || !in_array($enc, array('A128CBC-HS256', 'A128GCM', 'A256CBC-HS512', 'A256GCM'))) {
-        error_log("invalid enc {$enc}");
         return false;
     }
     $is_gcm = false;
@@ -989,8 +934,6 @@ function jwt_encrypt($data, $key_file, $is_private_key=false, $pass_phrase=NULL,
             $cmk=$enc_key;
         else
             $cmk = mcrypt_create_iv($key_length, MCRYPT_DEV_URANDOM);
-
-        
         $iv = mcrypt_create_iv(16, MCRYPT_DEV_URANDOM );
         $encoded_enc_key = base64url_encode(encrypt_with_key($cmk, $key_file, $is_private_key, $pass_phrase, $alg));
 
@@ -1010,41 +953,29 @@ function jwt_encrypt($data, $key_file, $is_private_key=false, $pass_phrase=NULL,
         if($iv)
             $encoded_iv =  base64url_encode($iv);
         $encoded_header = base64url_encode(json_encode($header));
-        error_log("CMK = " . bin2hex($cmk) . " len = {$key_length} $enc");
-        
+
         $cek = NULL;
         $cik = NULL;
         if($is_gcm) {
             $K = $cmk;
-            error_log("GCM K = " . bin2hex($K));
             $P = $input_data;
             $IV = $iv;
             $A = "{$encoded_header}";
             $t = 128;
 
-            // printf("K = %s\nIV = %s\nP = %s\nA = %s\nt = %d\n", bin2hex($K), bin2hex($IV), bin2hex($P), bin2hex($A), $t);
             list($C, $T) = gcm_encrypt($K, $IV, $P, $A, $t);
             if(!$C)
                 return false;
             $enc_data = base64url_encode($C);
             $integrity_hash = base64url_encode($T);
         } else {
-//            $cek = jweKDF($key_strength, $cmk, $enc, '', '', 'Encryption');
-//            $cik = jweKDF($int_key_strength, $cmk, $enc, '', '', 'Integrity');
             $cik = substr($cmk, 0, $key_length / 2);
             $cek = substr($cmk, $key_length / 2);
-            error_log("{$int_key_strength} CIK = " . bin2hex($cik));
-            error_log("{$key_strength} CEK = " . bin2hex($cek));
             $A = "{$encoded_header}";
-            error_log("A = {$A}");
             $al = pack('NN', 0, strlen($A) * 8);
-            error_log("AL len = " . strlen($A) . " packed = " . bin2hex($al));
             $encrypted_data = aes_cbc_encrypt($input_data, $cek, $key_strength, $iv);
             $enc_data = base64url_encode($encrypted_data);
             $integrity_hash = base64url_encode(substr(hash_hmac('sha' . $int_key_strength, "{$A}{$iv}{$encrypted_data}{$al}", $cik, true), 0, $key_length / 2));
-            $buffer = sprintf("encrypted_payload = %s iv = %s int = %s", bin2hex($encrypted_data), bin2hex($iv), bin2hex(base64url_decode($integrity_hash)));
-            error_log($buffer);
-            error_log("hash input = " . bin2hex("{$A}{$iv}{$encypted_data}{$al}"));
         }
 
     }
@@ -1056,7 +987,6 @@ function jwt_encrypt($data, $key_file, $is_private_key=false, $pass_phrase=NULL,
 function jwt_decrypt($jwe, $key_file, $is_private_key=true, $pass_phrase=NULL) {
     $parts = explode('.', $jwe);
     $rsa = null;
-//    print_r($obj);
     if(count($parts) != 5) {
         return false;
     }
@@ -1074,7 +1004,6 @@ function jwt_decrypt($jwe, $key_file, $is_private_key=true, $pass_phrase=NULL) {
     }
     elseif(is_file($key_file)) {
         if(!file_exists($key_file)) {
-            printf("key file %s not found\n", $key_file);
             return false;
         }
     }
@@ -1083,9 +1012,6 @@ function jwt_decrypt($jwe, $key_file, $is_private_key=true, $pass_phrase=NULL) {
     $iv = $obj[2];
     $encrypted_payload = $obj[3];
     $integrity = $obj[4];
-    // printf("header %s\nencrypted_cek %s\nencrypted_payload %s\n", $obj[0], bin2hex($obj[1]), bin2hex($obj[2]));
-    $buffer = sprintf("encrypted_payload = %s iv = %s int = %s", bin2hex($encrypted_payload), bin2hex($iv), bin2hex($integrity));
-    error_log($buffer);
     if(!isset($header['enc']) || !isset($header['alg']))
         return false;
     if(!in_array($header['enc'], array('A128CBC-HS256', 'A128GCM', 'A256CBC-HS512', 'A256GCM')))
@@ -1097,7 +1023,6 @@ function jwt_decrypt($jwe, $key_file, $is_private_key=true, $pass_phrase=NULL) {
     if(!in_array($header['alg'], array('RSA1_5', 'RSA-OAEP')))
         return false;
         
-    // printf("iv = %s\n", bin2hex($iv));
     if($rsa) {
         if($header['alg'] == 'RSA-OAEP') {
             $rsa->setEncryptionMode(CRYPT_RSA_ENCRYPTION_OAEP);
@@ -1109,11 +1034,8 @@ function jwt_decrypt($jwe, $key_file, $is_private_key=true, $pass_phrase=NULL) {
     } else
         $key = decrypt_with_key($encrypted_cek, $key_file, $is_private_key, $pass_phrase, $header['alg']);
     if(!$key) {
-        error_log("Unable to decrypt enc_key\n");
         return false;
     }
-    error_log("CMK = " . bin2hex($key));
-    // printf("cmk = %s\n", bin2hex($key));
 
     $int_key_strength = 512;
     switch($header['enc']) {
@@ -1146,23 +1068,16 @@ function jwt_decrypt($jwe, $key_file, $is_private_key=true, $pass_phrase=NULL) {
         $A = "{$parts[0]}";
         $T = $integrity;
         
-        // printf("K = %s\nIV = %s\nC = %s\nA = %s\nT = %s\n", bin2hex($K), bin2hex($IV), bin2hex($C), bin2hex($A), bin2hex($T));
         list($plainText, $result) = gcm_decrypt($K, $IV, $C, $A, $T);
         if(!$plainText)
             return false;
     } else {
         if(strlen($key) != $key_length) {
-            error_log("incorrect key size $key != $key_length");
             return false;
         }
-//        $cek = jweKDF($key_strength, $key, $header['enc'], $header['epu'], $header['epv'], 'Encryption');
-//        $cik = jweKDF($int_key_strength, $key, $header['enc'], $header['epu'], $header['epv'], 'Integrity');
         $cik = substr($key, 0, $key_length / 2);
         $cek = substr($key, $key_length / 2);
-        error_log("{$int_key_strength} CIK = " . bin2hex($cik));
-        error_log("{$key_strength} CEK = " . bin2hex($cek));
-        // printf("cek = %s\ncik = %s\n", bin2hex($cek), bin2hex($cik));
-        
+
         switch($header['enc']) {
             case 'A256CBC-HS512':
                 $plainText = aes_256_cbc_decrypt($encrypted_payload, $cek, $iv);
@@ -1174,25 +1089,17 @@ function jwt_decrypt($jwe, $key_file, $is_private_key=true, $pass_phrase=NULL) {
                 
             case 'ECDH-ES':
             default:
-                printf("Unsupported enc_type %s\n", $obj['enc_type']);
                 return false;
         }
         $A = "{$parts[0]}";
         $al = pack('NN', 0, strlen($A) * 8);
-        error_log("A = {$A}");
-        error_log("AL len = " . strlen($A) . " packed = " . bin2hex($al));
-        error_log("hash input = " . bin2hex("{$A}{$iv}{$encrypted_payload}{$al}"));
         $payload_integrity = substr(hash_hmac('sha' . $int_key_strength, "{$A}{$iv}{$encrypted_payload}{$al}", $cik, true), 0, $key_length / 2);
         if(strcmp($integrity, $payload_integrity)) {
             $msg = sprintf("int mismatched\ngot      %s\nexpected %s\nplain %s\n", bin2hex($integrity), bin2hex($payload_integrity), bin2hex($plainText));
-            error_log($msg);
             return false;
         }
 
     }
-    
-    // printf("plaintext = %s\n", bin2hex($plainText));
-    
     if(isset($header['zip']) && $header['zip'] == 'DEF')
         $plainText = gzinflate($plainText);
     
@@ -1418,14 +1325,12 @@ function digest_verify_data($data, $signature, $key, $alg='sha256') {
     $plainText = NULL;
     $status = openssl_public_decrypt($signature, $plainText, $key);
     if(!$status) {
-        error_log("openssl_public_decrypt status = " . $status);
         return false;
     }
     
     $hash = hash($alg, $data, true);
     $sign_data = ${$alg . '_header'};
     if(!$sign_data) {
-        error_log("no sign_data");
         return false;
     }
     $sign_data .= $hash;
@@ -1433,7 +1338,6 @@ function digest_verify_data($data, $signature, $key, $alg='sha256') {
         return true;
     }
     else {
-        error_log('expecting ' . bin2hex($sign_data) . 'got ' . bin2hex($plainText));
         return false;
     }
 }
@@ -1463,7 +1367,6 @@ function jwt_to_array($jwt) {
             }
         }
     }
-    error_log("json_obj = " . print_r($json_obj, true));
     return $json_obj;
 }
 
@@ -1604,17 +1507,11 @@ function aes_key_wrap($input, $KEK) {
     if($key_length < $input_len * 8) {
         die("aes_key_wrap insufficient key length for input\n");
     }
-    
-    // The mcrypt_generic_init function initializes the cipher by specifying both
-    // the key and the IV.  The length of the key determines whether we're doing
-    // 128-bit, 192-bit, or 256-bit encryption.
-    // Let's do 256-bit encryption here:
-    
+
     $iv_size = mcrypt_enc_get_iv_size($cipher);
     $iv = str_repeat(chr(0), 16);  // initialize to 16 byte string of "0"s
     $s = mcrypt_generic_init($cipher, $KEK, $iv);
     if( ($s < 0) || ($s === false)) {
-         echo  "mcrypt init error $s";
          return NULL;
     }
 
@@ -1631,31 +1528,15 @@ function aes_key_wrap($input, $KEK) {
         }
     }
     
-    printf("%20s %20s %20s\n", 'A', 'R1', 'R2');
     for($j = 0; $j < 6; $j++) {
         for($i = 1; $i <= $n; $i++) {
-            printf("%20s %20s %20s\n", bin2hex($A), bin2hex($R[1]), bin2hex($R[2]));
             $B = mcrypt_generic($cipher, $A . $R[$i]);
             $R[$i] = substr($B, -8);
             $A = substr($B, 0, 8);
-            printf("%20s %20s %20s\n", bin2hex($A), bin2hex($R[1]), bin2hex($R[2]));
-            // $t = sprintf('%x', ($n * $j) + $i);
             $t1 = ($n * $j) + $i;
             $t = pack('N', $t1);
             $padded_t = str_pad($t, 8, "\0", STR_PAD_LEFT);
-//            printf("%d len(t) = %d %s pt %s pt_len %d\n", $t, strlen($t), bin2hex($t), bin2hex($padded_t), strlen($padded_t));
-//
-////            echo $t, "\n";
-////            $temp_t = pack('h*', $t);
-//            
-//            // $padded_t = str_pad($temp_t, 8 - strlen($temp_t), chr(0), STR_PAD_LEFT);
-////            $padded_t = str_pad($t, 8, "\0", STR_PAD_LEFT);
-//            printf("t = %d hex(t) %s len = %d ", $t, bin2hex($t), strlen($t));
-////            printf("temp_t = %s hex(temp_t) %s len_temp_t ", bin2hex($temp_t), bin2hex($temp_t), strlen($temp_t));
-//            printf("padded_t = %s hex(padded_t) %s len_padded_t %d\n", $padded_t, bin2hex($padded_t), strlen($padded_t));
-            // $A = substr($B, 0, 8) ^ $padded_t;
             $A = bitxor($A, $padded_t);
-            printf("%20s %20s %20s\n----------------------\n", bin2hex($A), bin2hex($R[1]), bin2hex($R[2]));
         }
     }
     
@@ -1664,10 +1545,6 @@ function aes_key_wrap($input, $KEK) {
     for($i = 1; $i <= $n; $i++) {
         $C[$i] = $R[$i];
     }
-    for($i = 0; $i <= $n; $i++) {
-        printf("%20s ", bin2hex($C[$i]));
-    }
-    echo "\n\n";
     mcrypt_generic_deinit($cipher);
     mcrypt_module_close($cipher);
     return implode('', $C);
@@ -1685,52 +1562,35 @@ function aes_key_unwrap($input, $KEK) {
     if($key_length != 128 && $key_length != 192 && $key_length != 256) {
         die("aes_key_unwrap invalid key length $key_length\n");
     }
-    // $n = (int) ceil(($input_len * 8) / 64);
     $n = ceil(($input_len * 8) / 64) - 1;
     
     if($key_length < ($n) * 8) {
         die("aes_key_unwrap insufficient key length for input\n");
     }
-    
-    // The mcrypt_generic_init function initializes the cipher by specifying both
-    // the key and the IV.  The length of the key determines whether we're doing
-    // 128-bit, 192-bit, or 256-bit encryption.
-    // Let's do 256-bit encryption here:
-    
     $iv_size = mcrypt_enc_get_iv_size($cipher);
     $iv = str_repeat(chr(0), 16);  // initialize to 16 byte string of "0"s
     $s = mcrypt_generic_init($cipher, $KEK, $iv);
     if( ($s < 0) || ($s === false)) {
-         echo  "mcrypt init error $s";
          return NULL;
     }
-
-//    $iv = pack('H*', 'A6A6A6A6A6A6A6A6');
-
     $A = substr($input, 0, 8);
     $R = array();
     
     for($i = 1; $i <= $n; $i++) {
         $R[$i] = substr($input, $i * 8, 8);
         if(strlen($R[$i]) < 8) {
-            printf("odd length in ciphertext i = %d\n", $i, strlen($R[$i]));;
             $R[$i] = str_pad($R[$i], 8 - strlen($R[$i]), "\0");
         }
     }
-    
-    printf("%20s %20s %20s\n", 'A', 'R1', 'R2');
     for($j = 5; $j >= 0; $j--) {
         for($i = $n; $i >= 1; $i--) {
-            printf("%20s %20s %20s\n", bin2hex($A), bin2hex($R[1]), bin2hex($R[2]));
             $t1 = ($n * $j) + $i;
             $t = pack('N', $t1);
             $padded_t = str_pad($t, 8, "\0", STR_PAD_LEFT);
             $A = bitxor($A, $padded_t);
-            printf("%20s %20s %20s\n", bin2hex($A), bin2hex($R[1]), bin2hex($R[2]));
             $B = mdecrypt_generic($cipher, $A . $R[$i]);
             $A = substr($B, 0, 8);
             $R[$i] = substr($B, -8);
-            printf("%20s %20s %20s\n----------------------\n", bin2hex($A), bin2hex($R[1]), bin2hex($R[2]));
         }
     }
     
@@ -1739,10 +1599,6 @@ function aes_key_unwrap($input, $KEK) {
     for($i = 1; $i <= $n; $i++) {
         $P[$i] = $R[$i];
     }
-    for($i = 0; $i <= $n; $i++) {
-        printf("%20s ", bin2hex($P[$i]));
-    }
-    echo "\n\n";
     mcrypt_generic_deinit($cipher);
     mcrypt_module_close($cipher);
     return implode('', $P);
@@ -1775,10 +1631,6 @@ function gcm_encrypt($K, $IV, $P, $A, $t = 128) {
     if($key_length != 128 && $key_length != 192 && $key_length != 256) {
         die("encryp invalid key length {$key_length}\n");
     }
-    // The mcrypt_generic_init function initializes the cipher by specifying both
-    // the key and the IV.  The length of the key determines whether we're doing
-    // 128-bit, 192-bit, or 256-bit encryption.
-    // Let's do 256-bit encryption here:
 
     $iv_size = mcrypt_enc_get_iv_size($cipher);
     $iv = str_repeat(chr(0), 16);  // initialize to 16 byte string of "0"s
@@ -1824,11 +1676,6 @@ function gcm_decrypt($K, $IV, $C, $A, $T) {
     if($key_length != 128 && $key_length != 192 && $key_length != 256) {
         die("encryp invalid key length\n");
     }
-
-    // The mcrypt_generic_init function initializes the cipher by specifying both
-    // the key and the IV.  The length of the key determines whether we're doing
-    // 128-bit, 192-bit, or 256-bit encryption.
-    // Let's do 256-bit encryption here:
 
     $iv_size = mcrypt_enc_get_iv_size($cipher);
     $iv = str_repeat(chr(0), 16);  // initialize to 16 byte string of "0"s
@@ -1913,7 +1760,6 @@ function gcm_inc($s_bits, $x) {
     if($s_bits % 8)
         die('gcm_inc s_bits is not byte size');
     $lsb = gcm_LSB($s_bits, $x);
-//    $X = gmp_intval(gmp_mod((string)(_uint32be($lsb) + 1), gmp_pow(2, $s_bits)));
     $X = (_uint32be($lsb) + 1);
     $res = gcm_MSB(gcm_len($x) - $s_bits, $x) . pack('N', $X);
     return $res;
@@ -1984,11 +1830,6 @@ function gcm_gctr($K, $ICB, $X) {
     if($key_length != 128 && $key_length != 192 && $key_length != 256) {
         die("gcm_gctr invalid key length\n");
     }
-
-    // The mcrypt_generic_init function initializes the cipher by specifying both
-    // the key and the IV.  The length of the key determines whether we're doing
-    // 128-bit, 192-bit, or 256-bit encryption.
-    // Let's do 256-bit encryption here:
 
     $iv_size = mcrypt_enc_get_iv_size($cipher);
     $iv = str_repeat(chr(0), 16);  // initialize to 16 byte string of "0"s
@@ -2092,5 +1933,3 @@ function pretty_json($json) {
 
     return $result;
 }
-
-?>

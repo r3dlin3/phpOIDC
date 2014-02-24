@@ -1396,7 +1396,6 @@ function handle_logout() {
         if($id_token)
             $params['id_token_hint'] = $id_token;
         $url = $end_session_endpoint . '?' . http_build_query($params);
-        error_log("redirect to {$url}");
         header("Location: $url");
     }
 }
