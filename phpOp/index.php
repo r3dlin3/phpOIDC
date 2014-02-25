@@ -1672,6 +1672,10 @@ function get_account_claims($db_user, $requested_claims)
                     $claims[$mapped_key] = false;
                 break;
 
+            case 'picture' :
+                $claims[$mapped_key] = sprintf("%s/profiles/%s", OP_URL, $db_user[$key]);
+                break;
+
             default :
                 $claims[$mapped_key] = $db_user[$key];
                 break;

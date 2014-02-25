@@ -37,7 +37,7 @@ define("OP_PROTOCOL", 'https://');
 * Specifies the OP's protocol port 
 * Should use ':port_num' format, e.g. :80
 */
-define("OP_PORT", ':7443');
+define("OP_PORT", '');
 
 /*
 * Specifies the OP's PATH
@@ -61,7 +61,7 @@ define("RP_PROTOCOL", 'https://');
 * Specifies the RP's protocol port 
 * Should use ':port_num' format e.g. :80
 */
-define("RP_PORT", ':7443');
+define("RP_PORT", '');
 
 /*
 * Specifies the RP's PATH
@@ -85,21 +85,6 @@ define("OP_PKEY", dirname($_SERVER['SCRIPT_FILENAME']) . "/op.key");
 * OP's pass phrase for the private key file 
 */
 define("OP_PKEY_PASSPHRASE","");
-
-/**
-* path to OP's public x509 certificate
-*/
-define("OP_PCERT", dirname($_SERVER['SCRIPT_FILENAME']) . "/op.pem");
-
-/**
-* URL to OP's public x509 certificate
-*/
-define("OP_PCERT_URL", OP_URL . '/op.pem');
-
-/**
-* URL to OP's public x509 certificate for encryption
-*/
-define("OP_ENC_PCERT_URL", OP_URL . '/op.pem');
 
 /**
 * URL to OP's public JWK
@@ -130,21 +115,6 @@ define("RP_PKEY", dirname($_SERVER['SCRIPT_FILENAME']) . "/rp/rp.key");
 * RP's pass phrase for the private key file 
 */
 define("RP_PKEY_PASSPHRASE","");
-
-/**
-* path to RP's public x509 certificate
-*/
-define("RP_PCERT", dirname($_SERVER['SCRIPT_FILENAME']) . "/rp/rp.pem");
-
-/**
-* URL to RP's public x509 certificate
-*/
-define("RP_PCERT_URL", RP_URL . '/rp/rp.pem');
-
-/**
-* URL to RP's public x509 certificate for encryption
-*/
-define("RP_ENC_PCERT_URL", RP_URL . '/rp/rp.pem');
 
 /**
 * URL to RP's public JWK
@@ -187,7 +157,6 @@ define('RP_REDIRECT_URI', RP_INDEX_PAGE . '/callback');
 define('RP_AUTHCHECK_REDIRECT_URI', RP_URL . '/authcheck.php/authcheckcb');
 define('RP_POST_LOGOUT_REDIRECT_URI', RP_INDEX_PAGE . '/logoutcb');
 define('RP_CLIENT_ID', RP_URL . '/');
-define('RP_CLIENT_SECRET', 'shared_secret_is_not_so_secure');
 
 
 ?>

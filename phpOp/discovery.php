@@ -192,5 +192,3 @@ function handle_webfinger_discovery() {
     }
     send_webfinger_discovery($_REQUEST['resource']);
 }
-
-//https://phpop.sonicdemo.local:7443/.well-known/webfinger?resource=https://ubuntu:7443/phpOp&rel=http://openid.net/specs/connect/1.0/issuer
