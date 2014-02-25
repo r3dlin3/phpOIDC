@@ -1,29 +1,15 @@
+======================================================
+OpenID Connect Sample OP Implementation
+======================================================
 
-Requirements
-------------------
-MySQL
+This is a sample RP implementation of the following specifications :
 
-Doctrine ORM 1.2.4
-
-
-phpseclib.sourceforge.net :
------------------------------
-Package         Version State
-Crypt_AES       0.3.1   stable
-Crypt_DES       0.3.1   stable
-Crypt_Hash      0.3.1   stable
-Crypt_RC4       0.3.1   stable
-Crypt_RSA       0.3.1   stable
-Crypt_Random    0.3.1   stable
-Crypt_Rijndael  0.3.1   stable
-Crypt_TripleDES 0.3.1   stable
-File_ANSI       0.3.1   stable
-File_ASN1       0.3.1   stable
-File_X509       0.3.1   stable
-Math_BigInteger 0.3.1   stable
+OpenID Connect Core 1.0
+OpenID Connnect Discovery 1.0
+OpenID Connect Registration 1.0
+OpenID Connect Dynamic Registration 1.0
+OpenID Connect Session Management 1.0
 
 
-
-Composer
-
--- Run composer install to install components
+The OpenID Provider application performs end-user authentication, authorization, and provides identity
+and basic profile information to  Relying Parties.
