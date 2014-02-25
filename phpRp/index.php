@@ -61,8 +61,6 @@ if($_SERVER['PATH_INFO'] == '/callback') {
     $showResponse = true;
     handle_implicit_callback();
 }
-elseif($_SERVER['PATH_INFO'] == '/test') 
-    handle_test();
 elseif($_SERVER['PATH_INFO'] == '/start')
     handle_start();
 elseif($_SERVER['PATH_INFO'] == '/reqfile')
@@ -1375,16 +1373,6 @@ function get_update_options($request, $provider_info = array()) {
     return $update;
 }
 
-function handle_test() {
-
-    $url = 'https://ubuntu:7443/phpOp/index.php/client/mrUVmVW4CqM0RzDQ1p0_Eg';
-    $token = 'yFEYKq83neTFcw';
-    $info = read_client_info($url, $token);
-    log_info('%s', print_r($info, true));
-    exit;
-
-
-}
 
 function handle_logout() {
     $id_token = isset($_SESSION['id_token']) ? $_SESSION['id_token'] : '';

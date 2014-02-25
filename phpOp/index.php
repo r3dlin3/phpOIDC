@@ -84,8 +84,6 @@ elseif($path_info == '/endsession')
     handle_end_session();
 elseif($path_info == '/logout')
     handle_logout();
-elseif($path_info == '/test')
-    handle_test();
 else
     handle_default($path_info);
 
@@ -1333,8 +1331,6 @@ function handle_confirm_userinfo() {
 
 }
 
-function handle_test() {
-}
 
 function handle_file($file)
 {
