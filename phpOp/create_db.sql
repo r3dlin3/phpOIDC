@@ -15,13 +15,9 @@
  */
 
 
-/*
-DROP DATABASE IF EXISTS `abop_db`;
-CREATE DATABASE `abop_db`;
-GRANT ALL PRIVILEGES on abop_db.* to abop@'localhost' identified by 'abop';
-
+DROP DATABASE IF EXISTS `phpoidc_01`;
+CREATE DATABASE `phpoidc_01`;
 USE phpoidc_01;
-*/
 
 
 --
@@ -227,4 +223,75 @@ CREATE TABLE `token` (
   KEY `account_id_idx` (`account_id`),
   CONSTRAINT `tokens_account_id_accounts_id` FOREIGN KEY (`account_id`) REFERENCES `account` (`id`) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8;
+
+
+
+--
+-- Insert values into account table
+--
+INSERT INTO `account` VALUES (
+  0,
+  1,
+  'alice',
+  'b6263bb14858294c08e4bdfceba90363e10d72b4',
+  'Alice Yamada',
+  'ヤマダアリサ',
+  '山田亜理紗',
+  'Alice',
+  'アリサ',
+  '亜理紗',
+  'Yamada',
+  'ヤマダ',
+  '山田',
+  NULL,
+  NULL,
+  NULL,
+  'Standard Alice Nickname',
+  'AlicePreferred',
+  'http://www.wonderland.com/alice',
+  'smiling_woman.jpg',
+  'http://www.wonderland.com',
+  'alice@wonderland.com',
+  1,
+  'female',
+  '2000-08-08',
+  'America/Los Angeles',
+  'en',
+  '1-81-234-234234234',
+  1,
+  '123 wonderland way',
+  23453453
+),
+(0,
+ 1,
+ 'bob',
+ 'cc8684eed2b6544e89242558df73a7208c9391b4',
+ 'Bob Ikeda',
+ 'イケダボブ',
+ '池田保夫',
+ 'Bob',
+ 'ボブ',
+ '保夫',
+ 'Ikeda',
+ 'イケダ',
+ '池田',
+ NULL,
+ NULL,
+ NULL,
+ 'BobNick',
+ 'BobPreferred',
+ 'http://www.underland.com/bob',
+ 'smiling_woman.jpg',
+ 'http://www.underland.com',
+ 'bob@underland.com',
+ 1,
+ 'male',
+ '2111-11-11',
+ 'France/Paris',
+ 'fr',
+ '1-81-234-234234234',
+ 1,
+ '456 underland ct.',
+ 8472378234
+);
 
