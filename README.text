@@ -1,0 +1,52 @@
+phpOIDC Project
+===============
+
+About phpOIDC
+-------------
+
+This is an open source implementation of OpenID Connect in PHP by Nomura Research Institute, Ltd. This project was partly funded by the PEOFIAMP project sponsored by the Ministry of internal affairs and communication of Japan as a part of EU-Japan cooperation funding and is offered as the result of the project. 
+
+This implementation has been tested for interoperability at series of interop and has shown to be one of the most compliant implementation. However, as the focus was on the interoperability, less focus was given to the security issues around the implementation. Reviewers are kindly requested to submit any issues. 
+
+
+Licence
+-------
+The project is offered under Apache license 2.0. 
+
+> Copyright 2013 Nomura Research Institute, Ltd.
+> 
+> Licensed under the Apache License, Version 2.0 (the "License");
+> you may not use this file except in compliance with the License.
+> You may obtain a copy of the License at
+> 
+> http://www.apache.org/licenses/LICENSE-2.0
+> 
+> Unless required by applicable law or agreed to in writing, 
+> software distributed under the License is distributed on 
+> an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, 
+> either express or implied.
+> See the License for the specific language governing permissions 
+> limitations under the License.
+
+Files
+-------
+There are two directories/folders: phpOp, and phpRp. They are the source code for OpenID Connect Provider and OpenID Connect Relying Party respecitively. 
+
+There is a Debian package available as phpOidc_1.0-all.deb as well, which makes it easy for you to install and remove on a compatible platform. 
+
+Dependency/Requirements
+-----------------------
+* Apache Web Server with SSL
+* MySQL
+* PHP 5.3+
+* PHP Modules:
+  * MDB2
+  * MDB2_Driver_mysql
+  * Doctrine ORM 1.2.4
+  * PHPSecLib
+
+INSTALL
+--------
+Refer to INSTALL document in each directory. 
+
+
