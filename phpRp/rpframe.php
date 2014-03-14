@@ -21,6 +21,7 @@ include_once("base64url.php");
 include_once('libdb.php');
 include_once('logging.php');
 
+error_reporting(E_ERROR | E_WARNING | E_PARSE);
 header('Content-Type: text/html; charset=utf-8');
 
 $session_path = session_save_path() . RP_PATH;

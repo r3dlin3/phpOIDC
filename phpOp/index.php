@@ -20,6 +20,9 @@ include_once("libjsoncrypto.php");
 include_once('libdb.php');
 include_once('logging.php');
 include_once('OidcException.php');
+include_once('apache_header.php');
+
+error_reporting(E_ERROR | E_WARNING | E_PARSE);
 
 define("DEBUG",0);
 

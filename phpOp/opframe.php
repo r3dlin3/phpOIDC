@@ -19,6 +19,8 @@ require_once("abconstants.php");
 require_once("libjsoncrypto.php");
 require_once('libdb.php');
 
+error_reporting(E_ERROR | E_WARNING | E_PARSE);
+
 header('Content-Type: text/html; charset=utf-8');
 
 

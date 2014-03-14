@@ -20,9 +20,8 @@ include_once("libjsoncrypto.php");
 include_once('libdb.php');
 include_once('logging.php');
 
+error_reporting(E_ERROR | E_WARNING | E_PARSE);
 logw_debug("Request: %s\nInput: %s", count($_REQUEST) ? print_r($_REQUEST, true) : '[ ]', file_get_contents('php://input'));
-
-
 
 
 if(strpos($_SERVER['SCRIPT_NAME'], '/.well-known/openid-configuration') !== false) {

@@ -21,6 +21,8 @@ include_once("base64url.php");
 include_once('libdb.php');
 include_once('logging.php');
 
+error_reporting(E_ERROR | E_WARNING | E_PARSE);
+
 logw_debug("Request: %s\nInput: %s", count($_REQUEST) ? print_r($_REQUEST, true) : '[ ]', file_get_contents('php://input'));
 
 $g_auth_response='';
