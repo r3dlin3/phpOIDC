@@ -51,13 +51,13 @@ Copy phpOp and phpRp to the web server's document root directory, e.g. /var/www
 Configuration
 -----------------------------------------------------
   * Apache Configuration
-    1) To enable "Dynamic Discovery", add the following configuratin to Apache's web site configuration
+    1) To enable "Dynamic Discovery", add the following configuration to Apache's web site configuration
 
        Alias /.well-known/webfinger /var/www/phpOp/discovery.php
        Alias Alias /.well-known/openid-configuration /var/www/phpOp/discovery.php
        Alias /phpOp/.well-known/openid-configuration /var/www/phpOp/discovery.php
 
-       The path /var/www my be different depending on the location of the server's web document root directory
+       The path /var/www may be different depending on the location of the server's web document root directory
 
   * Database Configuration
     1) To create the database tables, use a mysql database client to execute the script file phpOP/create_db.sql
@@ -97,6 +97,70 @@ Configuration
     RP_ENC_JWK_URL
 
 
+
+Nginx Configuration
+-----------------------------------------------------
+    1) To enable "Dynamic Discovery", add the following configuration to nginx's SSL server configuration
+       (e.g. /etc/nginx/sites-enabled/default)
+
+
+        location ~ /\.well-known/[webfinger|openid\-configuration] {
+                alias /usr/share/nginx/www/phpOp/discovery.php;
+                fastcgi_split_path_info ^(.+\.php)(/.+)$;
+        #       # NOTE: You should have "cgi.fix_pathinfo = 0;" in php.ini
+        #
+        #       # With php5-cgi alone:
+                fastcgi_pass 127.0.0.1:9000;
+        #       # With php5-fpm:
+        #       fastcgi_pass unix:/var/run/php5-fpm.sock;
+                fastcgi_index index.php;
+                include fastcgi_params;
+                fastcgi_param SCRIPT_FILENAME $request_filename;
+        }
+
+       The path /usr/share/nginx/www may be different depending on the location of the server's web document root directory
+       The fastcgi_pass directive should be correctly configured for sockets or tcp.
+
+
+    2) nginx does not have  PHP's PATH_INFO variable by default
+
+        a) In the file /etc/nginx/fastcgi_params (path may be different), change the line :
+
+        fastcgi_param   SCRIPT_FILENAME         $request_filename;
+
+        to
+
+        fastcgi_param   SCRIPT_FILENAME         $document_root$fastcgi_script_name;
+
+        Add the following line to the end of the file :
+        fastcgi_param   PATH_INFO               $fastcgi_path_info;
+
+
+        b) In the file /etc/nginx/sites-enabled/default (path may be different), add the following to the SSL
+        server's configuration:
+
+        location ~ [^/]\.php(/|$) {
+                fastcgi_split_path_info ^(.+?\.php)(/.*)$;
+                if (!-f $document_root$fastcgi_script_name) {
+                        return 404;
+                }
+        #       # With php5-cgi alone:
+                fastcgi_pass 127.0.0.1:9000;
+        #       # With php5-fpm:
+        #       fastcgi_pass unix:/var/run/php5-fpm.sock;
+                fastcgi_index index.php;
+                include fastcgi_params;
+        }
+
+        c) In the file /etc/nginx/nginx.conf (path may be different), add the following lines to the http configuration :
+
+            fastcgi_buffers 8 16k;
+            fastcgi_buffer_size 32k;
+
+
+
+        d) restart nginx for settings to take effect.
+        
 
 
 
