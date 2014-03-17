@@ -107,8 +107,7 @@ Nginx Configuration
         location ~ /\.well-known/[webfinger|openid\-configuration] {
                 alias /usr/share/nginx/www/phpOp/discovery.php;
                 fastcgi_split_path_info ^(.+\.php)(/.+)$;
-        #       # NOTE: You should have "cgi.fix_pathinfo = 0;" in php.ini
-        #
+
         #       # With php5-cgi alone:
                 fastcgi_pass 127.0.0.1:9000;
         #       # With php5-fpm:
@@ -160,7 +159,7 @@ Nginx Configuration
 
 
         d) restart nginx for settings to take effect.
-        
+
 
 
 

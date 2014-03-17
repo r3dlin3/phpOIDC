@@ -141,7 +141,7 @@ header('Content-Type: text/html; charset=utf-8');
 
 <div style="background-color:#dddddd;">
 OpenID Connect Core Draft 17
-<form name='op_form' method='post' action='<? echo RP_INDEX_PAGE ?>/start'>
+<form name='op_form' method='post' action='<?php echo RP_INDEX_PAGE ?>/start'>
 Select your OP : &nbsp;
 <select size="1" name='provider'>
 <option selected value=''>Select OP</option>\n";    
