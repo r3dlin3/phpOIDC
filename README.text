@@ -49,4 +49,6 @@ INSTALL
 --------
 Refer to INSTALL document in each directory. 
 
-
+Notes on using with nginx
+--------------------------
+As of March 18, we are trying to add support for nginx. 
