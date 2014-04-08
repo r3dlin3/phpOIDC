@@ -1014,14 +1014,14 @@ function webfinger_get_provider_info($identifier) {
             return NULL;
             // process email address
             $host = substr($identifier, $at + 1);
-            $issuer = "https://$host";
+            $issuer = RP_PROTOCOL . "$host";
             $issuer_url = $issuer;
             $principal = 'acct:' . $identifier;
             log_info("RP - EMAIL principal = %s host = %s issuer = %s", $principal, $host, $issuer);
         } else { // process URL
             $scheme = strtolower(substr($identifier, 0, 4));
             if($scheme != 'http')
-                $identifier = "https://{$identifier}";
+                $identifier = RP_PROTOCOL . "{$identifier}";
 
             $pos = strpos($identifier, '#');
             if($pos !== false)
@@ -1031,7 +1031,7 @@ function webfinger_get_provider_info($identifier) {
                 return NULL;
             $host = $parts['host'];
             $port = $parts['port'] ? ':' . $parts['port'] : '';
-            $issuer = "https://{$host}{$port}";
+            $issuer = RP_PROTOCOL . "{$host}{$port}";
             $issuer_url = $issuer;
             if(isset($parts['path']) && $parts['path'] == '/')
                 $principal = $issuer;
@@ -1513,7 +1513,7 @@ function handle_start() {
                                        );
                 db_save_provider($db_provider['name'], $provider);
             }
-            if($p_info['name'] == 'https://self-issued.me') {
+            if($p_info['name'] == RP_PROTOCOL . 'self-issued.me') {
                 $provider['client_id'] = RP_REDIRECT_URI;
                 $provider['client_secret'] = '';
             }

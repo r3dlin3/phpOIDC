@@ -125,7 +125,7 @@ function handle_webfinger_discovery() {
         header('HTTP/1.0 400 Bad Request');
         exit;
     }
-    $hosts = Array(OP_SERVER_NAME, 'https://' . OP_SERVER_NAME, 'https://' . OP_SERVER_NAME . OP_PORT);
+    $hosts = Array(OP_SERVER_NAME, OP_PROTOCOL . OP_SERVER_NAME, OP_PROTOCOL . OP_SERVER_NAME . OP_PORT);
     $providers = db_get_providers();
     if($providers) {
         foreach($providers as $provider) {
@@ -171,7 +171,7 @@ function handle_webfinger_discovery() {
         }
         $host = $parts['host'];
         $port = $parts['port'] ? ':' . $parts['port'] : '';
-        $issuer = "https://{$host}{$port}";
+        $issuer = OP_PROTOCOL . "{$host}{$port}";
         if(isset($parts['path'])) {
             if($parts['path'] == '/')
                 $principal = $issuer;
