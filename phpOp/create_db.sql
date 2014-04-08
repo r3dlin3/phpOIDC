@@ -229,6 +229,7 @@ CREATE TABLE `token` (
 --
 -- Insert values into account table
 --
+
 INSERT INTO `account` VALUES (
   0,
   1,
