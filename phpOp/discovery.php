@@ -24,9 +24,9 @@ error_reporting(E_ERROR | E_WARNING | E_PARSE);
 logw_debug("Request: %s\nInput: %s", count($_REQUEST) ? print_r($_REQUEST, true) : '[ ]', file_get_contents('php://input'));
 
 
-if(strpos($_SERVER['SCRIPT_NAME'], '/.well-known/openid-configuration') !== false) {
+if(strpos($_SERVER['REQUEST_URI'], '/.well-known/openid-configuration') !== false) {
     handle_openid_config();
-}elseif(strpos($_SERVER['SCRIPT_NAME'], '/.well-known/webfinger') !== false)
+}elseif(strpos($_SERVER['REQUEST_URI'], '/.well-known/webfinger') !== false)
     handle_webfinger_discovery();
 exit;
 
