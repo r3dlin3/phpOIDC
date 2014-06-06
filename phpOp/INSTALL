@@ -59,6 +59,16 @@ Configuration
 
        The path /var/www may be different depending on the location of the server's web document root directory
 
+	   If you do not have unrestricted/direct access to your Apache configuration, you may use a .htaccess file
+	   together with mod_rewrite instead:
+
+	   <IfModule mod_rewrite.c>
+	   RewriteEngine on
+	   RewriteRule ^.well-known/webfinger.*$ /phpOp/discovery.php$1 [NC,L]
+	   RewriteRule ^.well-known/openid-configuration.*$ /phpOp/discovery.php$1 [NC,L]
+	   RewriteRule ^phpOp/.well-known/openid-configuration.*$ /phpOp/discovery.php$1 [NC,L]
+	   </IfModule>
+
   * Database Configuration
     1) To create the database tables, use a mysql database client to execute the script file phpOP/create_db.sql
     2) Create a database user that is allowed read/write permissions to the database 'phpoidc_01'.
