@@ -432,6 +432,10 @@ function handle_auth() {
                 throw new OidcException('invalid_request', "Unable to fetch request file $request_uri");
         } elseif(isset($_REQUEST['request']))
             $request_object = $_REQUEST['request'];
+        if(isset($_GET['claims'])) {
+            $_GET['claims'] = json_decode($_GET['claims'], true);
+            $_REQUEST['claims'] = $_GET['claims'];
+        }
         if(isset($request_object)) {
             $cryptoError = '';
             $payload = decrypt_verify_jwt($request_object, $client, $cryptoError);
@@ -451,8 +455,6 @@ function handle_auth() {
                     }
                 }
 
-                if(isset($_GET['claims']))
-                    $_GET['claims'] = json_decode($_GET['claims'], true);
                 $merged_req = array_merge($_GET, $payload);
                 if(!array_key_exists('max_age', $merged_req) && $client['default_max_age'])
                     $merged_req['max_age'] = $client['default_max_age'];

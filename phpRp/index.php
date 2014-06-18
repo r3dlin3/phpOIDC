@@ -1765,78 +1765,84 @@ function handle_start() {
 
     $request_method = $_REQUEST['request_method'];    
     if($_REQUEST['request_option']) {
-        if(strstr($request_method, 'Request File') !== false) {
-            $fileid = bin2hex(mcrypt_create_iv(32, MCRYPT_DEV_URANDOM ));
-            // $query_params['request_uri'] = RP_INDEX_PAGE . "/reqfile?fileid={$fileid}";
-        } else
-            $fileid = NULL;
-        
-        $sig_param = Array('alg' => 'none');
-        if($_REQUEST['request_object_signing_alg'])
-            $sig_param['alg'] = $_REQUEST['request_object_signing_alg'];
-        if(substr($sig_param['alg'], 0, 2) == 'HS') {
-            $sig_key = $provider['client_secret'];
-        } elseif(substr($sig_param['alg'], 0, 2) == 'RS') {
-            $sig_param['jku'] = RP_JWK_URL;
-            $sig_param['kid'] = RP_SIG_KID;
-            $sig_key = array('key_file' => RP_PKEY, 'password' => RP_PKEY_PASSPHRASE);
-        }
-        log_debug("Request Object Using Sig Alg %s", $sig_param['alg']);
-        $request_jwt = jwt_sign(array_merge(array_diff_key($query_params, array('id_token' => 0)), $custom_params), $sig_param, $sig_key);
-        if(!$request_jwt) {
-            $g_error .= 'Unable to sign request object';
-            return;
-        }
-        if($_REQUEST['request_object_encrypted_response_alg'] && $_REQUEST['request_object_encrypted_response_enc']) {
-            $supported_cek_algs = array('RSA1_5', 'RSA-OAEP');
-            $supported_plaintext_algs = array('A128GCM', 'A256GCM', 'A128CBC-HS256', 'A256CBC-HS512');
-            if(!in_array($_REQUEST['request_object_encrypted_response_alg'], $supported_cek_algs)) {
-                $g_error .= "Unsupported Request Object CEK Alg";
-                return;
+        if($request_method == 'GET') {
+            if(count($custom_params)) {
+                $query_params['claims'] = json_encode($custom_params['claims']);
             }
-            if(!in_array($_REQUEST['request_object_encrypted_response_enc'], $supported_plaintext_algs)) {
-                $g_error .= "Unsupported Request Object Plaintext Alg";
-                return;
-            }
-
-            $jwk_uri = '';
-            $encryption_keys = NULL;
-            if($provider['jwks_uri']) {
-                $jwk = get_url($provider['jwks_uri']);
-                if($jwk) {
-                    $jwk_uri = $provider['jwks_uri'];
-                    $encryption_keys = jwk_get_keys($jwk, 'RSA', 'enc', NULL);
-                    if(!$encryption_keys || !count($encryption_keys))
-                        $encryption_keys = NULL;
-                }
-            }
-            if(!$encryption_keys) {
-                $g_error .= 'No JWK key for encryption';
-                return NULL;
-            }
-
-            $encrypted_jwt = jwt_encrypt($request_jwt, $encryption_keys[0], false, NULL, $jwk_uri, NULL, $_REQUEST['request_object_encrypted_response_alg'], $_REQUEST['request_object_encrypted_response_enc'], false);
-            if(!$encrypted_jwt) {
-                $g_error .= "Unable to encrypt request object.";
-                return;
+        } else {
+            if(strstr($request_method, 'Request File') !== false) {
+                $fileid = bin2hex(mcrypt_create_iv(32, MCRYPT_DEV_URANDOM ));
+                // $query_params['request_uri'] = RP_INDEX_PAGE . "/reqfile?fileid={$fileid}";
             } else
-                $request_jwt = $encrypted_jwt;
-        } else {
+                $fileid = NULL;
+
+            $sig_param = Array('alg' => 'none');
+            if($_REQUEST['request_object_signing_alg'])
+                $sig_param['alg'] = $_REQUEST['request_object_signing_alg'];
+            if(substr($sig_param['alg'], 0, 2) == 'HS') {
+                $sig_key = $provider['client_secret'];
+            } elseif(substr($sig_param['alg'], 0, 2) == 'RS') {
+                $sig_param['jku'] = RP_JWK_URL;
+                $sig_param['kid'] = RP_SIG_KID;
+                $sig_key = array('key_file' => RP_PKEY, 'password' => RP_PKEY_PASSPHRASE);
+            }
+            log_debug("Request Object Using Sig Alg %s", $sig_param['alg']);
+            $request_jwt = jwt_sign(array_merge(array_diff_key($query_params, array('id_token' => 0)), $custom_params), $sig_param, $sig_key);
+            if(!$request_jwt) {
+                $g_error .= 'Unable to sign request object';
+                return;
+            }
+            if($_REQUEST['request_object_encrypted_response_alg'] && $_REQUEST['request_object_encrypted_response_enc']) {
+                $supported_cek_algs = array('RSA1_5', 'RSA-OAEP');
+                $supported_plaintext_algs = array('A128GCM', 'A256GCM', 'A128CBC-HS256', 'A256CBC-HS512');
+                if(!in_array($_REQUEST['request_object_encrypted_response_alg'], $supported_cek_algs)) {
+                    $g_error .= "Unsupported Request Object CEK Alg";
+                    return;
+                }
+                if(!in_array($_REQUEST['request_object_encrypted_response_enc'], $supported_plaintext_algs)) {
+                    $g_error .= "Unsupported Request Object Plaintext Alg";
+                    return;
+                }
+
+                $jwk_uri = '';
+                $encryption_keys = NULL;
+                if($provider['jwks_uri']) {
+                    $jwk = get_url($provider['jwks_uri']);
+                    if($jwk) {
+                        $jwk_uri = $provider['jwks_uri'];
+                        $encryption_keys = jwk_get_keys($jwk, 'RSA', 'enc', NULL);
+                        if(!$encryption_keys || !count($encryption_keys))
+                            $encryption_keys = NULL;
+                    }
+                }
+                if(!$encryption_keys) {
+                    $g_error .= 'No JWK key for encryption';
+                    return NULL;
+                }
+
+                $encrypted_jwt = jwt_encrypt($request_jwt, $encryption_keys[0], false, NULL, $jwk_uri, NULL, $_REQUEST['request_object_encrypted_response_alg'], $_REQUEST['request_object_encrypted_response_enc'], false);
+                if(!$encrypted_jwt) {
+                    $g_error .= "Unable to encrypt request object.";
+                    return;
+                } else
+                    $request_jwt = $encrypted_jwt;
+            } else {
 //            $custom_query['request'] = $request_jwt;
-        }
-        
-        // if(isset($query_params['request_uri'])) { // save file to db
-        if(isset($fileid)) { // save file to db
-            $query_params['request_uri'] = RP_INDEX_PAGE . "/reqfile?fileid={$fileid}";
-            $reqfile = array(
-                                'type' => $encrypted_jwt ? 1 : 0,
-                                'request' => json_encode(array_merge($query_params, $custom_params)),
-                                'jwt' => $request_jwt
-                             );
-            log_debug('query_params = %s custom = %s', print_r($query_params, true), print_r($custom_params, true));
-            db_save_request_file($fileid, $reqfile);
-        } else {
-            $query_params['request'] = $request_jwt;
+            }
+
+            // if(isset($query_params['request_uri'])) { // save file to db
+            if(isset($fileid)) { // save file to db
+                $query_params['request_uri'] = RP_INDEX_PAGE . "/reqfile?fileid={$fileid}";
+                $reqfile = array(
+                    'type' => $encrypted_jwt ? 1 : 0,
+                    'request' => json_encode(array_merge($query_params, $custom_params)),
+                    'jwt' => $request_jwt
+                );
+                log_debug('query_params = %s custom = %s', print_r($query_params, true), print_r($custom_params, true));
+                db_save_request_file($fileid, $reqfile);
+            } else {
+                $query_params['request'] = $request_jwt;
+            }
         }
     }
     $url = $provider['authorization_endpoint'] . '?' . http_build_query($query_params);
@@ -1969,7 +1975,7 @@ $scope_types = array(
 $scope_options = get_checkboxes_html('scope', $scope_types);
 
 
-$bearer_token_methods = array('get', 'post', 'bearer');
+$bearer_token_methods = array('bearer', 'post', 'get');
 $bearer_token_options = get_option_html('bearer', $bearer_token_methods, $_SESSION['bearer']);
 
 $sig_algs = array('', 'HS256', 'HS384', 'HS512', 'RS256', 'RS384', 'RS512');
