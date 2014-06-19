@@ -640,6 +640,10 @@ function is_client_authenticated() {
 
             case 'client_secret_jwt' :
                 $sig_verified = jwt_verify($jwt_assertion, $db_client['client_secret']);
+                if($db_client['token_endpoint_auth_signing_alg'])
+                    $alg_verified = $db_client['token_endpoint_auth_signing_alg'] == $jwt_header['alg'];
+                else
+                    $alg_verified = true;
                 if(substr($_SERVER['PATH_INFO'], 0, 2) == '/1')
                     $audience = OP_ENDPOINT . '/1/token';
                 else
@@ -653,8 +657,10 @@ function is_client_authenticated() {
                     log_info("Aud not verified %s != %s", $jwt_payload['aud'], $audience);
                 if(!$time_verified)
                     log_info('Time not verified');
-                $client_authenticated = $sig_verified && $aud_verified && $time_verified;
-                log_info(" client_secret_jwt Result : %d %d %d %d", $client_authenticated, $sig_verified, $aud_verified, $time_verified);
+                if(!$alg_verified)
+                    log_info("Signing Alg does not match %s != %s", $jwt_header['alg'], $db_client['token_endpoint_auth_signing_alg']);
+                $client_authenticated = $sig_verified && $aud_verified && $time_verified && $alg_verified;
+                log_info(" client_secret_jwt Result : %d %d %d %d %d", $client_authenticated, $sig_verified, $aud_verified, $time_verified, $alg_verified);
                 break;
 
             case 'private_key_jwt' :
@@ -662,6 +668,10 @@ function is_client_authenticated() {
                 if($db_client['jwks_uri'])
                     $pubkeys['jku'] = $db_client['jwks_uri'];
                 $sig_verified = jwt_verify($jwt_assertion, $pubkeys);
+                if($db_client['token_endpoint_auth_signing_alg'])
+                    $alg_verified = $db_client['token_endpoint_auth_signing_alg'] == $jwt_header['alg'];
+                else
+                    $alg_verified = true;
                 if(substr($_SERVER['PATH_INFO'], 0, 2) == '/1')
                     $audience = OP_ENDPOINT . '/1/token';
                 else
@@ -675,8 +685,10 @@ function is_client_authenticated() {
                     log_info('Aud not verified');
                 if(!$time_verified)
                     log_info('Time not verified');
-                $client_authenticated = $sig_verified && $aud_verified && $time_verified;
-                log_info("private_key_jwt Result : %d %d %d %d", $client_authenticated, $sig_verified, $aud_verified, $time_verified);
+                if(!$alg_verified)
+                    log_info("Signing Alg does not match %s != %s", $jwt_header['alg'], $db_client['token_endpoint_auth_signing_alg']);
+                $client_authenticated = $sig_verified && $aud_verified && $time_verified && $alg_verified;
+                log_info("private_key_jwt Result : %d %d %d %d %d", $client_authenticated, $sig_verified, $aud_verified, $time_verified, $alg_verified);
                 break;
 
             default :
@@ -1420,6 +1432,7 @@ function handle_client_registration() {
             'redirect_uris' => NULL,
             'post_logout_redirect_uris' => NULL,
             'token_endpoint_auth_method' => NULL,
+            'token_endpoint_auth_signing_alg' => NULL,
             'policy_uri' => NULL,
             'tos_uri' => NULL,
             'jwks_uri' => NULL,

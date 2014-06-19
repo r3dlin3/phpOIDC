@@ -509,7 +509,7 @@ function handle_callback() {
 
       $token_endpoint_auth_method = $_SESSION['provider']['token_endpoint_auth_method'];
       $token_endpoint_auth_signing_alg = $_SESSION['provider']['token_endpoint_auth_signing_alg'];
-      log_debug("Token Endpoint Auth Method : %s", $token_endpoint_auth_method);
+      log_debug("Token Endpoint Auth Method : %s alg : %s", $token_endpoint_auth_method, $token_endpoint_auth_signing_alg);
       switch($token_endpoint_auth_method) {
           case 'client_secret_post' :
               $data['client_id'] = $client_id;
@@ -525,7 +525,10 @@ function handle_callback() {
                   'exp' => time() + (5*60),
                   'iat' => time()
               );
-              if(!in_array($token_endpoint_auth_signing_alg, $_SESSION['provider']['token_endpoint_auth_signing_alg_values_supported'])) {
+              if(!$token_endpoint_auth_signing_alg)
+                  $token_endpoint_auth_signing_alg = 'HS256';
+              $token_endpoint_auth_signing_algs_supported = is_array($_SESSION['provider']['token_endpoint_auth_signing_alg_values_supported']) ? $_SESSION['provider']['token_endpoint_auth_signing_alg_values_supported'] : explode('|', $_SESSION['provider']['token_endpoint_auth_signing_alg_values_supported']);
+              if(!in_array($token_endpoint_auth_signing_alg, $token_endpoint_auth_signing_algs_supported)) {
                   $g_error = "Token Endpoint Auth Sig Alg {$token_endpoint_auth_signing_alg} is not supported.";
                   return NULL;
               }
@@ -548,7 +551,10 @@ function handle_callback() {
                   'iat' => time()
               );
 
-              if(!in_array($token_endpoint_auth_signing_alg, $_SESSION['provider']['token_endpoint_auth_signing_alg_values_supported'])) {
+              if(!$token_endpoint_auth_signing_alg)
+                  $token_endpoint_auth_signing_alg = 'RS256';
+              $token_endpoint_auth_signing_algs_supported = is_array($_SESSION['provider']['token_endpoint_auth_signing_alg_values_supported']) ? $_SESSION['provider']['token_endpoint_auth_signing_alg_values_supported'] : explode('|', $_SESSION['provider']['token_endpoint_auth_signing_alg_values_supported']);
+              if(!in_array($token_endpoint_auth_signing_alg, $token_endpoint_auth_signing_algs_supported)) {
                   $g_error = "Token Endpoint Auth Sig Alg {$token_endpoint_auth_signing_alg} is not supported.";
                   return NULL;
               }

@@ -19,6 +19,7 @@
  * @property string $redirect_uris
  * @property string $post_logout_redirect_uris
  * @property string $token_endpoint_auth_method
+ * @property string $token_endpoint_auth_signing_alg
  * @property string $policy_uri
  * @property string $jwks_uri
  * @property string $jwk_encryption_uri
@@ -185,6 +186,15 @@ abstract class BaseClient extends Doctrine_Record
              'notnull' => false,
              'autoincrement' => false,
              ));
+        $this->hasColumn('token_endpoint_auth_signing_alg', 'string', 255, array(
+            'type' => 'string',
+            'length' => 255,
+            'fixed' => false,
+            'unsigned' => false,
+            'primary' => false,
+            'notnull' => false,
+            'autoincrement' => false,
+        ));
         $this->hasColumn('policy_uri', 'string', 255, array(
              'type' => 'string',
              'length' => 255,
