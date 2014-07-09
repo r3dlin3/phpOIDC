@@ -798,7 +798,7 @@ function encrypt_with_key($data, $key_file,  $is_private_key=true, $pass_phrase=
  */
 
 function decrypt_with_key($data, $key_file, $is_private_key=true, $pass_phrase=NULL, $alg = 'RSA1_5') {
-    if(is_file($key_file)) {
+    if(is_string($key_file) && is_file($key_file)) {
         if(!file_exists($key_file)) return false;
         $key_contents = file_get_contents($key_file);
     } else
@@ -880,7 +880,7 @@ function decrypt_with_key($data, $key_file, $is_private_key=true, $pass_phrase=N
 
 
 function jwt_encrypt($data, $key_file, $is_private_key=false, $pass_phrase=NULL, $public_cert_url=NULL, $enc_key=NULL, $alg='RSA1_5', $enc='A256CBC-HS512', $zip = true) {
-    if(is_file($key_file)) {
+    if(is_string($key_file) && is_file($key_file)) {
         if(!file_exists($key_file)) {
             return false;
         }
@@ -1002,7 +1002,7 @@ function jwt_decrypt($jwe, $key_file, $is_private_key=true, $pass_phrase=NULL) {
             $rsa->setEncryptionMode(CRYPT_RSA_ENCRYPTION_PKCS1);
         }
     }
-    elseif(is_file($key_file)) {
+    elseif(is_string($key_file) && is_file($key_file)) {
         if(!file_exists($key_file)) {
             return false;
         }
