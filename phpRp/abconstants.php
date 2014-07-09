@@ -99,12 +99,12 @@ define("OP_ENC_JWK_URL", OP_URL . '/op.jwk');
 /**
 * OP's Signature Kid
 */
-define("OP_SIG_KID", '');
+define("OP_SIG_KID", 'PHPOP-00');
 
 /**
 * OP's Encryption Kid
 */
-define("OP_ENC_KID", '');
+define("OP_ENC_KID", 'PHPOP-00');
 
 /**
 * path to the RP's private key
@@ -129,12 +129,12 @@ define("RP_ENC_JWK_URL", RP_URL . '/rp/rp.jwk');
 /**
 * RP's Signature Kid
 */
-define("RP_SIG_KID", 'ABRP-00');
+define("RP_SIG_KID", 'PHPRP-00');
 
 /**
 * RP's Encryption Kid
 */
-define("RP_ENC_KID", 'ABRP-00');
+define("RP_ENC_KID", 'PHPRP-00');
 
 /**
 * OP endpoints and metadata
