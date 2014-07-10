@@ -49,6 +49,14 @@ INSTALL
 --------
 Refer to INSTALL document in each directory. 
 
+NOTE: There is an experimental .deb package available as well. 
+Install gdebi on your system and install by 
+
+    % sudo gdebi phpOidc_1.0-all.deb
+
+Currently, it does not take care of creating database nor
+installing pear modules so the usefulness can be a little limited. 
+
 Notes on using with nginx
 --------------------------
 As of March 18, we are trying to add support for nginx. 
