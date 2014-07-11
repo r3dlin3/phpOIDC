@@ -1878,6 +1878,7 @@ function get_url($url) {
                              CURLOPT_HEADERFUNCTION => 'saveHeaders',
                              CURLINFO_HEADER_OUT => true,
                              CURLOPT_SSL_VERIFYPEER => false,
+                             CURLOPT_SSL_VERIFYHOST => 0,
                              CURLOPT_RETURNTRANSFER => 1
                          );
     curl_setopt_array($ch, $curl_options);
@@ -2208,6 +2209,7 @@ function curl_fetch_url($url, $headers = NULL, $c_options = NULL, $is_post = fal
         CURLOPT_HEADERFUNCTION => 'saveHeaders',
         CURLINFO_HEADER_OUT => true,
         CURLOPT_SSL_VERIFYPEER => false,
+        CURLOPT_SSL_VERIFYHOST => 0,
         CURLOPT_RETURNTRANSFER => 1
     );
     if(isset($c_options) && is_array($c_options)) {
