@@ -52,23 +52,38 @@ Refer to INSTALL document in each directory.
 NOTE: There is an experimental .deb package available as well. 
 To use it to install, 
 
-1. Install mysql and create a database and its user with a password. 
+* Install mysql and create a database and its user with a password. 
 
-   % apt-get mysql-server
-   % mysql -p
-   mysal> create database 'phpOidc';
-   mysql> create user phpOidc identified by 'new_password';
-   mysql> grant all on phpOidc.* to phpOidc;
-   mysql> quit;
-   %
 
-2. Install gdebi on your system and install by 
+```
+#!sh
+
+    % apt-get mysql-server
+    % apt-get gdebi
+    % mysql -p
+    mysal> create database 'phpOidc';
+    mysql> create user phpOidc identified by 'new_password';
+    mysql> grant all on phpOidc.* to phpOidc;
+    mysql> quit;
+    %
+
+```
+
+
+
+* Install gdebi on your system and install by 
+
+
+```
+#!sh
 
     % sudo gdebi phpOidc_1.0-all.deb
+```
 
-3. Follow the instruction that appears at the end of the installation
-4. (Configure apache for SSL if it were not previously.)
-5. Restart apache. 
+
+* Follow the instruction that appears at the end of the installation
+* (Configure apache for SSL if it were not previously.)
+* Restart apache. 
 
 Notes on using with nginx
 --------------------------
