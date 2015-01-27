@@ -105,10 +105,13 @@ function loginform($display_name = '', $user_id = '', $client = null, $oplogin=f
        $userid_field = '<input type="text" name="username" value="alice">(or bob)';
    }
     $logo_uri = '';
+    $tos_uri = '';
     $policy_uri = '';
     if($client) {
         if($client['policy_uri'])
             $policy_uri = sprintf('<a href="%s">Policy</a>', $client['policy_uri']);
+        if($client['tos_uri'])
+            $policy_uri = sprintf('<a href="%s">TOS</a>', $client['tos_uri']);
         if($client['logo_uri'])
             $logo_uri = sprintf('<img src="%s">', $client['logo_uri']);
     }
@@ -127,7 +130,7 @@ function loginform($display_name = '', $user_id = '', $client = null, $oplogin=f
   Password:<input type="password" name="password" value="wonderland">(or underland)<br />
   <input type="checkbox" name="persist" checked>Keep me logged in. <br />
   <input type="submit">
-  </form>' . "\n  " . $policy_uri . '
+  </form>' . "\n  " . $policy_uri . "\n{$tos_uri}" . '
   </body>
   </html>
   ';
