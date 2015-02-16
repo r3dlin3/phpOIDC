@@ -4,9 +4,13 @@ phpOIDC Project
 About phpOIDC
 -------------
 
-This is an open source implementation of OpenID Connect in PHP by Nomura Research Institute, Ltd. This project was partly funded by the PEOFIAMP project sponsored by the Ministry of internal affairs and communication of Japan as a part of EU-Japan cooperation funding and is offered as the result of the project. 
+This is an open source implementation of OpenID Connect in PHP by Nomura Research Institute, Ltd. 
+This project was partly funded by the PEOFIAMP project sponsored by the Ministry of internal affairs 
+and communication of Japan as a part of EU-Japan cooperation funding and is offered as the result of the project. 
 
-This implementation has been tested for interoperability at series of interop and has shown to be one of the most compliant implementation. However, as the focus was on the interoperability, less focus was given to the security issues around the implementation. Reviewers are kindly requested to submit any issues. 
+This implementation has been tested for interoperability at series of interop and has shown to be one of 
+the most compliant implementation. However, as the focus was on the interoperability, 
+less focus was given to the security issues around the implementation. Reviewers are kindly requested to submit any issues. 
 
 
 Licence
@@ -50,10 +54,27 @@ INSTALL
 Refer to INSTALL document in each directory. 
 
 NOTE: There is an experimental .deb package available as well. 
-Install gdebi on your system and install by 
+To use it to install, 
 
+* Install mysql and create a database and its user with a password. 
+
+
+```
+#!sh
+
+    % sudo apt-get mysql-server
+    % sudo apt-get gdebi
+    % mysql -p
+    mysal> create database 'phpOidc';
+    mysql> grant all on phpOidc.* to phpOidc identified by 'new_password';
+    mysql> quit;
     % sudo gdebi phpOidc_1.0-all.deb
+```
+
+* Follow the instruction that appears at the end of the installation
+* (Configure apache for SSL if it were not previously.)
+* Restart apache. 
 
 Notes on using with nginx
 --------------------------
-As of March 18, we are trying to add support for nginx. 
+As of March 18, we are trying to add support for nginx.
