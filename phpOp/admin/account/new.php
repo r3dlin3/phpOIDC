@@ -1,7 +1,9 @@
-<? 
+<?
+require_once __DIR__ . '/../../PasswdHash.php';
+
 if (isset($_POST['submitted'])) {
 foreach($_POST AS $key => $value) { $_POST[$key] = mysql_real_escape_string($value); }
-$_POST['crypted_password'] = sha1($_POST['crypted_password']);
+$_POST['crypted_password'] = create_hash($_POST['crypted_password']);
 
 $sql = "INSERT INTO `account` ( `name` ,  `enabled` ,  `login` ,  `crypted_password` ,  `name_ja_kana_jp` ,  `name_ja_hani_jp` ,  `given_name` ,  `given_name_ja_kana_jp` ,  `given_name_ja_hani_jp` ,  `family_name` ,  `family_name_ja_kana_jp` ,  `family_name_ja_hani_jp` ,  `middle_name` ,  `middle_name_ja_kana_jp` ,  `middle_name_ja_hani_jp` ,  `nickname` ,  `preferred_username` ,  `profile` ,  `picture` ,  `website` ,  `email` ,  `email_verified` ,  `gender` ,  `birthdate` ,  `zoneinfo` ,  `locale` ,  `phone_number` ,  `phone_number_verified` ,  `address` ,  `updated_at`  ) VALUES(  '{$_POST['name']}' ,  '{$_POST['enabled']}' ,  '{$_POST['login']}' ,  '{$_POST['crypted_password']}' ,  '{$_POST['name_ja_kana_jp']}' ,  '{$_POST['name_ja_hani_jp']}' ,  '{$_POST['given_name']}' ,  '{$_POST['given_name_ja_kana_jp']}' ,  '{$_POST['given_name_ja_hani_jp']}' ,  '{$_POST['family_name']}' ,  '{$_POST['family_name_ja_kana_jp']}' ,  '{$_POST['family_name_ja_hani_jp']}' ,  '{$_POST['middle_name']}' ,  '{$_POST['middle_name_ja_kana_jp']}' ,  '{$_POST['middle_name_ja_hani_jp']}' ,  '{$_POST['nickname']}' ,  '{$_POST['preferred_username']}' ,  '{$_POST['profile']}' ,  '{$_POST['picture']}' ,  '{$_POST['website']}' ,  '{$_POST['email']}' ,  '{$_POST['email_verified']}' ,  '{$_POST['gender']}' ,  '{$_POST['birthdate']}' ,  '{$_POST['zoneinfo']}' ,  '{$_POST['locale']}' ,  '{$_POST['phone_number']}' ,  '{$_POST['phone_number_verified']}' ,  '{$_POST['address']}' ,  '{$_POST['updated_at']}'  ) ";
 mysql_query($sql) or die(mysql_error()); 

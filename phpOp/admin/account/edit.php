@@ -1,11 +1,13 @@
 <?php
+require_once __DIR__ . '/../../PasswdHash.php';
+
 if (isset($_GET['id']) ) {
 $id = (int) $_GET['id']; 
 if (isset($_POST['submitted'])) {
 foreach($_POST AS $key => $value) { $_POST[$key] = mysql_real_escape_string($value); }
 
 if($_POST['crypted_password']) {
-    $_POST['crypted_password'] = sha1($_POST['crypted_password']);
+    $_POST['crypted_password'] = create_hash($_POST['crypted_password']);
     $sql = "UPDATE `account` SET  `name` =  '{$_POST['name']}' ,  `enabled` =  '{$_POST['enabled']}' ,  `login` =  '{$_POST['login']}' ,  `crypted_password` =  '{$_POST['crypted_password']}' ,  `name_ja_kana_jp` =  '{$_POST['name_ja_kana_jp']}' ,  `name_ja_hani_jp` =  '{$_POST['name_ja_hani_jp']}' ,  `given_name` =  '{$_POST['given_name']}' ,  `given_name_ja_kana_jp` =  '{$_POST['given_name_ja_kana_jp']}' ,  `given_name_ja_hani_jp` =  '{$_POST['given_name_ja_hani_jp']}' ,  `family_name` =  '{$_POST['family_name']}' ,  `family_name_ja_kana_jp` =  '{$_POST['family_name_ja_kana_jp']}' ,  `family_name_ja_hani_jp` =  '{$_POST['family_name_ja_hani_jp']}' ,  `middle_name` =  '{$_POST['middle_name']}' ,  `middle_name_ja_kana_jp` =  '{$_POST['middle_name_ja_kana_jp']}' ,  `middle_name_ja_hani_jp` =  '{$_POST['middle_name_ja_hani_jp']}' ,  `nickname` =  '{$_POST['nickname']}' ,  `preferred_username` =  '{$_POST['preferred_username']}' ,  `profile` =  '{$_POST['profile']}' ,  `picture` =  '{$_POST['picture']}' ,  `website` =  '{$_POST['website']}' ,  `email` =  '{$_POST['email']}' ,  `email_verified` =  '{$_POST['email_verified']}' ,  `gender` =  '{$_POST['gender']}' ,  `birthdate` =  '{$_POST['birthdate']}' ,  `zoneinfo` =  '{$_POST['zoneinfo']}' ,  `locale` =  '{$_POST['locale']}' ,  `phone_number` =  '{$_POST['phone_number']}' ,  `phone_number_verified` =  '{$_POST['phone_number_verified']}' ,  `address` =  '{$_POST['address']}' ,  `updated_at` =  '{$_POST['updated_at']}'   WHERE `id` = '$id' ";
 }
 else

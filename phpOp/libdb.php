@@ -18,15 +18,31 @@
 require_once('MDB2.php');
 require_once('doctrine_bootstrap.php');
 require_once('dbconf.php');
+require_once('PasswordHash.php');
 
 
 function db_check_credential($username, $password) {
 
-    $q = Doctrine_Query::create()
-            ->from('Account a')
-            ->where('a.login = ? and crypted_password = ? and enabled = 1', array($username, sha1($password)));
-//    printf("%s\n", $q->getSqlQuery());
-    return ($q->execute()->count() == 1);
+//    $q = Doctrine_Query::create()
+//            ->from('Account a')
+//            ->where('a.login = ? and crypted_password = ? and enabled = 1', array($username, sha1($password)));
+////    printf("%s\n", $q->getSqlQuery());
+//    return ($q->execute()->count() == 1);
+
+    $account = db_get_account($username);
+    if($account && $account['enabled']) {
+
+        if(strstr($account['crypted_password'], ':') !== false) {
+            return validate_password($password, $account['crypted_password']);
+        } else { // check and migrate sha1 password to pbkdf2
+            if(sha1($password) == $account['crypted_password']) {
+                $values = array('crypted_password' => create_hash($password));
+                db_save_account($username, $values);
+                return true;
+            }
+        }
+    }
+    return false;
 }
 
 
