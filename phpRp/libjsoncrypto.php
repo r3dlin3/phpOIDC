@@ -22,6 +22,10 @@ include_once('Crypt/Hash.php');
 include_once('Crypt/RSA.php');
 
 
+$signing_alg_values_supported = Array('none', 'HS256', 'HS384', 'HS512', 'RS256', 'RS384', 'RS512');
+$encryption_alg_values_supported = Array('RSA1_5', 'RSA-OAEP');
+$encryption_enc_values_supported = Array('A128CBC-HS256', 'A256CBC-HS512', 'A128GCM', 'A256GCM');
+
 /**
 * signs a JSON object or string
 * @param    mixed  $data               JSON encoded string or JSON object
@@ -76,7 +80,7 @@ function jwt_sign($data, $sig_param, $keys) {
                     $header['alg'] = $alg;
                     $headers = array('x5u', 'x5t', 'jku', 'jwk', 'x5c', 'kid', 'typ', 'cty');
                     foreach($headers as $header_name) {
-                        if($sig_param[$header_name])
+                        if(isset($sig_param[$header_name]))
                             $header[$header_name] = $sig_param[$header_name];
                     }
                     $jwt_header = base64url_encode(json_encode($header));
@@ -107,6 +111,10 @@ function jwt_sign($data, $sig_param, $keys) {
                 $sig = '';
                 break;
 
+            default:
+                return false;
+                break;
+
         }            
     }
     $jwt_sig = $sig ? base64url_encode($sig) : $sig;
@@ -119,7 +127,7 @@ function jwt_sign($data, $sig_param, $keys) {
 
 
 
-function jwk_get_keys($jwk, $kty = 'RSA', $use = NULL, $kid = NULL) {
+function jwk_get_keys($jwk, $kty = 'RSA', $use = NULL, $kid = NULL, $x5t = NULL) {
     if(is_string($jwk))
         $json = json_decode($jwk, true);
     else
@@ -148,7 +156,7 @@ function jwk_get_keys($jwk, $kty = 'RSA', $use = NULL, $kid = NULL) {
     }
     if(!count($foundkeys))
         return NULL;
-    if($kid) {
+    if(isset($kid)) {
         $temp = array();
         foreach($foundkeys as $key) {
             if(!strcmp($key['kid'], $kid))
@@ -156,12 +164,20 @@ function jwk_get_keys($jwk, $kty = 'RSA', $use = NULL, $kid = NULL) {
         }
         $foundkeys = $temp;
     }
+    if(isset($x5t)) {
+        $temp = array();
+        foreach($foundkeys as $key) {
+            if(!strcmp($key['x5t'], $x5t))
+                $temp[] = $key;
+        }
+        $foundkeys = $temp;
+    }
     return $foundkeys;
 }
 
-function jwk_get_rsa_use_key($jwk, $use = NULL, $kid = NULL) {
+function jwk_get_rsa_use_key($jwk, $use = NULL, $kid = NULL, $x5t = NULL) {
     $is_cert = false;
-    $keys = jwk_get_keys($jwk, 'RSA', $use, $kid);
+    $keys = jwk_get_keys($jwk, 'RSA', $use, $kid, $x5t);
     if(!count($keys)) {
         return NULL;
     }
@@ -191,12 +207,12 @@ function jwk_get_rsa_use_key($jwk, $use = NULL, $kid = NULL) {
     return $rsa;
 }
 
-function jwk_get_rsa_sig_key($jwk, $kid = NULL) {
-    return jwk_get_rsa_use_key($jwk, 'sig', $kid);
+function jwk_get_rsa_sig_key($jwk, $kid = NULL, $x5t = NULL) {
+    return jwk_get_rsa_use_key($jwk, 'sig', $kid, $x5t);
 }
 
-function jwk_get_rsa_enc_key($jwk, $kid = NULL) {
-    return jwk_get_rsa_use_key($jwk, 'enc', $kid);
+function jwk_get_rsa_enc_key($jwk, $kid = NULL, $x5t = NULL) {
+    return jwk_get_rsa_use_key($jwk, 'enc', $kid, $x5t);
 }
 
 
@@ -374,7 +390,7 @@ function jwt_verify($jwt, $sig_hints = NULL) {
                 }
                 if(!$verified) {
                     foreach($jwks as $jwk) {
-                        $rsa = jwk_get_rsa_sig_key($jwk, $header['kid']);
+                        $rsa = jwk_get_rsa_sig_key($jwk, $header['kid'], $header['x5t']);
                         if($rsa) {
                             $rsa->setHash('sha' . substr($header['alg'], 2));
                             $rsa->setSignatureMode(CRYPT_RSA_SIGNATURE_PKCS1);
@@ -881,15 +897,16 @@ function decrypt_with_key($data, $key_file, $is_private_key=true, $pass_phrase=N
 
 
 function jwt_encrypt($data, $key_file, $is_private_key=false, $pass_phrase=NULL, $public_cert_url=NULL, $enc_key=NULL, $alg='RSA1_5', $enc='A256CBC-HS512', $zip = true) {
+    global $encryption_alg_values_supported, $encryption_enc_values_supported;
     if(is_string($key_file) && is_file($key_file)) {
         if(!file_exists($key_file)) {
             return false;
         }
     }
-    if(!$alg || !in_array($alg, array('RSA1_5', 'RSA-OAEP'))) {
+    if(!$alg || !in_array($alg, $encryption_alg_values_supported)) {
         return false;
     }
-    if(!$enc || !in_array($enc, array('A128CBC-HS256', 'A128GCM', 'A256CBC-HS512', 'A256GCM'))) {
+    if(!$enc || !in_array($enc, $encryption_enc_values_supported)) {
         return false;
     }
     $is_gcm = false;
@@ -986,6 +1003,8 @@ function jwt_encrypt($data, $key_file, $is_private_key=false, $pass_phrase=NULL,
 
 
 function jwt_decrypt($jwe, $key_file, $is_private_key=true, $pass_phrase=NULL) {
+    global $encryption_alg_values_supported, $encryption_enc_values_supported;
+
     $parts = explode('.', $jwe);
     $rsa = null;
     if(count($parts) != 5) {
@@ -1015,13 +1034,13 @@ function jwt_decrypt($jwe, $key_file, $is_private_key=true, $pass_phrase=NULL) {
     $integrity = $obj[4];
     if(!isset($header['enc']) || !isset($header['alg']))
         return false;
-    if(!in_array($header['enc'], array('A128CBC-HS256', 'A128GCM', 'A256CBC-HS512', 'A256GCM')))
+    if(!in_array($header['enc'], $encryption_enc_values_supported))
         return false;
     $is_gcm = false;
     if(strpos($header['enc'], 'GCM') !== false) {
         $is_gcm = true;
     }
-    if(!in_array($header['alg'], array('RSA1_5', 'RSA-OAEP')))
+    if(!in_array($header['alg'], $encryption_alg_values_supported))
         return false;
         
     if($rsa) {
