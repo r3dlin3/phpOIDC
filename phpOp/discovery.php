@@ -32,6 +32,7 @@ exit;
 
 
 function handle_openid_config() {
+    global $signing_alg_values_supported, $encryption_alg_values_supported, $encryption_enc_values_supported;
     $endpoint_base =  OP_INDEX_PAGE;
 
     $discovery = Array(
@@ -51,20 +52,20 @@ function handle_openid_config() {
                         'acr_values_supported' => Array(),
                         'subject_types_supported' => Array('public', 'pairwise'),
 
-                        'userinfo_signing_alg_values_supported' => Array('HS256', 'HS384', 'HS512', 'RS256', 'RS384', 'RS512'),
-                        'userinfo_encryption_alg_values_supported' => Array('RSA1_5', 'RSA-OAEP'),
-                        'userinfo_encryption_enc_values_supported' => Array('A128CBC-HS256', 'A256CBC-HS512', 'A128GCM', 'A256GCM'),
+                        'userinfo_signing_alg_values_supported' => $signing_alg_values_supported,
+                        'userinfo_encryption_alg_values_supported' => $encryption_alg_values_supported,
+                        'userinfo_encryption_enc_values_supported' => $encryption_enc_values_supported,
 
-                        'id_token_signing_alg_values_supported' => Array('HS256', 'HS384', 'HS512', 'RS256', 'RS384', 'RS512'),
-                        'id_token_encryption_alg_values_supported' => Array('RSA1_5', 'RSA-OAEP'),
-                        'id_token_encryption_enc_values_supported' => Array('A128CBC-HS256', 'A256CBC-HS512', 'A128GCM', 'A256GCM'),
+                        'id_token_signing_alg_values_supported' => $signing_alg_values_supported,
+                        'id_token_encryption_alg_values_supported' => $encryption_alg_values_supported,
+                        'id_token_encryption_enc_values_supported' => $encryption_enc_values_supported,
 
-                        'request_object_signing_alg_values_supported' => Array('HS256', 'HS384', 'HS512', 'RS256', 'RS384', 'RS512'),
-                        'request_object_encryption_alg_values_supported' => Array('RSA1_5', 'RSA-OAEP'),
-                        'request_object_encryption_enc_values_supported' => Array('A128CBC-HS256', 'A256CBC-HS512', 'A128GCM', 'A256GCM'),
+                        'request_object_signing_alg_values_supported' => $signing_alg_values_supported,
+                        'request_object_encryption_alg_values_supported' => $encryption_alg_values_supported,
+                        'request_object_encryption_enc_values_supported' => $encryption_enc_values_supported,
 
                         'token_endpoint_auth_methods_supported' => Array('client_secret_post', 'client_secret_basic', 'client_secret_jwt', 'private_key_jwt'),
-                        'token_endpoint_auth_signing_alg_values_supported' => Array('HS256', 'HS384', 'HS512', 'RS256', 'RS384', 'RS512'),
+                        'token_endpoint_auth_signing_alg_values_supported' => $signing_alg_values_supported,
 
                         'display_values_supported' => Array('page'),
                         'claim_types_supported' => Array('normal'),
