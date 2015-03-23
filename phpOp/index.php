@@ -413,6 +413,17 @@ function handle_auth() {
         if(count(array_diff($response_types, $known_response_types)))
             throw new OidcException('invalid_response_type', "Unknown response_type {$_REQUEST['response_type']}");
 
+        if(ENABLE_PKCE) {
+            if(in_array('code', $response_types)) {
+                if(!isset($_REQUEST['code_challenge']))
+                    throw new OidcException('invalid_request', 'code challenge required');
+                if(isset($_REQUEST['code_challenge_method'])) {
+                    if(!in_array($_REQUEST['code_challenge_method'], array('plain', 'S256')))
+                        throw new OidcException('invalid_request', "unsupported code challenge method {$_REQUEST['code_challenge_method']}");
+                }
+            }
+        }
+
         if(!isset($_REQUEST['scope']))
             throw new OidcException('invalid_request', 'no scope');
         $scopes = explode(' ', $_REQUEST['scope']);
@@ -728,6 +739,27 @@ function handle_token() {
         $request_info = json_decode($auth_code['info'], true);
         $client_authenticated = is_client_authenticated();
         if($client_authenticated) {
+            if(ENABLE_PKCE) {
+                if(!isset($_REQUEST['code_verifier']))
+                    throw new OidcException('invalid_grant', 'code verifier required');
+                $code_verifier = $_REQUEST['code_verifier'];
+                $code_challenge = $request_info['g']['code_challenge'];
+                $code_challenge_method = $request_info['g']['code_challenge_method']? $request_info['g']['code_challenge_method'] : 'plain';
+
+                $code_challenge_verified = false;
+                if($code_challenge_method == 'plain') {
+                    if($code_verifier == $code_challenge)
+                        $code_challenge_verified = true;
+                } else if($code_challenge_method = 'S256') {
+                    if(base64url_encode(hash('sha256', $code_verifier, true)) == $code_challenge) {
+                        $code_challenge_verified = true;
+                        log_debug("code challenge verified");
+                    }
+                }
+                if(!$code_challenge_verified)
+                    throw new OidcException('invalid_grant', 'code verifier mismatch');
+            }
+
             while(true) {
                 $token_name = base64url_encode(mcrypt_create_iv(32, MCRYPT_DEV_URANDOM));
                 if(!db_find_token($token_name))
@@ -888,7 +920,7 @@ function handle_token() {
             $auth_code->delete();
             echo json_encode($token_response);
         } else
-            send_error(NULL, 'invalid_client', 'invalid client credentials');
+            throw new OidcException('invalid_client', 'invalid client credentials');
     }
     catch(OidcException $e)
     {

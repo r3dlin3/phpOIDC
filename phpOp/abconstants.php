@@ -158,5 +158,6 @@ define('RP_AUTHCHECK_REDIRECT_URI', RP_URL . '/authcheck.php/authcheckcb');
 define('RP_POST_LOGOUT_REDIRECT_URI', RP_INDEX_PAGE . '/logoutcb');
 define('RP_CLIENT_ID', RP_URL . '/');
 
+define('ENABLE_PKCE', 0);
 
 ?>
