@@ -501,11 +501,10 @@ function handle_callback() {
       $data = array( 'client_id' => $client_id,
           'code' => $code,
           'redirect_uri' => $client_redirect_uri,
-          'grant_type' => 'authorization_code'
+          'grant_type' => 'authorization_code',
+          'code_verifier' => $_SESSION['code_verifier']
       );
-      $curl_options = array(
-
-      );
+      $curl_options = array();
 
       $token_endpoint_auth_method = $_SESSION['provider']['token_endpoint_auth_method'];
       $token_endpoint_auth_signing_alg = $_SESSION['provider']['token_endpoint_auth_signing_alg'];
@@ -1413,6 +1412,7 @@ function handle_start() {
 
     unset($_SESSION['id_token']);
     unset($_SESSION['session_state']);
+    unset($_SESSION['code_verifier']);
 
     remember_session_form_options($_REQUEST);
     log_debug("handle_start : %s", print_r($_REQUEST, true));
@@ -1611,6 +1611,12 @@ function handle_start() {
     $query_params['scope'] = implode(' ', $unique_scopes);
     log_debug('scopes = %s', print_r($query_params['scope'], true));
 
+    $code_verifier = base64url_encode(mcrypt_create_iv(32, MCRYPT_DEV_URANDOM));
+    $_SESSION['code_verifier'] = $code_verifier;
+    $code_challenge = base64url_encode(hash('sha256', $code_verifier, true));
+    $query_params['code_challenge_method'] = 'S256';
+    $query_params['code_challenge'] = $code_challenge;
+    log_debug("code verifier : %s challenge : %s method : %s", $code_verifier, $code_challenge, $query_params['code_challenge_method']);
 
     if($_REQUEST['page'])
         $query_params['page'] = $_REQUEST['page'];
