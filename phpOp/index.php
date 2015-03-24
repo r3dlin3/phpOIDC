@@ -1447,6 +1447,7 @@ function check_redirect_uris($uris) {
 
 function handle_client_registration() {
     try {
+        global $signing_alg_values_supported, $encryption_alg_values_supported, $encryption_enc_values_supported;
         $tmp_headers = apache_request_headers();
         foreach ($tmp_headers as $header => $value) {
             $headers[strtolower($header)] = $value;
@@ -1472,20 +1473,20 @@ function handle_client_registration() {
             'logo_uri' => NULL,
             'redirect_uris' => NULL,
             'post_logout_redirect_uris' => NULL,
-            'token_endpoint_auth_method' => NULL,
-            'token_endpoint_auth_signing_alg' => NULL,
+            'token_endpoint_auth_method' => array('client_secret_basic', 'client_secret_post','private_key_jwt', 'client_secret_jwt'),
+            'token_endpoint_auth_signing_alg' => $signing_alg_values_supported,
             'policy_uri' => NULL,
             'tos_uri' => NULL,
             'jwks_uri' => NULL,
             'sector_identifier_uri' => NULL,
-            'subject_type' => NULL,
-            'request_object_signing_alg' => NULL,
-            'userinfo_signed_response_alg' => NULL,
-            'userinfo_encrypted_response_alg' => NULL,
-            'userinfo_encrypted_response_enc' => NULL,
-            'id_token_signed_response_alg' => NULL,
-            'id_token_encrypted_response_alg' => NULL,
-            'id_token_encrypted_response_enc' => NULL,
+            'subject_type' => array('pairwise', 'public'),
+            'request_object_signing_alg' => $signing_alg_values_supported,
+            'userinfo_signed_response_alg' => $signing_alg_values_supported,
+            'userinfo_encrypted_response_alg' => $encryption_alg_values_supported,
+            'userinfo_encrypted_response_enc' => $encryption_enc_values_supported,
+            'id_token_signed_response_alg' => $signing_alg_values_supported,
+            'id_token_encrypted_response_alg' => $encryption_alg_values_supported,
+            'id_token_encrypted_response_enc' => $encryption_enc_values_supported,
             'default_max_age' => NULL,
             'require_auth_time' => NULL,
             'default_acr_values' => NULL,
@@ -1508,12 +1509,16 @@ function handle_client_registration() {
             'registration_access_token' => $reg_token,
             'registration_client_uri_path' => $reg_client_uri_path
         );
-        foreach($keys as $key => $default) {
+        foreach($keys as $key => $supported_values) {
             if(isset($data[$key])) {
                 if(in_array($key, array('contacts', 'redirect_uris', 'request_uris', 'post_logout_redirect_uris', 'grant_types', 'response_types', 'default_acr_values')))
                     $params[$key] = implode('|', $data[$key]);
                 else
                     $params[$key] = $data[$key];
+                if(!empty($supported_values)) {
+                    if(!in_array($params[$key], $supported_values))
+                        throw new OidcException('invalid_client_metadata', "Unsupported {$key} value : {$params[$key]}");
+                }
             }
         }
         if(!check_redirect_uris($data['redirect_uris'])) {
@@ -1546,6 +1551,7 @@ function handle_client_registration() {
         log_debug("client registration params = %s", print_r($params, true));
         db_save_client($client_id, $params);
         $reg_uri = OP_ENDPOINT . '/client/' . $reg_client_uri_path;
+        unset($params['registration_client_uri_path']);
 
         $client_json = Array(
             'client_id' => $client_id,
