@@ -1275,7 +1275,10 @@ function handle_distributedinfo() {
                         }
                         if(!$encryption_keys)
                             send_bearer_error('400', 'invalid_request', 'Unable to retrieve JWK key for encryption');
-                        $userinfo_jwt = jwt_encrypt($userinfo_jwt, $encryption_keys[0], false, NULL, $jwk_uri, NULL, $alg, $enc, false);
+                        $header_params = array('jku' => $jwk_uri);
+                        if(isset($encryption_keys[0]['kid']))
+                            $header_params['kid'] = $encryption_keys[0]['kid'];
+                        $userinfo_jwt = jwt_encrypt2($userinfo_jwt, $encryption_keys[0], false, NULL, $header_params, NULL, $alg, $enc, false);
                         if(!$userinfo_jwt) {
                             log_error("Unable to encrypt response for DistributedInfo");
                             send_bearer_error('400', 'invalid_request', 'Unable to encrypt response for DistributedInfo');
@@ -2015,7 +2018,10 @@ function sign_encrypt($payload, $sig, $alg, $enc, $jwks_uri = null, $client_secr
                 log_error("Unable to get enc keys");
                 return null;
             }
-            $jwt = jwt_encrypt($jwt, $encryption_keys[0], false, NULL, $jwk_uri, NULL, $alg, $enc, false);
+            $header_params = array('jku' => $jwk_uri);
+            if(isset($encryption_keys[0]['kid']))
+                $header_params['kid'] = $encryption_keys[0]['kid'];
+            $jwt = jwt_encrypt2($jwt, $encryption_keys[0], false, NULL, $header_params, NULL, $alg, $enc, false);
             if(!$jwt) {
                 if($cryptoError)
                     $cryptoError = 'error_enc';

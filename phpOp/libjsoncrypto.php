@@ -896,7 +896,8 @@ function decrypt_with_key($data, $key_file, $is_private_key=true, $pass_phrase=N
 }
 
 
-function jwt_encrypt($data, $key_file, $is_private_key=false, $pass_phrase=NULL, $public_cert_url=NULL, $enc_key=NULL, $alg='RSA1_5', $enc='A256CBC-HS512', $zip = true) {
+
+function jwt_encrypt2($data, $key_file, $is_private_key=false, $pass_phrase=NULL, $params=NULL, $enc_key=NULL, $alg='RSA1_5', $enc='A256CBC-HS512', $zip = true) {
     global $encryption_alg_values_supported, $encryption_enc_values_supported;
     if(is_string($key_file) && is_file($key_file)) {
         if(!file_exists($key_file)) {
@@ -961,12 +962,13 @@ function jwt_encrypt($data, $key_file, $is_private_key=false, $pass_phrase=NULL,
                         );
         if($zip)
             $header['zip'] = 'DEF';
-        if($public_cert_url) {
-            if(is_array($key_file)) {
-                $header['jku'] = $public_cert_url;
-            } else
-                $header['x5u'] = $public_cert_url;
-            
+        if($params) {
+            $keys = array('jku', 'x5u', 'x5c', 'jwk', 'x5t', 'kid', 'cty', 'typ', 'crit', 'x5t#sha256');
+            foreach ($keys as $key) {
+                if(isset($params[$key])) {
+                    $header[$key] = $params[$key];
+                }
+            }
         }
         if($iv)
             $encoded_iv =  base64url_encode($iv);
@@ -1000,7 +1002,12 @@ function jwt_encrypt($data, $key_file, $is_private_key=false, $pass_phrase=NULL,
     return sprintf('%s.%s.%s.%s.%s', $encoded_header, $encoded_enc_key, $encoded_iv, $enc_data, $integrity_hash);;                     
 }
 
-
+function jwt_encrypt($data, $key_file, $is_private_key=false, $pass_phrase=NULL, $public_cert_url=NULL, $enc_key=NULL, $alg='RSA1_5', $enc='A256CBC-HS512', $zip = true) {
+    $header = NULL;
+    if($public_cert_url)
+        $header = array('jku' => $public_cert_url);
+    return jwt_encrypt2($data, $key_file, $is_private_key, $pass_phrase, $header, $enc_key, $alg, $enc, $zip);
+}
 
 function jwt_decrypt($jwe, $key_file, $is_private_key=true, $pass_phrase=NULL) {
     global $encryption_alg_values_supported, $encryption_enc_values_supported;

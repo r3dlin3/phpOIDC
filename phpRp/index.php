@@ -454,7 +454,10 @@ function rp2op_jwt_sign_encrypt($provider, $data, $sig_alg, $enc_algs = NULL) {
                     }
                     if(!$encryption_keys)
                         throw new Exception('Unable to retrieve JWK for encryption');
-                    $jwt = jwt_encrypt($jwt, $encryption_keys[0], false, NULL, $jwk_uri, NULL, $cek_alg, $plaintext_alg, false);
+                    $header_params = array('jku' => $jwk_uri);
+                    if(isset($encryption_keys[0]['kid']))
+                        $header_params['kid'] = $encryption_keys[0]['kid'];
+                    $jwt = jwt_encrypt2($jwt, $encryption_keys[0], false, NULL, $header_params, NULL, $cek_alg, $plaintext_alg, false);
                     if(!$jwt)
                         throw new Exception('Unable to encrypt data');
                 } else
@@ -1831,8 +1834,11 @@ function handle_start() {
                     $g_error .= 'No JWK key for encryption';
                     return NULL;
                 }
+                $header_params = array('jku' => $jwk_uri);
+                if(isset($encryption_keys[0]['kid']))
+                    $header_params['kid'] = $encryption_keys[0]['kid'];
 
-                $encrypted_jwt = jwt_encrypt($request_jwt, $encryption_keys[0], false, NULL, $jwk_uri, NULL, $_REQUEST['request_object_encrypted_response_alg'], $_REQUEST['request_object_encrypted_response_enc'], false);
+                $encrypted_jwt = jwt_encrypt2($request_jwt, $encryption_keys[0], false, NULL, $header_params, NULL, $_REQUEST['request_object_encrypted_response_alg'], $_REQUEST['request_object_encrypted_response_enc'], false);
                 if(!$encrypted_jwt) {
                     $g_error .= "Unable to encrypt request object.";
                     return;
