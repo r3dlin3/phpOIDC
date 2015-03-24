@@ -1170,6 +1170,8 @@ function handle_distributedinfo() {
 
     try
     {
+        global $signing_alg_values_supported, $encryption_alg_values_supported, $encryption_enc_values_supported;
+
         $token = $_REQUEST['access_token'];
         if(!$token) {
             $token = get_bearer_token();
@@ -1242,7 +1244,7 @@ function handle_distributedinfo() {
         $sig_param = Array('alg' => 'none');
         $sig_key = NULL;
         if($db_client['userinfo_signed_response_alg']) {
-            if(in_array($db_client['userinfo_signed_response_alg'], Array('HS256', 'HS384', 'HS512', 'RS256', 'RS384', 'RS512'))) {
+            if(in_array($db_client['userinfo_signed_response_alg'], $signing_alg_values_supported)) {
                 $sig_param['alg'] = $db_client['userinfo_signed_response_alg'];
                 if(substr($db_client['userinfo_signed_response_alg'], 0, 2) == 'HS') {
                     $sig_key = $db_client['client_secret'];
@@ -1261,7 +1263,7 @@ function handle_distributedinfo() {
                 if($db_client['userinfo_encrypted_response_alg'] && $db_client['userinfo_encrypted_response_enc']) {
                     log_debug("UserInfo Encryption Algs %s %s", $db_client['userinfo_encrypted_response_alg'], $db_client['userinfo_encrypted_response_enc']);
                     list($alg, $enc) = array($db_client['userinfo_encrypted_response_alg'], $db_client['userinfo_encrypted_response_enc']);
-                    if(in_array($alg, Array('RSA1_5', 'RSA-OAEP')) && in_array($enc, Array('A128GCM', 'A256GCM', 'A128CBC-HS256', 'A256CBC-HS512'))) {
+                    if(in_array($alg, $encryption_alg_values_supported) && in_array($enc, $encryption_enc_values_supported)) {
                         $jwk_uri = '';
                         $encryption_keys = NULL;
                         if($db_client['jwks_uri']) {
@@ -1967,13 +1969,14 @@ function send_response($username, $authorize = false)
 
 function sign_encrypt($payload, $sig, $alg, $enc, $jwks_uri = null, $client_secret = null, &$cryptoError = null)
 {
+    global $signing_alg_values_supported, $encryption_alg_values_supported, $encryption_enc_values_supported;
     log_debug("sign_encrypt sig = %s alg = %s enc = %s", $sig, $alg, $enc);
     $jwt = is_array($payload) ? json_encode($payload) : $payload;
 
     if(isset($sig)) {
         $sig_param = Array('alg' => 'none');
         $sig_key = NULL;
-        if(in_array($sig, Array('HS256', 'HS384', 'HS512', 'RS256', 'RS384', 'RS512'))) {
+        if(in_array($sig, $signing_alg_values_supported)) {
             $sig_param['alg'] = $sig;
             if(substr($sig, 0, 2) == 'HS') {
                 $sig_key = $client_secret;
@@ -2000,7 +2003,7 @@ function sign_encrypt($payload, $sig, $alg, $enc, $jwks_uri = null, $client_secr
     }
 
     if(isset($alg) && isset($enc)) {
-        if(in_array($alg, Array('RSA1_5', 'RSA-OAEP')) && in_array($enc, Array('A128GCM', 'A256GCM', 'A128CBC-HS256', 'A256CBC-HS512'))) {
+        if(in_array($alg, $encryption_alg_values_supported) && in_array($enc, $encryption_enc_values_supported)) {
             $jwk_uri = '';
             $encryption_keys = NULL;
             if($jwks_uri) {
