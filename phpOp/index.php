@@ -276,18 +276,27 @@ function clean_session($persist=0){
 }
 
 
-function send_error($url, $error, $description=NULL, $error_uri=NULL, $state=NULL, $query=true, $http_error_code = '400') {
+function send_error($url, $error, $description=NULL, $error_uri=NULL, $state=NULL, $response_mode='query', $http_error_code = '400') {
     log_error("url:%s error:%s desc:%s uri:%s state:%s code:%d", $url, $error, $description, $error_uri, $state, $http_error_code);
     if($url) {
-        if($query) $separator = '?';
-            else $separator = '#';
         $params = array('error' => $error);
-
         if($state) $params['state'] = $state;
         if($description) $params['error_description'] = $description;
-        $url .= $separator . http_build_query($params);
-        header("Location: $url");
-        exit;
+
+        if($response_mode == 'form_post') {
+            header("Cache-Control: no-store");
+            header("Pragma: no-cache");
+            echo make_form_post_response($url, $params);
+            exit;
+        } else {
+            if($response_mode == 'fragment')
+                $separator = '#';
+            else
+                $separator = '?';
+            $url .= $separator . http_build_query($params);
+            header("Location: $url");
+            exit;
+        }
     } else {
         $json = array();
         if($error)
@@ -388,7 +397,8 @@ function decrypt_verify_jwt($jwt, $client, &$error) {
 
 function handle_auth() {
     $state = isset($_REQUEST['state']) ? $_REQUEST['state'] : NULL;
-    $error_page = isset($_REQUEST['redirect_uri']) ? $_REQUEST['redirect_uri'] : OP_INDEX_PAGE;
+    $error_page = OP_INDEX_PAGE;
+    $response_mode = 'query';
 
     try{
         if(!isset($_REQUEST['client_id']))
@@ -401,10 +411,11 @@ function handle_auth() {
         if(isset($_REQUEST['redirect_uri'])) {
             if(!is_valid_registered_redirect_uri($client['redirect_uris'], $_REQUEST['redirect_uri']))
                 throw new OidcException('invalid_request', 'no matching redirect_uri');
-        } else {
-            $error_page = null;
-            throw new OidcException('invalid_request', 'no redirect_uris registered');
-        }
+        } else
+            throw new OidcException('invalid_request', 'no redirect_uri in request');
+
+        $error_page = $_REQUEST['redirect_uri'];
+        $response_mode = get_response_mode($_REQUEST);
 
         if(!isset($_REQUEST['response_type']))
             throw new OidcException('invalid_request', 'no response_type');
@@ -584,11 +595,11 @@ function handle_auth() {
     }
     catch(OidcException $e) {
         log_debug("handle_auth exception : %s", $e->getTraceAsString());
-        send_error($error_page, $e->error_code, $e->desc, NULL, $state);
+        send_error($error_page, $e->error_code, $e->desc, NULL, $state, $response_mode);
     }
     catch(Exception $e) {
         log_debug("handle_auth exception : %s", $e->getTraceAsString());
-        send_error($error_page, 'invalid_request', $e->getMessage(), NULL, $state);
+        send_error($error_page, 'invalid_request', $e->getMessage(), NULL, $state, $response_mode);
     }
 }
 
@@ -1404,7 +1415,7 @@ if($file && file_exists(__DIR__ . $file)) {
 }
 
 $error = $_REQUEST['error'];
-$desc = $_REQUEST['description'];
+$desc = $_REQUEST['error_description'];
 
 if(!$error)
     $error_html = NULL;
@@ -1746,6 +1757,62 @@ function get_account_claims($db_user, $requested_claims)
     return $claims;
 }
 
+
+function get_response_mode($req) {
+    if(isset($req['response_mode'])) {
+        if(in_array($req['response_mode'], array('fragment', 'query', 'form_post')))
+            return $req['response_mode'];
+    }
+    if($req['response_type'] == 'code' || empty($req['response_type']))
+        return 'query';
+    else
+        return 'fragment';
+}
+
+function make_form_post_response($url, $params) {
+
+    $pairs = '';
+    $type = 'hidden';
+    foreach($params as $key => $value) {
+        $pairs .= "<input type='{$type}' name='{$key}' value='{$value}'>";
+    }
+
+    $html = <<<EOF
+<html>
+<head>
+    <title >Form Test</title>
+    <script type="text/javascript">
+        function submitform() {
+            document.forms[0].submit();
+        }
+    </script>
+</head>
+<body onload='submitform();'>
+<form id='myform' name='myform' method='post' action='{$url}'>
+$pairs
+</form>
+</body>
+</html>
+EOF;
+    return $html;
+}
+
+
+function send_auth_response($url, $params, $response_mode) {
+    error_log('URL = ' . $url . ' params = ' . print_r($params, true) . ' mode = ' . $response_mode);
+    if($response_mode == 'form_post') {
+        echo make_form_post_response($url, $params);
+    } else {
+        if($response_mode == 'fragment')
+            $separator = '#';
+        else
+            $separator = '?';
+        $url .= $separator . http_build_query($params);
+        error_log("redirect to $url");
+        header("Location: $url");
+    }
+}
+
 function send_response($username, $authorize = false)
 {
     $GET=$_SESSION['get'];
@@ -1753,6 +1820,7 @@ function send_response($username, $authorize = false)
     $rpep=$GET['redirect_uri'];
     $state = isset($GET['state']) ? $GET['state'] : NULL;
     $error_page = isset($GET['redirect_uri']) ? $GET['redirect_uri'] : OP_INDEX_PAGE;
+    $response_mode = get_response_mode($GET);
 
     try
     {
@@ -1769,6 +1837,7 @@ function send_response($username, $authorize = false)
 
         $issue_at = strftime('%G-%m-%d %T');
         $expiration_at = strftime('%G-%m-%d %T', time() + (2*60));
+        $response_params = array();
 
         if(!$authorize)
             throw new OidcException('access_denied', 'User denied access');
@@ -1827,16 +1896,16 @@ function send_response($username, $authorize = false)
         }
 
         // Handle response_type for code or token
-
-        $fragments = Array();
+        if(isset($GET['state']))
+            $response_params['state'] = $GET['state'];
         if($is_token_flow || $is_id_token) {
-            $fragments[] = "access_token=$token";
-            $fragments[] = 'token_type=Bearer';
-            if($offline_access)
-                $fragments[] = "refresh_token=$refresh_token_name";
-            $fragments[] = 'expires_in=3600';
-            if($GET['state'])
-                $fragments[] = "state={$GET['state']}";
+            if(isset($token)) {
+                $response_params['access_token'] = $token;
+                $response_params['token_type'] = 'Bearer';
+                if($offline_access)
+                    $response_params['refresh_token'] = $refresh_token_name;
+                $response_params['expires_in'] = '3600';
+            }
         }
         if($is_id_token) {
 
@@ -1906,7 +1975,7 @@ function send_response($username, $authorize = false)
             }
             $id_token_obj = make_id_token(wrap_userid($db_client, $username), SERVER_ID, $client_id, $idt_claims, $nonce, $c_hash, $at_hash, $auth_time, $ops, $acr );
 
-            log_debug('sen_response id_token_obj = %s', print_r($id_token_obj));
+            log_debug('sen_response id_token_obj = %s', print_r($id_token_obj, true));
             $cryptoError = null;
             $id_token = sign_encrypt($id_token_obj, $sig, $alg, $enc, $jwk_uri, $client_secret, $cryptoError);
 
@@ -1914,35 +1983,18 @@ function send_response($username, $authorize = false)
                 log_error("Unable to sign encrypt response for ID Token %s", $cryptoError);
                 throw new OidcException('invalid_request', "idtoken crypto error {$cryptoError}");
             }
-            $fragments[] = "id_token=$id_token";
+            $response_params['id_token'] = $id_token;
         }
-        $queries = Array();
         $url_parts = parse_url($rpep);
         $origin = sprintf("%s://%s%s", $url_parts['scheme'], $url_parts['host'], isset($url_parts['port']) ? ':' . $url_parts['port'] : '');
         $salt = bin2hex(mcrypt_create_iv(16, MCRYPT_DEV_URANDOM));
         log_debug("ss = sha256(%s%s%s%s).%s", $client_id, $origin, $_SESSION['ops'], $salt, $salt);
         $session_state = hash('sha256', "{$client_id}{$origin}{$_SESSION['ops']}{$salt}") . '.' . $salt;
+        $response_params['session_state'] = $session_state;
 
         if($is_code_flow) {
-            log_debug('url parts = %s', print_r($url_parts, true));
-            if(count($fragments) == 0) {
-                $queries[] = "code=$code";
-                if($GET['state'])
-                    $queries[] = "state={$GET['state']}";
-                $queries[] = "session_state={$session_state}";
-            } else {
-                array_unshift($fragments, "code=$code");
-                $fragments[] = "session_state={$session_state}";
-            }
-        } else {
-            $fragments[] = "session_state={$session_state}";
+            $response_params['code'] = $code;
         }
-
-        if(count($queries))
-            $query = '?' . implode('&', $queries);
-        if(count($fragments))
-            $fragment = '#' . implode('&', $fragments);
-        $url="$rpep{$query}{$fragment}";
 
         if($_SESSION['persist']=='on') {
             $username = $_SESSION['username'];
@@ -1959,16 +2011,15 @@ function send_response($username, $authorize = false)
         } else {
             session_destroy();
         }
-        log_debug('redirect to %s', $url);
-        header("Location:$url");
+        send_auth_response($rpep, $response_params, $response_mode);
     }
     catch(OidcException $e) {
         log_error("handle_auth exception : %s", $e->getTraceAsString());
-        send_error($error_page, $e->error_code, $e->desc, NULL, $state);
+        send_error($error_page, $e->error_code, $e->desc, NULL, $state, $response_mode);
     }
     catch(Exception $e) {
         log_error("handle_auth exception : %s", $e->getTraceAsString());
-        send_error($error_page, 'invalid_request', $e->getMessage(), NULL, $state);
+        send_error($error_page, 'invalid_request', $e->getMessage(), NULL, $state, $response_mode);
     }
 
 }
