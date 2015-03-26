@@ -30,7 +30,7 @@ header('Content-Type: text/html; charset=utf-8');
 <head>
 <meta http-equiv="content-type" content="text/html;charset=UTF-8" />
 <title>OP Frame</title>
-<script src="http://crypto-js.googlecode.com/svn/tags/3.0.2/build/rollups/sha256.js"></script>
+<script src="https://crypto-js.googlecode.com/svn/tags/3.0.2/build/rollups/sha256.js"></script>
 <script type='text/javascript'>//<![CDATA[
 
 /*

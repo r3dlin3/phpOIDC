@@ -58,7 +58,7 @@ $client_origin = RP_PROTOCOL . RP_SERVER_NAME . RP_PORT;
 <head>
 <meta http-equiv="content-type" content="text/html;charset=UTF-8" />
 <title>RP Frame</title>
-<script src="http://crypto-js.googlecode.com/svn/tags/3.0.2/build/rollups/sha256.js"></script>
+<script src="https://crypto-js.googlecode.com/svn/tags/3.0.2/build/rollups/sha256.js"></script>
 <script src='/<?php echo RP_PATH ?>/js/base64.js'></script>
 <script type='text/javascript'>//<![CDATA[
 
