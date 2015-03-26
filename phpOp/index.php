@@ -530,7 +530,7 @@ function handle_auth() {
                 $requested_userid_display = $_GET['claims']['id_token']['sub']['value'];
                 $requested_userid = unwrap_userid($_GET['claims']['id_token']['sub']['value']);
                 if(!db_get_user($requested_userid))
-                    throw new OidcException( 'invalid_request', "Unrecognized userid in ID Token", NULL, $_REQUEST['state'], $response_mode);
+                    throw new OidcException( 'invalid_request', "Unrecognized userid in ID Token");
             } else if(isset($_GET['login_hint'])) {
                 $principal = $_GET['login_hint'];
 
