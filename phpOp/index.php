@@ -526,6 +526,55 @@ function handle_auth() {
                     if(!db_get_user($requested_userid))
                         throw new OidcException('invalid_request', 'Unrecognized userid in ID Token');
                 }
+            } else if(isset($_GET['claims']['id_token']['sub']['value'])) {
+                $requested_userid_display = $_GET['claims']['id_token']['sub']['value'];
+                $requested_userid = unwrap_userid($_GET['claims']['id_token']['sub']['value']);
+                if(!db_get_user($requested_userid))
+                    throw new OidcException( 'invalid_request', "Unrecognized userid in ID Token", NULL, $_REQUEST['state'], $response_mode);
+            } else if(isset($_GET['login_hint'])) {
+                $principal = $_GET['login_hint'];
+
+                $at = strpos($principal, '@');
+                if($at !== false) {
+                    error_log("EMAIL\n");
+                    if($at != 0) {    // XRI
+                        // process email address
+                        list($principal, $domain) = explode('@', $principal);
+                        error_log("==> principal = $principal domain = $domain");
+                        $port_pos = strpos($domain, ':');
+                        if($port_pos !== false)
+                            $domain = substr($domain, 0, $port_pos);
+                        $domain_parts = explode('.', $domain);
+                        $server_parts = explode('.', OP_SERVER_NAME);
+                        // check to see domain matches
+                        $domain_start = count($domain_parts) - 1;
+                        $server_start = count($server_parts) - 1;
+                        $domain_match = true;
+                        for($i = $domain_start, $j = $server_start; $i >= 0 && $j >= 0; $i--, $j--) {
+                            if(strcasecmp($domain_parts[$i], $server_parts[$j]) != 0) {
+                                $domain_match = false;
+                            }
+                        }
+                        if($domain_match) {
+                            $requested_userid_display = $principal;
+                            $requested_userid = unwrap_userid($requested_userid_display);
+                            if(!db_get_user($requested_userid)) {
+                                $requested_userid_display = NULL;
+                                $requested_userid = NULL;
+                            }
+                        } else
+                            throw new OidcException('invalid_request', 'Unrecognized email domain');
+                    }
+                } else { // name only
+
+                    $requested_userid_display = $_GET['login_hint'];
+                    $requested_userid = unwrap_userid($requested_userid_display);
+                    if(!db_get_user($requested_userid)) {
+                        $requested_userid_display = NULL;
+                        $requested_userid = NULL;
+                    }
+                }
+
             }
 
             if(!array_key_exists('max_age', $_REQUEST) && $client['default_max_age'])
