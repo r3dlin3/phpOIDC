@@ -171,7 +171,7 @@ or Enter OP URL : <input type='text' name='identifier' value=''>
 
 <div id='error' class='error'>
 <?php
-$g_error = $g_error ? $g_error : $_GET['error'];
+$g_error = $g_error ? $g_error : $_REQUEST['error'];
 if($g_error) {
     echo "<pre>\n";
     echo $g_error . " :  ";
@@ -323,6 +323,10 @@ $html = <<<EOF
                         document.forms['form1'].id_token.value = decodeURIComponent(val);
                     } else if(key == 'session_state') {
                         document.forms['form1'].session_state.value = decodeURIComponent(val);
+                    } else if(key == 'error') {
+                        document.forms['form1'].error.value = decodeURIComponent(val);
+                    } else if(key == 'error_description') {
+                        document.forms['form1'].error_description.value = decodeURIComponent(val);
                     }
                 }
             }    
@@ -341,6 +345,8 @@ $forms = <<<EOF
         <input type='hidden' name='state' value='' size="100">
         <input type='hidden' name='id_token' value='' size="100">
         <input type='hidden' name='session_state' value='' size="100">
+        <input type='hidden' name='error' value='' size="100">
+        <input type='hidden' name='error_description' value='' size="100">
     </form>
 EOF;
 
@@ -355,6 +361,9 @@ function handle_implicit_callback() {
 
     $code = $_REQUEST['code'];
     $token = $_REQUEST['access_token'];
+    if($_REQUEST['error'])
+        return;
+
     if($code) {
         handle_callback();
         return;
@@ -490,7 +499,10 @@ function handle_callback() {
           unset($_SESSION['session_state']);
 
       if(!$code) {
-          handle_implicit();
+          if($_SERVER['REQUEST_METHOD'] == 'POST') {
+              handle_implicit_callback();
+          } else
+              handle_implicit();
           return;
       }
       $client_id = $_SESSION['provider']['client_id'];
@@ -1190,6 +1202,7 @@ function remember_session_form_options($request) {
 //                        'request_object',
 //                        'request_file',
                         'request_option',
+                        'response_mode',
                         'page',
                         'prompt_none',
                         'prompt_login',
@@ -1621,6 +1634,9 @@ function handle_start() {
     $query_params['code_challenge'] = $code_challenge;
     log_debug("code verifier : %s challenge : %s method : %s", $code_verifier, $code_challenge, $query_params['code_challenge_method']);
 
+    if($_REQUEST['response_mode'])
+        $query_params['response_mode'] = $_REQUEST['response_mode'];
+
     if($_REQUEST['page'])
         $query_params['page'] = $_REQUEST['page'];
     $prompt_types = array('none', 'login', 'consent', 'select_account');
@@ -1973,7 +1989,10 @@ if($_SESSION['debug'])
     array_unshift($response_types, '');
 $response_type_options = get_option_html('response_type', $response_types, $_SESSION['response_type'] ? $_SESSION['response_type'] : 'code' );
 
-$page_types = array('', 'page', 'popup', 'touch', 'wap', 'embedded');
+$response_modes = array('', 'query', 'fragment', 'form_post');
+$response_mode_options = get_option_html('response_mode', $response_modes, $_SESSION['response_mode'] ? $_SESSION['response_mode'] : '');
+
+    $page_types = array('', 'page', 'popup', 'touch', 'wap', 'embedded');
 $page_options = get_option_html('page', $page_types, $_SESSION['page']);
 
 $prompt_types = array(
@@ -2104,6 +2123,10 @@ $tabs = <<<EOF
                     <tr><td colspan='3'><p/></td></tr>
                     <tr><td>Scope</td><td>&nbsp;&nbsp;</td>
                         <td>$scope_options</td>
+                    </tr>
+                    <tr><td colspan='3'><p/></td></tr>
+                    <tr><td>Response Mode</td><td>&nbsp;&nbsp;</td>
+                        <td>$response_mode_options</td>
                     </tr>
                     <tr><td colspan='3'><p/></td></tr>
                     <tr><td>Prompt</td><td>&nbsp;&nbsp;</td>
