@@ -676,7 +676,7 @@ function is_client_authenticated() {
                     $audience = OP_ENDPOINT . '/token';
                 $aud_verified = (is_array($jwt_payload['aud']) ? $jwt_payload['aud'][0] : $jwt_payload['aud'])  == $audience;
                 $now = time();
-                $time_verified = ($now >= $jwt_payload['iat']) && ($now <= $jwt_payload['exp']);
+                $time_verified = abs(($now - $jwt_payload['iat']) <= 180 ) && abs(($now - $jwt_payload['exp']) < 180);
                 if(!$sig_verified)
                     log_info("Sig not verified");
                 if(!$aud_verified)
@@ -704,7 +704,7 @@ function is_client_authenticated() {
                     $audience = OP_ENDPOINT . '/token';
                 $aud_verified = (is_array($jwt_payload['aud']) ? $jwt_payload['aud'][0] : $jwt_payload['aud']) == $audience;
                 $now = time();
-                $time_verified = ($now >= $jwt_payload['iat']) && ($now <= $jwt_payload['exp']);
+                $time_verified = abs(($now - $jwt_payload['iat']) <= 180 ) && abs(($now - $jwt_payload['exp']) < 180);
                 if(!$sig_verified)
                     log_info("Sig not verified");
                 if(!$aud_verified)
