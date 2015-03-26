@@ -487,7 +487,7 @@ function handle_callback() {
   global $g_error, $g_info;
 
   try {
-      if(isset($_REQUEST['error']))
+      if($_REQUEST['error'])
           return;
       $code = $_REQUEST['code'];
       $token = $_REQUEST['access_token'];
@@ -1229,7 +1229,8 @@ function remember_session_form_options($request) {
                         'id_token_encrypted_response_enc',
                         'default_max_age',
                         'require_auth_time',
-                        'default_acr_values'
+                        'default_acr_values',
+                        'login_hint'
                    );
                     
     foreach($options as $r_key) {
@@ -1652,7 +1653,10 @@ function handle_start() {
     
     if($_REQUEST['id_token'])
         $query_params['id_token_hint'] = $_REQUEST['id_token'];
-        
+
+    if($_REQUEST['login_hint'])
+        $query_params['login_hint'] = $_REQUEST['login_hint'];
+
     $custom_params = array();
     if($_REQUEST['request_option']) {
 //        $custom_query = array();
@@ -2164,6 +2168,10 @@ $tabs = <<<EOF
                     <tr><td colspan='3'><p/></td></tr>
                     <tr><td>Default ACR</td><td>&nbsp;&nbsp;</td>
                         <td><input type='text' name='default_acr_values' value='{$_SESSION['default_acr_values']}'></td>
+                    </tr>
+                    <tr><td colspan='3'><p/></td></tr>
+                    <tr><td>Login Hint</td><td>&nbsp;&nbsp;</td>
+                        <td><input type='text' name='login_hint'></td>
                     </tr>
                 </table>
 
