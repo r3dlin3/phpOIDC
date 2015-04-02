@@ -791,11 +791,11 @@ function handle_token() {
             throw new OidcException('unsupported_grant_type', "{$grant_type} is not supported");
         $code = $_REQUEST['code'];
         if(!$code)
-            throw new OidcException('invalid_authorization_code', 'No auth code');
+            throw new OidcException('invalid_grant', 'No auth code');
         // check code
         $auth_code = db_find_auth_code($code);
         if(!$auth_code)
-            throw new OidcException('invalid_authorization_code', 'no such code');
+            throw new OidcException('invalid_grant', 'no such code');
         $request_info = json_decode($auth_code['info'], true);
         $client_authenticated = is_client_authenticated();
         if($client_authenticated) {
