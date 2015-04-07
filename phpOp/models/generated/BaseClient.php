@@ -23,6 +23,7 @@
  * @property string $policy_uri
  * @property string $jwks_uri
  * @property string $jwk_encryption_uri
+ * @property string $jwks
  * @property string $x509_uri
  * @property string $x509_encryption_uri
  * @property string $sector_identifier_uri
@@ -213,6 +214,14 @@ abstract class BaseClient extends Doctrine_Record
              'notnull' => false,
              'autoincrement' => false,
              ));
+        $this->hasColumn('jwks', 'string', null, array(
+            'type' => 'string',
+            'fixed' => false,
+            'unsigned' => false,
+            'primary' => false,
+            'notnull' => false,
+            'autoincrement' => false,
+        ));
         $this->hasColumn('jwk_encryption_uri', 'string', 255, array(
              'type' => 'string',
              'length' => 255,
