@@ -383,6 +383,8 @@ function decrypt_verify_jwt($jwt, $client, &$error) {
             $pubkeys = array();
             if($client['jwks_uri'])
                 $pubkeys['jku'] = $client['jwks_uri'];
+            if($client['jwks'])
+                $pubkeys['jwk'] = $client['jwks'];
             $verified = jwt_verify($signed_jwt, $pubkeys);
         } elseif($header['alg'] == 'none')
             $verified = true;
@@ -742,6 +744,8 @@ function is_client_authenticated() {
                 $pubkeys = array();
                 if($db_client['jwks_uri'])
                     $pubkeys['jku'] = $db_client['jwks_uri'];
+                if($db_client['jwks'])
+                    $pubkeys['jwk'] = $db_client['jwks'];
                 $sig_verified = jwt_verify($jwt_assertion, $pubkeys);
                 if($db_client['token_endpoint_auth_signing_alg'])
                     $alg_verified = $db_client['token_endpoint_auth_signing_alg'] == $jwt_header['alg'];
@@ -867,6 +871,7 @@ function handle_token() {
                 $enc = $db_client['id_token_encrypted_response_enc'];
                 $client_secret = $db_client['client_secret'];
                 $jwk_uri = $db_client['jwks_uri'];
+                $jwks = $db_client['jwks'];
 
 
                 if(isset($request_info['r']['session_id'])) {
@@ -942,7 +947,7 @@ function handle_token() {
 
                 log_debug('handle_token id_token_obj = %s', print_r($id_token_obj, true));
                 $cryptoError = '';
-                $id_token = sign_encrypt($id_token_obj, $sig, $alg, $enc, $jwk_uri, $client_secret, $cryptoError);
+                $id_token = sign_encrypt($id_token_obj, $sig, $alg, $enc, $jwk_uri, $jwks, $client_secret, $cryptoError);
 
                 if(!$id_token) {
                     log_error("ID Token cryptoError = %s", $cryptoError);
@@ -1164,6 +1169,7 @@ function handle_userinfo() {
         $enc = $db_client['userinfo_encrypted_response_enc'];
         $client_secret = $db_client['client_secret'];
         $jwk_uri = $db_client['jwks_uri'];
+        $jwks = $db_client['jwks'];
 
         $userinfo_claims = get_account_claims($db_user, array_intersect_key($tinfo['l'], $requested_userinfo_claims));
         $userinfo = array_merge($userinfo, $userinfo_claims);
@@ -1172,7 +1178,7 @@ function handle_userinfo() {
 
         if($sig || ($alg && $enc)) {
             $cryptoError = '';
-            $userinfo_jwt = sign_encrypt($userinfo, $sig, $alg, $enc, $jwk_uri, $client_secret, $cryptoError);
+            $userinfo_jwt = sign_encrypt($userinfo, $sig, $alg, $enc, $jwk_uri, $jwks, $client_secret, $cryptoError);
             header("Content-Type: application/jwt");
             header("Cache-Control: no-store");
             header("Pragma: no-cache");
@@ -1331,8 +1337,13 @@ function handle_distributedinfo() {
                             if($jwk) {
                                 $jwk_uri = $db_client['jwks_uri'];
                                 $encryption_keys = jwk_get_keys($jwk, 'RSA', 'enc', NULL);
-                                if(!$encryption_keys || !count($encryption_keys))
-                                    $encryption_keys = NULL;
+                                if(!$encryption_keys || !count($encryption_keys)) {
+                                    if(!empty($db_client['jwks'])) {
+                                        $encryption_keys = jwk_get_keys($db_client['jwks'], 'RSA', 'enc', NULL);
+                                    }
+                                    if(!$encryption_keys || !count($encryption_keys))
+                                        $encryption_keys = NULL;
+                                }
                             }
                         }
                         if(!$encryption_keys)
@@ -1538,6 +1549,7 @@ function handle_client_registration() {
             'policy_uri' => NULL,
             'tos_uri' => NULL,
             'jwks_uri' => NULL,
+            'jwks' => NULL,
             'sector_identifier_uri' => NULL,
             'subject_type' => array('pairwise', 'public'),
             'request_object_signing_alg' => $signing_alg_values_supported,
@@ -1573,6 +1585,9 @@ function handle_client_registration() {
             if(isset($data[$key])) {
                 if(in_array($key, array('contacts', 'redirect_uris', 'request_uris', 'post_logout_redirect_uris', 'grant_types', 'response_types', 'default_acr_values')))
                     $params[$key] = implode('|', $data[$key]);
+                else if($key == 'jwks') {
+                    $params[$key] = json_encode($data[$key]);
+                }
                 else
                     $params[$key] = $data[$key];
                 if(!empty($supported_values)) {
@@ -1629,6 +1644,8 @@ function handle_client_registration() {
             if(isset($params[$aparam]))
                 $params[$aparam] = explode('|', $params[$aparam]);
         }
+        if(!empty($params['jwks']))
+            $params['jwks'] = json_decode($params['jwks'], true);
         if(isset($params['require_auth_time']))
             $params['require_auth_time'] = $params['require_auth_time'] == 1;
         echo json_encode(array_merge($client_json, $params));
@@ -1677,6 +1694,8 @@ function handle_client_operations() {
             } else
                 unset($params[$key]);
         }
+        if(!empty($params['jwks']))
+            $params['jwks'] = json_decode($params['jwks'], true);
         if($params['require_auth_time'])
             $params['require_auth_time'] = $params['require_auth_time'] == 1;
         header("Cache-Control: no-store");
@@ -1980,6 +1999,7 @@ function send_response($username, $authorize = false)
                 $enc = $db_client['id_token_encrypted_response_enc'];
                 $client_secret = $db_client['client_secret'];
                 $jwk_uri = $db_client['jwks_uri'];
+                $jwks = $db_client['jwks'];
             }
 
             if(isset($rpfA['claims']) && isset($rpfA['claims']['id_token'])) {
@@ -2026,7 +2046,7 @@ function send_response($username, $authorize = false)
 
             log_debug('sen_response id_token_obj = %s', print_r($id_token_obj, true));
             $cryptoError = null;
-            $id_token = sign_encrypt($id_token_obj, $sig, $alg, $enc, $jwk_uri, $client_secret, $cryptoError);
+            $id_token = sign_encrypt($id_token_obj, $sig, $alg, $enc, $jwk_uri, $jwks, $client_secret, $cryptoError);
 
             if(!$id_token) {
                 log_error("Unable to sign encrypt response for ID Token %s", $cryptoError);
@@ -2073,7 +2093,7 @@ function send_response($username, $authorize = false)
 
 }
 
-function sign_encrypt($payload, $sig, $alg, $enc, $jwks_uri = null, $client_secret = null, &$cryptoError = null)
+function sign_encrypt($payload, $sig, $alg, $enc, $jwks_uri = null, $jwks = null, $client_secret = null, &$cryptoError = null)
 {
     global $signing_alg_values_supported, $encryption_alg_values_supported, $encryption_enc_values_supported;
     log_debug("sign_encrypt sig = %s alg = %s enc = %s", $sig, $alg, $enc);
@@ -2121,13 +2141,20 @@ function sign_encrypt($payload, $sig, $alg, $enc, $jwks_uri = null, $client_secr
                         $encryption_keys = NULL;
                 }
             }
+            if(!$encryption_keys && !empty($jwks)) {
+                $encryption_keys = jwk_get_keys($jwks, 'RSA', 'enc', NULL);
+                if(!$encryption_keys || !count($encryption_keys))
+                    $encryption_keys = NULL;
+                $jwk_uri = NULL;
+            }
             if(!$encryption_keys) {
                 if($cryptoError)
                     $cryptoError = 'error_enc';
                 log_error("Unable to get enc keys");
                 return null;
             }
-            $header_params = array('jku' => $jwk_uri);
+            if(!empty($jwk_uri))
+                $header_params = array('jku' => $jwk_uri);
             if(isset($encryption_keys[0]['kid']))
                 $header_params['kid'] = $encryption_keys[0]['kid'];
             $jwt = jwt_encrypt2($jwt, $encryption_keys[0], false, NULL, $header_params, NULL, $alg, $enc, false);
