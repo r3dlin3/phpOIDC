@@ -1113,7 +1113,41 @@ function get_userinfo_claims($request, $scopes) {
 }
 
 function get_id_token_claims($request) {
-    return get_requested_claims($request, array('id_token'));
+    $requested_claims = array();
+    $profile_claims = array();
+    if(isset($request['claims']) && isset($request['claims']['userinfo']))
+        $requested_claims = get_requested_claims($request, array('id_token'));
+    if($request['response_type'] == 'id_token') {
+        $scopes = $request['scope'];
+        if(is_string($scopes))
+            $scopes = explode(' ', $scopes);
+        if(!is_array($scopes)) {
+            return array();
+        }
+        if(in_array('email', $scopes)) {
+            $requested_claims['email'] = 0;
+            $requested_claims['email_verified'] = 0;
+        }
+        if(in_array('address', $scopes))
+            $requested_claims['address'] = 0;
+        if(in_array('phone', $scopes)) {
+            $requested_claims['phone_number'] = 0;
+            $requested_claims['phone_number_verified'] = 0;
+        }
+        if(in_array('profile', $scopes)) {
+            $profile_claims=get_default_claims();
+            unset($profile_claims['email']);
+            unset($profile_claims['email_verified']);
+            unset($profile_claims['address']);
+            unset($profile_claims['phone_number']);
+            unset($profile_claims['phone_number_verified']);
+            $profile_keys = array_keys($profile_claims);
+            $num = count($profile_keys);
+            if($num)
+                $profile_claims = array_combine($profile_keys, array_fill(0, $num, 0));
+        }
+    }
+    return array_merge($requested_claims, $profile_claims);
 }
 
 function get_all_requested_claims($request, $scope) {
