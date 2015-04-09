@@ -437,7 +437,7 @@ function rp2op_jwt_sign_encrypt($provider, $data, $sig_alg, $enc_algs = NULL) {
             } elseif(substr($sig_alg, 0, 2) == 'RS') {
                 $sig_param['jku'] = RP_JWK_URL;
                 $sig_param['kid'] = RP_SIG_KID;
-                $sig_key = array('key_file' => RP_PKEY, 'password' => RP_PKEY_PASSPHRASE);
+                $sig_key = array('key_file' => RP_SIG_PKEY, 'password' => RP_SIG_PKEY_PASSPHRASE);
             }
             $jwt = jwt_sign($data, $sig_param, $sig_key);
             if(!$jwt)
@@ -767,7 +767,7 @@ function get_endpoint_claims($endpoint, $token) {
         $jwt_parts = jwt_to_array($data_responseText);
         if(isset($jwt_parts[0]['enc'])) { // encrypted
             $g_info .= "Encrypted Endpoint Info {$jwt_parts[0]['enc']} {$jwt_parts[0]['alg']}\n";
-            $signed_jwt = jwt_decrypt($data_responseText, RP_PKEY, true);
+            $signed_jwt = jwt_decrypt($data_responseText, RP_ENC_PKEY, true, RP_ENC_PKEY_PASSPHRASE);
             if(!$signed_jwt) {
                 $g_error .= "Unable to decrypt UserInfo response";
                 log_error($g_error);
@@ -846,7 +846,7 @@ function get_userinfo($userinfo_ep, $token) {
         $jwt_parts = jwt_to_array($data_responseText);
         if(isset($jwt_parts[0]['enc'])) { // encrypted
             $g_info .= "Encrypted UserInfo {$jwt_parts[0]['enc']} {$jwt_parts[0]['alg']} {$jwt_parts[0]['int']}\n";
-            $signed_jwt = jwt_decrypt($data_responseText, RP_PKEY, true);
+            $signed_jwt = jwt_decrypt($data_responseText, RP_ENC_PKEY, true, RP_ENC_PKEY_PASSPHRASE);
             if(!$signed_jwt) {
                 $g_error .= "Unable to decrypt UserInfo response";
                 log_error('%s', $g_error);
@@ -897,7 +897,7 @@ function rp_decrypt_verify_jwt($jwt) {
     $jwt_parts = jwt_to_array($jwt);
     if(isset($jwt_parts[0]['enc'])) { // encrypted
         $g_info .= "Encrypted JWT - {$jwt_parts[0]['enc']} {$jwt_parts[0]['alg']} {$jwt_parts[0]['int']}\n";
-        $signed_jwt = jwt_decrypt($jwt, RP_PKEY, true);
+        $signed_jwt = jwt_decrypt($jwt, RP_ENC_PKEY, true, RP_ENC_PKEY_PASSPHRASE);
         if(!$signed_jwt) {
             $g_error .= "Unable to decrypt JWT";
             log_error('%s', $g_error);
@@ -938,7 +938,7 @@ function rp_decrypt_verify_id_token($id_token) {
     if(isset($jwt_parts[0]['enc'])) { // encrypted
         $g_info .= "Encrypted ID Token - {$jwt_parts[0]['enc']} {$jwt_parts[0]['alg']} {$jwt_parts[0]['int']}\n";
         $response['jwe'] = $jwt_parts;
-        $signed_jwt = jwt_decrypt($id_token, RP_PKEY, true);
+        $signed_jwt = jwt_decrypt($id_token, RP_ENC_PKEY, true, RP_ENC_PKEY_PASSPHRASE);
         if(!$signed_jwt) {
             $g_error .= "Unable to decrypt ID Token response";
             log_error('%s', $g_error);
@@ -1134,12 +1134,12 @@ function register_client($url, $options = array()) {
             'redirect_uris' => array(RP_REDIRECT_URI, RP_AUTHCHECK_REDIRECT_URI),
             'post_logout_redirect_uris' => array(RP_POST_LOGOUT_REDIRECT_URI),
             'jwks_uri' => RP_JWK_URL,
+//            'jwks' => json_decode($jwks),
 //            'sector_identifier_uri' => RP_INDEX_PAGE . '/sector_id',
             'policy_uri' => RP_INDEX_PAGE . '/policy',
 //            'request_uris' => $request_uris,
             'grant_types' => array('authorization_code', 'implicit'),
             'response_types' => array('code', 'token', 'id_token', 'code token', 'code id_token', 'id_token token', 'code id_token token')
-
         );
 
         $curl_options[CURLOPT_POSTFIELDS] = pretty_json(json_encode(array_merge($data, $options)));
@@ -1819,7 +1819,7 @@ function handle_start() {
             } elseif(substr($sig_param['alg'], 0, 2) == 'RS') {
                 $sig_param['jku'] = RP_JWK_URL;
                 $sig_param['kid'] = RP_SIG_KID;
-                $sig_key = array('key_file' => RP_PKEY, 'password' => RP_PKEY_PASSPHRASE);
+                $sig_key = array('key_file' => RP_SIG_PKEY, 'password' => RP_SIG_PKEY_PASSPHRASE);
             }
             log_debug("Request Object Using Sig Alg %s", $sig_param['alg']);
             $request_jwt = jwt_sign(array_merge(array_diff_key($query_params, array('id_token' => 0)), $custom_params), $sig_param, $sig_key);

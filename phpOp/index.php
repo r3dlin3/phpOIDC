@@ -365,7 +365,7 @@ function decrypt_verify_jwt($jwt, $client, &$error) {
     $response = NULL;
     $jwt_parts = jwt_to_array($jwt);
     if(isset($jwt_parts[0]['enc'])) { // encrypted
-        $signed_jwt = jwt_decrypt($jwt, OP_PKEY, true);
+        $signed_jwt = jwt_decrypt($jwt, OP_ENC_PKEY, true, OP_ENC_PKEY_PASSPHRASE);
         if(!$signed_jwt) {
             log_error('Unable to decrypt object');
             $error = 'error_decrypt';
@@ -443,7 +443,7 @@ function handle_auth() {
         if(!in_array('openid', $scopes))
             throw new OidcException('invalid_scope', 'no openid scope');
 
-        if(in_array('token', $response_types) || in_array('id_token', $response_types)) {
+        if((in_array('token', $response_types) || in_array('id_token', $response_types)) && !in_array('code', $response_types)) {
             if(!isset($_REQUEST['nonce']))
                 throw new OidcException('invalid_request', 'no nonce');
         }
@@ -1351,7 +1351,7 @@ function handle_distributedinfo() {
                 } elseif(substr($db_client['userinfo_signed_response_alg'], 0, 2) == 'RS') {
                     $sig_param['jku'] = OP_JWK_URL;
                     $sig_param['kid'] = OP_SIG_KID;
-                    $sig_key = array('key_file' => OP_PKEY, 'password' => OP_PKEY_PASSPHRASE);
+                    $sig_key = array('key_file' => OP_SIG_PKEY, 'password' => OP_SIG_PKEY_PASSPHRASE);
                 }
                 log_debug("DistributedInfo Using Sig Alg %s", $sig_param['alg'] );
                 $userinfo_jwt = jwt_sign($userinfo, $sig_param, $sig_key);
@@ -1372,6 +1372,7 @@ function handle_distributedinfo() {
                                 $jwk_uri = $db_client['jwks_uri'];
                                 $encryption_keys = jwk_get_keys($jwk, 'RSA', 'enc', NULL);
                                 if(!$encryption_keys || !count($encryption_keys)) {
+                                    $jwk_uri = NULL;
                                     if(!empty($db_client['jwks'])) {
                                         $encryption_keys = jwk_get_keys($db_client['jwks'], 'RSA', 'enc', NULL);
                                     }
@@ -1382,7 +1383,8 @@ function handle_distributedinfo() {
                         }
                         if(!$encryption_keys)
                             send_bearer_error('400', 'invalid_request', 'Unable to retrieve JWK key for encryption');
-                        $header_params = array('jku' => $jwk_uri);
+                        if($jwk_uri)
+                            $header_params = array('jku' => $jwk_uri);
                         if(isset($encryption_keys[0]['kid']))
                             $header_params['kid'] = $encryption_keys[0]['kid'];
                         $userinfo_jwt = jwt_encrypt2($userinfo_jwt, $encryption_keys[0], false, NULL, $header_params, NULL, $alg, $enc, false);
@@ -2143,7 +2145,7 @@ function sign_encrypt($payload, $sig, $alg, $enc, $jwks_uri = null, $jwks = null
             } elseif(substr($sig, 0, 2) == 'RS') {
                 $sig_param['kid'] = OP_SIG_KID;
                 $sig_param['jku'] = OP_JWK_URL;
-                $sig_key = array('key_file' => OP_PKEY, 'password' => OP_PKEY_PASSPHRASE);
+                $sig_key = array('key_file' => OP_SIG_PKEY, 'password' => OP_SIG_PKEY_PASSPHRASE);
             }
         } else {
             log_error("sig alg %s not supported", $sig);

@@ -37,7 +37,7 @@ define("OP_PROTOCOL", 'https://');
 * Specifies the OP's protocol port 
 * Should use ':port_num' format, e.g. :80
 */
-define("OP_PORT", '');
+define("OP_PORT", ':7443');
 
 /*
 * Specifies the OP's PATH
@@ -61,7 +61,7 @@ define("RP_PROTOCOL", 'https://');
 * Specifies the RP's protocol port 
 * Should use ':port_num' format e.g. :80
 */
-define("RP_PORT", '');
+define("RP_PORT", ':7443');
 
 /*
 * Specifies the RP's PATH
@@ -77,14 +77,25 @@ define("RP_URL", RP_PROTOCOL . RP_SERVER_NAME . RP_PORT . RP_PATH);
 
 
 /**
-* path to the OP's private key
+* path to the OP's private key for signing
 */
-define("OP_PKEY", dirname($_SERVER['SCRIPT_FILENAME']) . "/op.key");
+define("OP_SIG_PKEY", dirname($_SERVER['SCRIPT_FILENAME']) . "/op_sig.key");
 
 /**
 * OP's pass phrase for the private key file 
 */
-define("OP_PKEY_PASSPHRASE","");
+define("OP_SIG_PKEY_PASSPHRASE","");
+
+
+/**
+ * path to the OP's private key for encryption
+ */
+define("OP_ENC_PKEY", dirname($_SERVER['SCRIPT_FILENAME']) . "/op_enc.key");
+
+/**
+ * OP's pass phrase for the private key file
+ */
+define("OP_ENC_PKEY_PASSPHRASE","");
 
 /**
 * URL to OP's public JWK
@@ -92,29 +103,34 @@ define("OP_PKEY_PASSPHRASE","");
 define("OP_JWK_URL", OP_URL . '/op.jwk');
 
 /**
-* URL to OP's public JWK for encryption
-*/
-define("OP_ENC_JWK_URL", OP_URL . '/op.jwk');
-
-/**
 * OP's Signature Kid
 */
-define("OP_SIG_KID", 'PHPOP-00');
+define("OP_SIG_KID", 'PHPOP-00S');
 
 /**
 * OP's Encryption Kid
 */
-define("OP_ENC_KID", 'PHPOP-00');
+define("OP_ENC_KID", 'PHPOP-00E');
 
 /**
-* path to the RP's private key
+* path to the RP's private key for signing
 */
-define("RP_PKEY", dirname($_SERVER['SCRIPT_FILENAME']) . "/rp/rp.key");
+define("RP_SIG_PKEY", dirname($_SERVER['SCRIPT_FILENAME']) . "/rp/rp_sig.key");
 
 /**
-* RP's pass phrase for the private key file 
+* RP's pass phrase for the private key file for signing
 */
-define("RP_PKEY_PASSPHRASE","");
+define("RP_SIG_PKEY_PASSPHRASE","");
+
+/**
+ * path to the RP's private key for encryption
+ */
+define("RP_ENC_PKEY", dirname($_SERVER['SCRIPT_FILENAME']) . "/rp/rp_enc.key");
+
+/**
+ * RP's pass phrase for the private key file for encryption
+ */
+define("RP_ENC_PKEY_PASSPHRASE","");
 
 /**
 * URL to RP's public JWK
@@ -122,19 +138,14 @@ define("RP_PKEY_PASSPHRASE","");
 define("RP_JWK_URL", RP_URL . '/rp/rp.jwk');
 
 /**
-* URL to OP's public JWK for encryption
-*/
-define("RP_ENC_JWK_URL", RP_URL . '/rp/rp.jwk');
-
-/**
 * RP's Signature Kid
 */
-define("RP_SIG_KID", 'PHPRP-00');
+define("RP_SIG_KID", 'PHPRP-00S');
 
 /**
 * RP's Encryption Kid
 */
-define("RP_ENC_KID", 'PHPRP-00');
+define("RP_ENC_KID", 'PHPRP-00E');
 
 /**
 * OP endpoints and metadata
