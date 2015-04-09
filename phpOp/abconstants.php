@@ -37,7 +37,7 @@ define("OP_PROTOCOL", 'https://');
 * Specifies the OP's protocol port 
 * Should use ':port_num' format, e.g. :80
 */
-define("OP_PORT", ':7443');
+define("OP_PORT", '');
 
 /*
 * Specifies the OP's PATH
@@ -61,7 +61,7 @@ define("RP_PROTOCOL", 'https://');
 * Specifies the RP's protocol port 
 * Should use ':port_num' format e.g. :80
 */
-define("RP_PORT", ':7443');
+define("RP_PORT", '');
 
 /*
 * Specifies the RP's PATH
