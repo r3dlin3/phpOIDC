@@ -119,31 +119,48 @@ function get_mod_exp_from_key($key_contents, $pass_phrase = NULL, $is_private_ke
 
 
 if($argc > 1) {
-    $cert = file_get_contents($argv[1]);
-    if($cert) {
-        $key_pattern = '/(?m)^-----BEGIN (CERTIFICATE|PUBLIC KEY|RSA PRIVATE KEY)-----$\n((?s).*)\n^-----END (CERTIFICATE|PUBLIC KEY|RSA PRIVATE KEY)-----$/';  // matches whole block,
-        if(preg_match($key_pattern, $cert, $matches)) {
-            $encoded_der = $matches[2];
-            $jwk_keys = array();
-            if($matches[1] == 'RSA PRIVATE KEY')
-                $pubinfo = get_mod_exp_from_key($cert, NULL, true);
-            else
-                $pubinfo = get_mod_exp_from_key($cert);
-            $kid = isset($argv[2]) ? $argv[2] : '';
-            $use = isset($argv[3]) ? $argv[3] : '';
-            
-            if($pubinfo) {
-                list($n, $e) = $pubinfo;
-                $jwk_key = make_rsa_jwk_key($n, $e, $kid, $use);
-//                $jwk_key['x5c'] = array($encoded_der);
-                if($jwk_key) 
-                    $jwk_keys[] = $jwk_key;
+    if($argv[1] == 'mergejwks') {
+        $json = array('keys'=>array());
+        for($i = 2; $i < count($argv); $i++) {
+            $file = file_get_contents($argv[$i]);
+            if($file) {
+                $temp = json_decode($file, true);
+                if($temp) {
+                    if(isset($temp['keys']))
+                        $json = array_merge_recursive($json, $temp);
+                }
             }
-            $jwk = make_jwk($jwk_keys);
-            printf("%s\n", $jwk);
-        } else
-            printf("no match\n");
+        }
+        echo pretty_json(json_encode($json));
+
+    } else {
+        $cert = file_get_contents($argv[1]);
+        if($cert) {
+            $key_pattern = '/(?m)^-----BEGIN (CERTIFICATE|PUBLIC KEY|RSA PRIVATE KEY)-----$\n((?s).*)\n^-----END (CERTIFICATE|PUBLIC KEY|RSA PRIVATE KEY)-----$/';  // matches whole block,
+            if(preg_match($key_pattern, $cert, $matches)) {
+                $encoded_der = $matches[2];
+                $jwk_keys = array();
+                if($matches[1] == 'RSA PRIVATE KEY')
+                    $pubinfo = get_mod_exp_from_key($cert, NULL, true);
+                else
+                    $pubinfo = get_mod_exp_from_key($cert);
+                $kid = isset($argv[2]) ? $argv[2] : '';
+                $use = isset($argv[3]) ? $argv[3] : '';
+
+                if($pubinfo) {
+                    list($n, $e) = $pubinfo;
+                    $jwk_key = make_rsa_jwk_key($n, $e, $kid, $use);
+//                $jwk_key['x5c'] = array($encoded_der);
+                    if($jwk_key)
+                        $jwk_keys[] = $jwk_key;
+                }
+                $jwk = make_jwk($jwk_keys);
+                printf("%s\n", $jwk);
+            } else
+                printf("no match\n");
+        }
     }
+
 } else {
     printf("Usage : php makejwk.php pem_file_path kid use\n");
 }
