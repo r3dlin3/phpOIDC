@@ -443,7 +443,7 @@ function handle_auth() {
         if(!in_array('openid', $scopes))
             throw new OidcException('invalid_scope', 'no openid scope');
 
-        if((in_array('token', $response_types) || in_array('id_token', $response_types)) && !in_array('code', $response_types)) {
+        if(in_array('token', $response_types) || in_array('id_token', $response_types)) {
             if(!isset($_REQUEST['nonce']))
                 throw new OidcException('invalid_request', 'no nonce');
         }
