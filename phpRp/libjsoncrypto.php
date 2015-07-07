@@ -1960,3 +1960,59 @@ function pretty_json($json) {
 
     return $result;
 }
+
+function get_mod_exp_from_key($key_contents, $pass_phrase = NULL, $is_private_key = false) {
+
+    if($is_private_key)
+        $key = openssl_pkey_get_private($key_contents, $pass_phrase);
+    else
+        $key = openssl_pkey_get_public($key_contents);
+
+    $rsa = new Crypt_RSA();
+    if($rsa) {
+        if($is_private_key) {
+            $rsa->setPassword($pass_phrase);
+            if(!$rsa->loadkey($key_contents, CRYPT_RSA_PRIVATE_FORMAT_PKCS1)) {
+                return NULL;
+            }
+        }
+        else {
+            $details = openssl_pkey_get_details($key);
+            $pubkey = $details['key'];
+            if(!$rsa->loadkey($pubkey, CRYPT_RSA_PUBLIC_FORMAT_PKCS1))
+                return NULL;
+        }
+        return array($rsa->modulus->toBytes(), $is_private_key ? $rsa->publicExponent->toBytes() : $rsa->exponent->toBytes());
+    }
+    return NULL;
+}
+
+function get_rsa_jwk_thumbprint($n, $e) {
+    if(!$n || !$e)
+        return '';
+    $key_info =  array(  'e'   => base64url_encode($e),
+        'kty' => 'RSA',
+        'n'   => base64url_encode($n),
+    );
+    return base64url_encode(hash('sha256', json_encode($key_info), true));
+}
+
+function get_rsa_key_thumbprint($key) {
+    if($key) {
+        $key_pattern = '/(?m)^-----BEGIN (CERTIFICATE|PUBLIC KEY|RSA PRIVATE KEY)-----$\n((?s).*)\n^-----END (CERTIFICATE|PUBLIC KEY|RSA PRIVATE KEY)-----$/';  // matches whole block,
+        if(preg_match($key_pattern, $key, $matches)) {
+            if($matches[1] == 'RSA PRIVATE KEY')
+                $pubinfo = get_mod_exp_from_key($key, NULL, true);
+            else
+                $pubinfo = get_mod_exp_from_key($key);
+
+            if($pubinfo) {
+                list($n, $e) = $pubinfo;
+                if($n && $e) {
+                    return get_rsa_jwk_thumbprint($n, $e);
+                }
+            }
+        }
+    }
+    return '';
+}

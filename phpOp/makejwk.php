@@ -33,12 +33,15 @@ function make_rsa_jwk($n, $e, $kid = NULL, $use = '') {
     if(!$n || !$e)
         return false;
         
-    $key_info =  array( 'kty' => 'RSA',
+    $key_info =  array(  'e'   => base64url_encode($e),
+                         'kty' => 'RSA',
                          'n'   => base64url_encode($n),
-                         'e'   => base64url_encode($e)
                       );
     if($kid)
         $key_info['kid'] = $kid;
+    else {
+        $key_info['kid'] = base64url_encode(hash('sha256', json_encode($key_info), true));
+    }
     if($use)
         $key_info['use'] = $use;                      
  
@@ -53,12 +56,17 @@ function make_rsa_jwk_key($n, $e, $kid = NULL, $use = '') {
     if(!$n || !$e)
         return false;
         
-    $key_info =  array( 'kty' => 'RSA',
+    $key_info =  array(  'e'   => base64url_encode($e),
+                         'kty' => 'RSA',
                          'n'   => base64url_encode($n),
-                         'e'   => base64url_encode($e)
                       );
     if($kid)
         $key_info['kid'] = $kid;
+    else {
+        printf("jwk = %s\n", json_encode($key_info));
+        $key_info['kid'] = base64url_encode(hash('sha256', json_encode($key_info), true));
+
+    }
     if($use)
         $key_info['use'] = $use;                      
     return $key_info; 
@@ -87,37 +95,6 @@ function make_jwk($keys) {
     return pretty_json(json_encode($jwk));
 }
 
-
-function get_mod_exp_from_key($key_contents, $pass_phrase = NULL, $is_private_key = false) {
-
-    if($is_private_key)
-        $key = openssl_pkey_get_private($key_contents, $pass_phrase);
-    else 
-        $key = openssl_pkey_get_public($key_contents);
-        
-
-    $rsa = new Crypt_RSA();
-    if($rsa) {
-        if($is_private_key) {
-            $rsa->setPassword($pass_phrase);
-            if(!$rsa->loadkey($key_contents, CRYPT_RSA_PRIVATE_FORMAT_PKCS1)) {
-                printf("failed to load key\n");
-                return false;
-            }
-        }
-        else {
-            $details = openssl_pkey_get_details($key);
-            $pubkey = $details['key'];
-            if(!$rsa->loadkey($pubkey, CRYPT_RSA_PUBLIC_FORMAT_PKCS1))
-                return false;
-        }
-        return array($rsa->modulus->toBytes(), $is_private_key ? $rsa->publicExponent->toBytes() : $rsa->exponent->toBytes());
-    }
-    return NULL;
-}
-
-
-
 if($argc > 1) {
     if($argv[1] == 'mergejwks') {
         $json = array('keys'=>array());
@@ -133,6 +110,8 @@ if($argc > 1) {
         }
         echo pretty_json(json_encode($json));
 
+    } else if($argv[1] == 'thumbprint') {
+        echo get_rsa_key_thumbprint(file_get_contents($argv[2]));
     } else {
         $cert = file_get_contents($argv[1]);
         if($cert) {
