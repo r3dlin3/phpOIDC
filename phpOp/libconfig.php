@@ -20,7 +20,11 @@
 
 define('OP_DB_CONF_FILE',                   __DIR__ . '/dbconf.php');
 define('RP_DB_CONF_FILE',                   dirname(__DIR__)  . '/phpRp/dbconf.php');
-define('DB_CONF_TEMPLATE',               __DIR__ . '/dbconf.php.sample');
+define('DB_CONF_TEMPLATE',                  __DIR__ . '/dbconf.php.sample');
+define('AB_CONF_TEMPLATE',                   __DIR__ . '/abconstants.php.sample');
+define('OP_AB_CONF_FILE',                   __DIR__ . '/abconstants.php');
+define('RP_AB_CONF_FILE',                   dirname(__DIR__)  . '/phpRp/abconstants.php');
+
 
 function configureDB($template, $configFile, $host, $port, $db, $user, $password, &$replacedText = null) {
     $config = file_get_contents($template);
@@ -42,6 +46,34 @@ function configureDB($template, $configFile, $host, $port, $db, $user, $password
             $db,
             $user,
             $password
+        );
+
+        $config = preg_replace($pattern, $replacement, $config);
+        if(!is_null($replacedText))
+            $replacedText = $config;
+        return file_put_contents($configFile, $config);
+    }
+    return false;
+}
+
+
+function configureAb($template, $configFile, $op_sig_kid, $op_enc_kid, $rp_sig_kid, $rp_enc_kid, &$replacedText = null) {
+    $config = file_get_contents($template);
+    if(!is_null($replacedText))
+        $replacedText = '';
+    if(isset($config)) {
+        $pattern = array(
+            '/CONFIG_OP_SIG_KID/',
+            '/CONFIG_OP_ENC_KID/',
+            '/CONFIG_RP_SIG_KID/',
+            '/CONFIG_RP_ENC_KID/'
+        );
+
+        $replacement = array(
+            $op_sig_kid,
+            $op_enc_kid,
+            $rp_sig_kid,
+            $rp_enc_kid
         );
 
         $config = preg_replace($pattern, $replacement, $config);
@@ -76,20 +108,29 @@ function checkDbConnection()
 
 // run from commandline
 if(isset($argv) && isset($argv[0]) && (basename($argv[0]) == basename(__FILE__))) {
-    if($argc == 6) {
-        list($executable, $db_host, $db_port, $db_name, $db_user, $db_password) = $argv;
-
-        configureDB(DB_CONF_TEMPLATE, OP_DB_CONF_FILE, $db_host, $db_port, $db_name, $db_user, $db_password);
-        configureDB(DB_CONF_TEMPLATE, RP_DB_CONF_FILE, $db_host, $db_port, $db_name, $db_user, $db_password);
-        if(file_exists(OP_DB_CONF_FILE)) {
-            require_once('migration.php');
-            migrate_db();
-        }
-    } elseif($argc == 2) {
+    if($argc >= 2) {
         list($executable, $command) = $argv;
+        $executable = array_shift($argv);
+        $command = array_shift($argv);
+
         switch($command) {
             case 'checkdbconnection' :
                 checkDbConnection();
+                break;
+            case 'configAb' :
+                list($op_sig_kid, $op_enc_kid, $rp_sig_kid, $rp_enc_kid) = $argv;
+                configureAb(AB_CONF_TEMPLATE, OP_AB_CONF_FILE, $op_sig_kid, $op_enc_kid, $rp_sig_kid, $rp_enc_kid);
+                copy(OP_AB_CONF_FILE, RP_AB_CONF_FILE);
+                break;
+            case 'configDb' :
+                list($db_host, $db_port, $db_name, $db_user, $db_password) = $argv;
+
+                configureDB(DB_CONF_TEMPLATE, OP_DB_CONF_FILE, $db_host, $db_port, $db_name, $db_user, $db_password);
+                copy(OP_DB_CONF_FILE, RP_DB_CONF_FILE);
+                if(file_exists(OP_DB_CONF_FILE)) {
+                    require_once('migration.php');
+                    migrate_db();
+                }
                 break;
             default:
         }
