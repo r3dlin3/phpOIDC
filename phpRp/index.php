@@ -1143,6 +1143,8 @@ function register_client($url, $options = array()) {
         );
 
         $curl_options[CURLOPT_POSTFIELDS] = pretty_json(json_encode(array_merge($data, $options)));
+
+        log_debug('register options = %s', $curl_options[CURLOPT_POSTFIELDS]);
         $curl_options[CURLOPT_HTTPHEADER] = array('Content-Type: application/json');
         list($code, $data_content_type, $req_out, $response_headers, $data_responseText) = curl_fetch_url($url, $headers, $curl_options, $is_post);
         if($code != 200) {
@@ -1379,17 +1381,18 @@ function get_update_options($request, $provider_info = array()) {
     
     // returns all options
     foreach($options as $option) {
-        $update[$option] = $r[$option] ? $r[$option] : NULL;
+        if(isset($r[$option]) && $r[$option])
+            $update[$option] = $r[$option];
     }
 
-    if($update['require_auth_time']) {
+    if(isset($update['require_auth_time']) && $update['require_auth_time']) {
         if($update['require_auth_time'] == 'true')
             $update['require_auth_time'] = true;
         else
             $update['require_auth_time'] = false;
     }
 
-    if($update['default_acr_values']) {
+    if(isset($update['default_acr_values']) && $update['default_acr_values']) {
         $update['default_acr_values'] = explode(' ', $update['default_acr_values']);
     }
 
@@ -2299,7 +2302,7 @@ if(isset($_SESSION['session_state']) && isset($_SESSION['provider']['check_sessi
 
 <?php
 } else {
-    log_debug('session = %s', print_r($_SESSION, true));
+ //   log_debug('session = %s', print_r($_SESSION, true));
 }
 ?>
 
