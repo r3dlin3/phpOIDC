@@ -939,13 +939,21 @@ function is_valid_id_token($id_token, $info, &$error) {
 
     if($id_token && !$info && !is_array($info))
         return false;
+
     if(!isset($info['iss']) || !isset($info['client_id']))
         return false;
     $jwt_parts = jwt_to_array($id_token);
     if(!$jwt_parts || !is_array($jwt_parts) || count($jwt_parts) != 3)
         return false;
     $idt = $jwt_parts[1];
-    if($idt['iss'] != $info['iss']) {
+    if(!isset($idt['sub'])) {
+        $error = 'No sub';
+        return false;
+    }
+    if(!isset($idt['iss'])) {
+        $error = 'No iss';
+        return false;
+    } else if($idt['iss'] != $info['iss']) {
         $error = sprintf('Issuers are different : %s != %s', $idt['iss'], $info['iss']);
         return false;
     }
@@ -973,10 +981,6 @@ function is_valid_id_token($id_token, $info, &$error) {
     }
 
     $timeOffset = 5 * 60; // 5 minutes
-    if($idt['iat'] > $idt['exp']) {
-        $error = 'iat > exp';
-        return false;
-    }
     if(!isset($idt['iat'])) {
         $error = 'No iat';
         return false;
@@ -992,6 +996,12 @@ function is_valid_id_token($id_token, $info, &$error) {
         $error = 'exp < current time';
         return false;
     }
+
+    if($idt['iat'] > $idt['exp']) {
+        $error = 'iat > exp';
+        return false;
+    }
+
     log_debug("Valid ID Token");
     return true;
 }
