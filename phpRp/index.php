@@ -156,7 +156,7 @@ foreach($providers as $provider) {
 }
 ?>
 </select> <br/>
-or Enter OP URL : <input type='text' name='identifier' value=''>
+or Enter OP URL : <input type='text' name='identifier' value='' style='width:500px'>
 <?php
     echo generate_tab_html();
 ?>
@@ -963,7 +963,7 @@ function is_valid_id_token($id_token, $info, &$error) {
         return false;
     }
     if(isset($info['nonce'])) {
-        if(isset($idt['nonce']) || ($info['nonce'] != $idt['nonce'])) {
+        if(!isset($idt['nonce']) || ($info['nonce'] != $idt['nonce'])) {
             $error = sprintf("Invalid nonce : %s != %s", $idt['nonce'], $info['nonce']);
             return false;
         }
