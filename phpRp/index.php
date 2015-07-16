@@ -974,11 +974,18 @@ function is_valid_id_token($id_token, $info, &$error) {
         $error = 'iat > exp';
         return false;
     }
-    if($idt['iat'] > time() + $timeOffset) {
+    if(!isset($idt['iat'])) {
+        $error = 'No iat';
+        return false;
+    } else if($idt['iat'] > time() + $timeOffset) {
         $error = 'iat > current time';
         return false;
     }
-    if($idt['exp'] < time() - $timeOffset) {
+
+    if(!isset($idt['exp'])) {
+        $error = 'No exp';
+        return false;
+    } else if($idt['exp'] < time() - $timeOffset) {
         $error = 'exp < current time';
         return false;
     }
