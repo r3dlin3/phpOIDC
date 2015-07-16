@@ -617,7 +617,7 @@ function handle_callback() {
           if(isset($id_token)) {
               $g_info .= "{$id_token}\n";
               $unpacked_id_token = rp_decrypt_verify_id_token($id_token);
-              if(!$unpacked_id_token) {
+              if($unpacked_id_token) {
                   $bit_length = substr($unpacked_id_token['jws'][0]['alg'], 2);
                   switch($bit_length) {
                       case '384':
@@ -946,7 +946,7 @@ function is_valid_id_token($id_token, $info, &$error) {
         return false;
     $idt = $jwt_parts[1];
     if($idt['iss'] != $info['iss']) {
-        $error = sprintf('Issuers are different : %s != %s', $idt['iss']. $info['iss']);
+        $error = sprintf('Issuers are different : %s != %s', $idt['iss'], $info['iss']);
         return false;
     }
     if(is_array($idt['aud'])) {
@@ -955,7 +955,7 @@ function is_valid_id_token($id_token, $info, &$error) {
             return false;
         }
     } else if($idt['aud'] != $info['client_id']) {
-        $error = sprintf('Unauthorized aud : %s != %s', $idt['aud']. $info['client_id']);
+        $error = sprintf('Unauthorized aud : %s != %s', $idt['aud'], $info['client_id']);
         return false;
     }
     if(isset($idt['azp']) && $idt['azp'] != $info['client_id']) {
