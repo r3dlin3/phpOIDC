@@ -949,9 +949,12 @@ function is_valid_id_token($id_token, $info, &$error) {
         $error = sprintf('Issuers are different : %s != %s', $idt['iss'], $info['iss']);
         return false;
     }
-    if(is_array($idt['aud'])) {
+    if(!isset($idt['aud'])) {
+        $error = 'aud not set';
+        return false;
+    } else if(is_array($idt['aud'])) {
         if(!in_array($info['client_id'], $idt['aud'])) {
-            $error = 'No client_id or aud';
+            $error = 'aud does not contain ' . $info['client_id'];
             return false;
         }
     } else if($idt['aud'] != $info['client_id']) {
