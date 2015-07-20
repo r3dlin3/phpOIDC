@@ -357,7 +357,7 @@ EOF;
 
 
 function handle_implicit_callback() {
-    global $g_error, $g_info;
+    global $g_error, $g_info, $g_userinfo_response;
 
     $code = $_REQUEST['code'];
     $token = $_REQUEST['access_token'];
@@ -417,6 +417,12 @@ function handle_implicit_callback() {
                         $g_error .= "Code Hash Verification Failed for code {$code}\n";
                 }
             }
+
+            if($g_userinfo_response) {
+                if($g_userinfo_response['sub'] != $unpacked_id_token['jws'][1]['sub'])
+                    $g_error .= 'Invalid UserInfo - sub identifier differs from ID Token sub';
+            }
+
         }
     }
 
@@ -486,7 +492,7 @@ function rp2op_jwt_sign_encrypt($provider, $data, $sig_alg, $enc_algs = NULL) {
 }
 
 function handle_callback() {
-  global $g_error, $g_info;
+  global $g_error, $g_info, $g_userinfo_response;
 
   try {
       if($_REQUEST['error'])
@@ -655,6 +661,12 @@ function handle_callback() {
                           else
                               $g_error .= "Code Hash Verification Failed for code {$code}\n";
                       }
+                  }
+
+                  // compare sub in Userinfo and ID Token
+                  if($g_userinfo_response) {
+                      if($g_userinfo_response['sub'] != $unpacked_id_token['jws'][1]['sub'])
+                          $g_error .= 'Invalid UserInfo - sub identifier differs from ID Token sub';
                   }
               }
           }
