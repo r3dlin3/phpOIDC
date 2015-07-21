@@ -765,7 +765,7 @@ function get_endpoint_claims($endpoint, $token) {
         default :
             break;
     }
-    $url = $endpoint . (count($query_params)) ? '?' . http_build_query($query_params) : '';
+    $url = $endpoint . (count($query_params) ? '?' . http_build_query($query_params) : '');
     list($code, $data_content_type, $req_out, $response_headers, $data_responseText) = curl_fetch_url($url, $headers, $curl_options, $is_post, $data);
 
     if($code != 200) {
