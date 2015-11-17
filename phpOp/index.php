@@ -1115,7 +1115,7 @@ function get_userinfo_claims($request, $scopes) {
 function get_id_token_claims($request) {
     $requested_claims = array();
     $profile_claims = array();
-    if(isset($request['claims']) && isset($request['claims']['userinfo']))
+    if(isset($request['claims']) && isset($request['claims']['id_token']))
         $requested_claims = get_requested_claims($request, array('id_token'));
     if($request['response_type'] == 'id_token') {
         $scopes = $request['scope'];
