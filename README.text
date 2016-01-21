@@ -10,8 +10,12 @@ and communication of Japan as a part of EU-Japan cooperation funding and is offe
 
 This implementation has been tested for interoperability at series of interop and has shown to be one of 
 the most compliant implementation. However, as the focus was on the interoperability, 
-less focus was given to the security issues around the implementation. Reviewers are kindly requested to submit any issues. 
+less focus was given to the security issues around the implementation. Reviewers are kindly requested to submit any issues 
+to the "Issues" section of this repository. 
 
+Also, please note the RP code here is not an RP that is usable for a regular RP work. 
+It is an OP debugger. We are using this to debug various OP implementations. 
+If you want to have some code to do regular RP processings, look for another implementation. 
 
 Licence
 -------
