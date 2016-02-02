@@ -48,6 +48,7 @@ $path_info = $_SERVER['PATH_INFO'];
 
 switch($path_info) {
     case '/token':
+    case '/validatetoken':
     case '/userinfo':
     case '/distributedinfo':
     case '/registration':
@@ -69,6 +70,8 @@ if($path_info == '/auth')
     handle_auth();
 elseif($path_info == '/token')
     handle_token();
+elseif($path_info == '/validatetoken')
+    handle_validatetoken();
 elseif($path_info == '/userinfo')
     handle_userinfo();
 elseif($path_info == '/distributedinfo')
@@ -986,6 +989,63 @@ function handle_token() {
             echo json_encode($token_response);
         } else
             throw new OidcException('invalid_client', 'invalid client credentials');
+    }
+    catch(OidcException $e)
+    {
+        send_error(NULL, $e->error_code, $e->desc);
+    }
+    catch(BearerException $e)
+    {
+        send_bearer_error('400', $e->error_code, $e->desc);
+    }
+
+}
+
+function handle_validatetoken()
+{
+    try {
+            $access_token = $_REQUEST['access_token'];
+
+            header("Content-Type: application/json");
+            header("Cache-Control: no-store");
+            header("Pragma: no-cache");
+
+            # Make sure client authenticated w/ client_id and secret
+            if(is_client_authenticated()) {
+                $token = db_find_access_token($access_token);
+                if($token) {
+                        $db_client = db_get_client($token['client']);
+                        if(!$db_client)
+                                throw new BearerException('invalid_request', 'Invalid Client ID');
+                        $tinfo = json_decode($token['info'], true);
+                        $userinfo = Array();
+
+                        $db_user = db_get_user($tinfo['u']);
+                        $scopes = explode(' ', $tinfo['g']['scope']);
+                        if(in_array('openid', $scopes)) {
+                                $userinfo['sub'] = wrap_userid($db_client, $tinfo['u']);
+                        }
+                        log_debug("userid = %s  unwrapped = %s", $userinfo['sub'], unwrap_userid($userinfo['sub']));
+                        # throw new BearerException('invalid_request', 'Cannot find Access Token');
+
+                        $token_response = array(
+                                'active' =>  true,
+                                'sub' => $userinfo['sub']
+                        );
+                } else {
+                        throw new BearerException('invalid_request', 'Cannot find Access Token');
+                        $token_response = array (
+                                'active' => false
+                        );
+                }
+            } else  {
+                throw new OidcException('invalid_client', 'invalid client credentials');
+            }
+            header("Content-Type: application/json");
+            header("Cache-Control: no-store");
+            header("Pragma: no-cache");
+            echo json_encode($token_response);
+
     }
     catch(OidcException $e)
     {
