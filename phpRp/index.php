@@ -2018,7 +2018,8 @@ function make_post_data($pairs) {
 
 function get_url($url) {
     global $g_error, $g_headers;
-    
+    log_debug("get_url %s", $url);
+
     $ch = curl_init();
     $g_headers[$ch] = '';
     $curl_options = array(
@@ -2039,7 +2040,7 @@ function get_url($url) {
     unset($g_headers[$ch]);
     curl_close($ch);
 
-    log_debug("GET {$url} - {$req_out}\n{$response_headers}\n{$data_responseText}");
+    log_debug("GET %s - %s\n%s\n%s", $url, $req_out, $response_headers, $data_responseText);
     if($code != 200) {
         if($data_responseText && substr($url, 0, 7) == 'file://')
             return $data_responseText;
@@ -2138,6 +2139,7 @@ $bearer_token_methods = array('bearer', 'post', 'get');
 $bearer_token_options = get_option_html('bearer', $bearer_token_methods, $_SESSION['bearer']);
 
 $sig_algs = array('', 'HS256', 'HS384', 'HS512', 'RS256', 'RS384', 'RS512');
+$idt_sig_algs = array('', 'none', 'HS256', 'HS384', 'HS512', 'RS256', 'RS384', 'RS512');
 $enc_cek_algs = array('', 'RSA1_5', 'RSA-OAEP');
 $enc_plaintext_algs = array('', 'A128GCM', 'A256GCM', 'A128CBC-HS256', 'A256CBC-HS512');
 
@@ -2153,7 +2155,7 @@ $subject_type_options = get_option_html('subject_type', $subject_types, $_SESSIO
 
 $request_object_signing_alg_options = get_option_html('request_object_signing_alg', $sig_algs, $_SESSION['request_object_signing_alg']);
 $userinfo_signed_response_alg_options = get_option_html('userinfo_signed_response_alg', $sig_algs, $_SESSION['userinfo_signed_response_alg']);
-$id_token_signed_response_alg_options = get_option_html('id_token_signed_response_alg', $sig_algs, $_SESSION['id_token_signed_response_alg']);
+$id_token_signed_response_alg_options = get_option_html('id_token_signed_response_alg', $idt_sig_algs, $_SESSION['id_token_signed_response_alg']);
 $require_auth_time_options = get_option_html('require_auth_time', array('', 'true', 'false'), $_SESSION['require_auth_time']);
 
 if($_SESSION['enc'] || true) {
