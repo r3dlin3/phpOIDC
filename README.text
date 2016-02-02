@@ -66,10 +66,10 @@ To use it to install,
 ```
 #!sh
 
-    % sudo apt-get mysql-server
-    % sudo apt-get gdebi
+    % sudo apt-get install mysql-server
+    % sudo apt-get install gdebi
     % mysql -p
-    mysal> create database 'phpOidc';
+    mysql> create database `phpOidc`;
     mysql> grant all on phpOidc.* to phpOidc identified by 'new_password';
     mysql> quit;
     % sudo gdebi phpOidc_1.0-all.deb
