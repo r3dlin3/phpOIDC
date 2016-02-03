@@ -361,11 +361,17 @@ function handle_implicit_callback() {
 
     $code = $_REQUEST['code'];
     $token = $_REQUEST['access_token'];
+    $state = $_REQUEST['state'];
     if($_REQUEST['error'])
         return;
 
     if($code) {
         handle_callback();
+        return;
+    }
+
+    if(!isset($state) || $state != $_SESSION['state']) {
+        $g_error .= 'state parameter mismatch';
         return;
     }
     $id_token = $_REQUEST['id_token'];
@@ -501,10 +507,7 @@ function handle_callback() {
       $token = $_REQUEST['access_token'];
       $state = $_REQUEST['state'];
       $id_token = $_REQUEST['id_token'];
-      if(isset($_REQUEST['session_state']))
-          $_SESSION['session_state'] = $_REQUEST['session_state'];
-      else
-          unset($_SESSION['session_state']);
+
 
       if(!$code) {
           if($_SERVER['REQUEST_METHOD'] == 'POST') {
@@ -513,6 +516,12 @@ function handle_callback() {
               handle_implicit();
           return;
       }
+
+      if(!isset($state) || $state !== $_SESSION['state']) {
+          $g_error .= 'state parameter mismatch';
+          return;
+      }
+
       $client_id = $_SESSION['provider']['client_id'];
       $client_secret = $_SESSION['provider']['client_secret'];
       $token_ep = $_SESSION['provider']['token_endpoint'];
