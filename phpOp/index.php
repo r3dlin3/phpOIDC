@@ -1021,22 +1021,27 @@ function handle_validatetoken()
                         $userinfo = Array();
 
                         $db_user = db_get_user($tinfo['u']);
-                        $scopes = explode(' ', $tinfo['g']['scope']);
-                        if(in_array('openid', $scopes)) {
-                                $userinfo['sub'] = wrap_userid($db_client, $tinfo['u']);
-                        }
-                        log_debug("userid = %s  unwrapped = %s", $userinfo['sub'], unwrap_userid($userinfo['sub']));
-                        # throw new BearerException('invalid_request', 'Cannot find Access Token');
 
-                        $token_response = array(
+                        if($db_user && $db_user['enabled']) {
+                            $scopes = explode(' ', $tinfo['g']['scope']);
+                            if(in_array('openid', $scopes)) {
+                                $userinfo['sub'] = wrap_userid($db_client, $tinfo['u']);
+                            }
+                            log_debug("userid = %s  unwrapped = %s", $userinfo['sub'], unwrap_userid($userinfo['sub']));
+                            # throw new BearerException('invalid_request', 'Cannot find Access Token');
+
+                            $token_response = array(
                                 'active' =>  true,
                                 'sub' => $userinfo['sub']
-                        );
+                            );
+                        } else {
+                            $token_response = array (
+                                'active' => false
+                            );
+                        }
+
                 } else {
                         throw new BearerException('invalid_request', 'Cannot find Access Token');
-                        $token_response = array (
-                                'active' => false
-                        );
                 }
             } else  {
                 throw new OidcException('invalid_client', 'invalid client credentials');
