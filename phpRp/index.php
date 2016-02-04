@@ -1023,6 +1023,36 @@ function is_valid_id_token($id_token, $info, &$error) {
         return false;
     }
 
+    if((isset($info['require_auth_time']) || isset($info['max_age'])) && !isset($idt['auth_time'])) {
+        $error = 'no auth_time';
+        return false;
+    }
+    if(isset($info['max_age'])) {
+        if((time() - $idt['auth_time']) > $info['max_age']) {
+            $error = 'auth_time max_age exceeded';
+            return false;
+        }
+    } else { // check auth time even if not requested
+        if(isset($idt['auth_time'])) {
+            // allow 24 hours time limit from last login
+            if((time() - $idt['auth_time']) > 24 * 60 * 60) {
+                $error = "auth_time exceeded 24 hours";
+                return false;
+            }
+        }
+    }
+    if(isset($info['acr'])) {
+        if(!isset($idt['acr'])) {
+            $error = 'no acr value present';
+            return false;
+        }
+
+        if($idt['acr'] != $info['acr']) {
+            $error = "acr {$idt['acr']} not as requested : {$info['acr']}";
+            return false;
+        }
+    }
+
     log_debug("Valid ID Token");
     return true;
 }
@@ -1067,8 +1097,22 @@ function rp_decrypt_verify_id_token($id_token) {
                             'iss' => $_SESSION['provider']['issuer'],
                             'nonce' => $_SESSION['nonce']
                          );
-            $error = '';
+            if(isset($_SESSION['provider']['require_auth_time']))
+                $info['require_auth_time'] = true;
+            if(isset($_SESSION['req_auth_time']))
+                $info['require_auth_time'] = $_SESSION['req_auth_time'];
 
+            if(isset($_SESSION['provider']['default_max_age']))
+                $info['max_age'] = $_SESSION['provider']['default_max_age'];
+            if(isset($_SESSION['req_max_age']))
+                $info['max_age'] = $_SESSION['req_max_age'];
+
+            if(isset($_SESSION['provider']['default_acr_values']) && is_array($_SESSION['provider']['default_acr_values']))
+                $info['acr'] = $_SESSION['provider']['default_acr_values'][0];
+            if(isset($_SESSION['req_acr']))
+                $info['acr'] = $_SESSION['req_acr'];
+
+            $error = '';
             if(!is_valid_id_token($signed_jwt, $info, $error)) {
                 $g_error .= 'Invalid ID Token : ' . $error;
                 log_error($g_error);
@@ -1554,6 +1598,11 @@ function handle_start() {
     unset($_SESSION['id_token']);
     unset($_SESSION['session_state']);
     unset($_SESSION['code_verifier']);
+    unset($_SESSION['nonce']);
+    unset($_SESSION['state']);
+    unset($_SESSION['req_auth_time']);
+    unset($_SESSION['req_max_age']);
+    unset($_SESSION['req_acr']);
 
     remember_session_form_options($_REQUEST);
     log_debug("handle_start : %s", print_r($_REQUEST, true));
@@ -1821,33 +1870,40 @@ function handle_start() {
                                                                                 'auth_time' => array('essential' => true)
                                                                               )
                                                        );
-                break;
+                    $_SESSION['req_auth_time'] = true;
+
+                    break;
 
                 case 'Custom 23' :
                     $custom_params['claims'] =  array(
                                                             'id_token' => array(
-                                                                                'acr' => array('values' => array('0', '1', '2'),
+                                                                                'acr' => array('values' => array('2', '1', '0'),
                                                                                                'essential' => true
                                                                                               )
                                                                               )
                                                        );
+                    $_SESSION['req_acr'] = '2';
                 break;
 
                 case 'Custom 24' :
                     $custom_params['claims'] =  array(
                                                             'id_token' => array(
-                                                                                'acr' => array( 'values' => array('0', '1', '2')
+                                                                                'acr' => array( 'values' => array('2', '1', '0')
                                                                                               )
                                                                               )
                                                        );
+                    $_SESSION['req_acr'] = '2';
                 break;
 
                 case 'Custom 25a' :
                     $query_params['max_age'] =  1;
-                break;
+                    $_SESSION['req_max_age'] = $query_params['max_age'];
+
+                    break;
 
                 case 'Custom 25b' :
                     $query_params['max_age'] =  10;
+                    $_SESSION['req_max_age'] = $query_params['max_age'];
                 break;
                 
                 case 'Custom Dist' :
@@ -1866,6 +1922,7 @@ function handle_start() {
 
                 case 'Custom Req 1' :
                     $query_params['max_age'] =  1*60;
+                    $_SESSION['req_max_age'] = $query_params['max_age'];
                     $custom_params['claims'] =  array(
                                                             'userinfo' => array(
                                                                                 'name' => array('essential' => true),
@@ -1903,6 +1960,7 @@ function handle_start() {
                                                                                 'auth_time' => array('essential' => true),
                                                                               )
                                                        );
+                    $_SESSION['req_auth_time'] = true;
                     break;
 
                 case 'Custom Req 2' :
@@ -1915,6 +1973,8 @@ function handle_start() {
                                                                                 'auth_time' => array('essential' => true),
                                                                               ),
                                                        );
+                    $_SESSION['req_auth_time'] = true;
+                    $_SESSION['req_max_age'] = $query_params['max_age'];
                     break;
                     
                 default:
