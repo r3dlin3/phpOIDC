@@ -507,6 +507,10 @@ function handle_callback() {
       $token = $_REQUEST['access_token'];
       $state = $_REQUEST['state'];
       $id_token = $_REQUEST['id_token'];
+      if(isset($_REQUEST['session_state']))
+          $_SESSION['session_state'] = $_REQUEST['session_state'];
+      else
+          unset($_SESSION['session_state']);
 
 
       if(!$code) {
