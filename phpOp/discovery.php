@@ -126,13 +126,8 @@ function handle_webfinger_discovery() {
         header('HTTP/1.0 400 Bad Request');
         exit;
     }
-    $hosts = Array(OP_SERVER_NAME, OP_PROTOCOL . OP_SERVER_NAME, OP_PROTOCOL . OP_SERVER_NAME . OP_PORT);
-    $providers = db_get_providers();
-    if($providers) {
-        foreach($providers as $provider) {
-            array_push($hosts, $provider['issuer']);
-        }
-    }
+    $hosts = Array(OP_SERVER_NAME, OP_PROTOCOL . OP_SERVER_NAME, OP_PROTOCOL . OP_SERVER_NAME . OP_PORT, OP_URL);
+
     if($principal && substr($principal, 0, 5) == 'acct:')
         $principal = substr($principal, 5);
 
@@ -176,6 +171,8 @@ function handle_webfinger_discovery() {
         if(isset($parts['path'])) {
             if($parts['path'] == '/')
                 $principal = $issuer;
+            else if($parts['path'] == OP_PATH) // OP Issuer Path
+                $principal = OP_URL;
             else {
                 $principal = substr($parts['path'], 1);
                 log_debug("principal = %s", $principal);
