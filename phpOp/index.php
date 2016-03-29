@@ -541,11 +541,9 @@ function handle_auth() {
 
                 $at = strpos($principal, '@');
                 if($at !== false) {
-                    error_log("EMAIL\n");
                     if($at != 0) {    // XRI
                         // process email address
                         list($principal, $domain) = explode('@', $principal);
-                        error_log("==> principal = $principal domain = $domain");
                         $port_pos = strpos($domain, ':');
                         if($port_pos !== false)
                             $domain = substr($domain, 0, $port_pos);
@@ -868,10 +866,12 @@ function handle_token() {
                 if(!$db_client)
                     throw new OidcException('invalid_request', 'invalid client');
                 $sig = $db_client['id_token_signed_response_alg'];
-                if(!isset($sig))
+                if(empty($sig))
                     $sig = 'RS256';
                 $alg = $db_client['id_token_encrypted_response_alg'];
                 $enc = $db_client['id_token_encrypted_response_enc'];
+
+                log_debug("sig = '%s' alg='%s' enc='%s'", $sig, $alg, $enc);
                 $client_secret = $db_client['client_secret'];
                 $jwk_uri = $db_client['jwks_uri'];
                 $jwks = $db_client['jwks'];
@@ -1968,7 +1968,7 @@ EOF;
 
 
 function send_auth_response($url, $params, $response_mode) {
-    error_log('URL = ' . $url . ' params = ' . print_r($params, true) . ' mode = ' . $response_mode);
+    log_debug('URL = %s params = %s mode = %s', $url, print_r($params, true), $response_mode);
     if($response_mode == 'form_post') {
         echo make_form_post_response($url, $params);
     } else {
@@ -1977,7 +1977,7 @@ function send_auth_response($url, $params, $response_mode) {
         else
             $separator = '?';
         $url .= $separator . http_build_query($params);
-        error_log("redirect to $url");
+        log_debug("redirect to %s", $url);
         header("Location: $url");
     }
 }
@@ -2200,7 +2200,7 @@ function sign_encrypt($payload, $sig, $alg, $enc, $jwks_uri = null, $jwks = null
     log_debug("sign_encrypt sig = %s alg = %s enc = %s", $sig, $alg, $enc);
     $jwt = is_array($payload) ? json_encode($payload) : $payload;
 
-    if(isset($sig)) {
+    if(isset($sig) && !empty($sig)) {
         $sig_param = Array('alg' => 'none');
         $sig_key = NULL;
         if(in_array($sig, $signing_alg_values_supported)) {
@@ -2229,7 +2229,7 @@ function sign_encrypt($payload, $sig, $alg, $enc, $jwks_uri = null, $jwks = null
         log_debug('jws = %s', $jwt);
     }
 
-    if(isset($alg) && isset($enc)) {
+    if(isset($alg) && isset($enc) && !empty($alg) && !empty($enc)) {
         if(in_array($alg, $encryption_alg_values_supported) && in_array($enc, $encryption_enc_values_supported)) {
             $jwk_uri = '';
             $encryption_keys = NULL;
