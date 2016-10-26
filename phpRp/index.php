@@ -52,6 +52,11 @@ if(array_key_exists('debug', $_REQUEST)) {
 }
 
 
+function noHTML($input, $encoding = 'UTF-8') {
+    return htmlentities($input, ENT_QUOTES | ENT_HTML5, $encoding);
+}
+
+
 
 if($_SERVER['PATH_INFO'] == '/callback') {
     $showResponse = true;
@@ -156,7 +161,7 @@ foreach($providers as $provider) {
 }
 ?>
 </select> <br/>
-or Enter OP URL : <input type='text' name='identifier' value='' style='width:500px'>
+or Enter OP URL : <input type='text' name='identifier' value='' style='width:500px'> &nbsp; <input type='checkbox' name='saveDis'>Save Discovery Endpoints
 <?php
     echo generate_tab_html();
 ?>
@@ -754,7 +759,7 @@ function post_process_userinfo(&$userinfo_response) {
 
 }
 
-function get_endpoint_claims($endpoint, $token) {
+function get_endpoint_claims($endpoint, $token, $allowed_sig_algs=NULL, $allowed_enc_algs=NULL, $allowed_enc_encs=NULL) {
     global $g_headers, $g_error, $g_info;
     $is_post = false;
     $headers = NULL;
@@ -796,7 +801,7 @@ function get_endpoint_claims($endpoint, $token) {
         $jwt_parts = jwt_to_array($data_responseText);
         if(isset($jwt_parts[0]['enc'])) { // encrypted
             $g_info .= "Encrypted Endpoint Info {$jwt_parts[0]['enc']} {$jwt_parts[0]['alg']}\n";
-            $signed_jwt = jwt_decrypt($data_responseText, RP_ENC_PKEY, true, RP_ENC_PKEY_PASSPHRASE);
+            $signed_jwt = jwt_decrypt($data_responseText, RP_ENC_PKEY, true, RP_ENC_PKEY_PASSPHRASE, $allowed_enc_algs, $allowed_enc_encs);
             if(!$signed_jwt) {
                 $g_error .= "Unable to decrypt UserInfo response";
                 log_error($g_error);
@@ -810,12 +815,12 @@ function get_endpoint_claims($endpoint, $token) {
         if($signed_jwt) {
             list($header, $payload, $sig) = jwt_to_array($signed_jwt);
             if(substr($header['alg'], 0, 2) == 'HS') {
-                $verified = jwt_verify($signed_jwt, $_SESSION['provider']['client_secret']);
+                $verified = jwt_verify($signed_jwt, $_SESSION['provider']['client_secret'], $allowed_sig_algs);
             } elseif(substr($header['alg'], 0, 2) == 'RS') {
                 $pubkeys = array();
                 if($_SESSION['provider']['jwks_uri'])
                     $pubkeys['jku'] = $_SESSION['provider']['jwks_uri'];
-                $verified = jwt_verify($signed_jwt, $pubkeys);
+                $verified = jwt_verify($signed_jwt, $pubkeys, $allowed_sig_algs);
             } elseif($header['alg'] == 'none')
                 $verified = true;
             log_info("Endpoint Info Signature Verification = %d", $verified);
@@ -873,9 +878,12 @@ function get_userinfo($userinfo_ep, $token) {
         }
     } elseif(strpos($data_content_type, 'application/jwt') !== false) {
         $jwt_parts = jwt_to_array($data_responseText);
+        $allowed_sig_algs = $_SESSION['provider']['userinfo_signed_response_alg'] ? array($_SESSION['provider']['userinfo_signed_response_alg']) : array();
+        $allowed_enc_algs = $_SESSION['provider']['userinfo_encrypted_response_alg'] ? array($_SESSION['provider']['userinfo_encrypted_response_alg']) : array();
+        $allowed_enc_encs = $_SESSION['provider']['userinfo_encrypted_response_enc'] ? array($_SESSION['provider']['userinfo_encrypted_response_enc']) : array('A128CBC-HS256');
         if(isset($jwt_parts[0]['enc'])) { // encrypted
             $g_info .= "Encrypted UserInfo {$jwt_parts[0]['enc']} {$jwt_parts[0]['alg']} {$jwt_parts[0]['int']}\n";
-            $signed_jwt = jwt_decrypt($data_responseText, RP_ENC_PKEY, true, RP_ENC_PKEY_PASSPHRASE);
+            $signed_jwt = jwt_decrypt($data_responseText, RP_ENC_PKEY, true, RP_ENC_PKEY_PASSPHRASE, $allowed_enc_algs, $allowed_enc_encs);
             if(!$signed_jwt) {
                 $g_error .= "Unable to decrypt UserInfo response";
                 log_error('%s', $g_error);
@@ -896,12 +904,12 @@ function get_userinfo($userinfo_ep, $token) {
         if($signed_jwt) {
             list($header, $payload, $sig) = jwt_to_array($signed_jwt);
             if(substr($header['alg'], 0, 2) == 'HS') {
-                $verified = jwt_verify($signed_jwt, $_SESSION['provider']['client_secret']);
+                $verified = jwt_verify($signed_jwt, $_SESSION['provider']['client_secret'], $allowed_sig_algs);
             } elseif(substr($header['alg'], 0, 2) == 'RS') {
                 $pubkeys = array();
                 if($_SESSION['provider']['jwks_uri'])
                     $pubkeys['jku'] = $_SESSION['provider']['jwks_uri'];
-                $verified = jwt_verify($signed_jwt, $pubkeys);
+                $verified = jwt_verify($signed_jwt, $pubkeys, $allowed_sig_algs);
             } elseif($header['alg'] == 'none')
                 $verified = true;
             log_info("Signature Verification = %d", $verified);
@@ -919,14 +927,14 @@ function get_userinfo($userinfo_ep, $token) {
 }
 
 
-function rp_decrypt_verify_jwt($jwt) {
+function rp_decrypt_verify_jwt($jwt, $allowed_sig_algs=NULL, $allowed_enc_algs=NULL, $allowed_enc_encs=NULL) {
     global $g_info, $g_error;
     $response = array();
     
     $jwt_parts = jwt_to_array($jwt);
     if(isset($jwt_parts[0]['enc'])) { // encrypted
         $g_info .= "Encrypted JWT - {$jwt_parts[0]['enc']} {$jwt_parts[0]['alg']} {$jwt_parts[0]['int']}\n";
-        $signed_jwt = jwt_decrypt($jwt, RP_ENC_PKEY, true, RP_ENC_PKEY_PASSPHRASE);
+        $signed_jwt = jwt_decrypt($jwt, RP_ENC_PKEY, true, RP_ENC_PKEY_PASSPHRASE, $allowed_enc_algs, $allowed_enc_encs);
         if(!$signed_jwt) {
             $g_error .= "Unable to decrypt JWT";
             log_error('%s', $g_error);
@@ -940,12 +948,12 @@ function rp_decrypt_verify_jwt($jwt) {
     if($signed_jwt) {
         list($header, $payload, $sig) = jwt_to_array($signed_jwt);
         if(substr($header['alg'], 0, 2) == 'HS') {
-            $verified = jwt_verify($signed_jwt, $_SESSION['provider']['client_secret']);
+            $verified = jwt_verify($signed_jwt, $_SESSION['provider']['client_secret'], $allowed_sig_algs);
         } elseif(substr($header['alg'], 0, 2) == 'RS') {
             $pubkeys = array();
             if($_SESSION['provider']['jwks_uri'])
                 $pubkeys['jku'] = $_SESSION['provider']['jwks_uri'];
-            $verified = jwt_verify($signed_jwt, $pubkeys);
+            $verified = jwt_verify($signed_jwt, $pubkeys, $allowed_sig_algs);
         } elseif($header['alg'] == 'none')
             $verified = true;
         log_info("Signature Verification = $verified");
@@ -1065,12 +1073,15 @@ function rp_decrypt_verify_id_token($id_token) {
     global $g_id_response, $g_info, $g_error;
     $response = array();
     
+    $allowed_sig_algs = empty($_SESSION['provider']['id_token_signed_response_alg']) ? array('RS256') : array($_SESSION['provider']['id_token_signed_response_alg']);
+    $allowed_enc_algs = empty($_SESSION['provider']['id_token_encrypted_response_alg']) ? array() :  array($_SESSION['provider']['id_token_encrypted_response_alg']);
+    $allowed_enc_encs = empty($_SESSION['provider']['id_token_encrypted_response_enc']) ? array('A128CBC-HS256') : array($_SESSION['provider']['id_token_encrypted_response_enc']);
     
     $jwt_parts = jwt_to_array($id_token);
     if(isset($jwt_parts[0]['enc'])) { // encrypted
         $g_info .= "Encrypted ID Token - {$jwt_parts[0]['enc']} {$jwt_parts[0]['alg']} {$jwt_parts[0]['int']}\n";
         $response['jwe'] = $jwt_parts;
-        $signed_jwt = jwt_decrypt($id_token, RP_ENC_PKEY, true, RP_ENC_PKEY_PASSPHRASE);
+        $signed_jwt = jwt_decrypt($id_token, RP_ENC_PKEY, true, RP_ENC_PKEY_PASSPHRASE, $allowed_enc_algs, $allowed_enc_encs);
         if(!$signed_jwt) {
             $g_error .= "Unable to decrypt ID Token response";
             log_error('%s', $g_error);
@@ -1085,12 +1096,12 @@ function rp_decrypt_verify_id_token($id_token) {
         $g_info .= "Signed ID Token {$header['alg']}\n";
         $response['jws'] = array($header, $payload, $sig);
         if(substr($header['alg'], 0, 2) == 'HS') {
-            $verified = jwt_verify($signed_jwt, $_SESSION['provider']['client_secret']);
+            $verified = jwt_verify($signed_jwt, $_SESSION['provider']['client_secret'], $allowed_sig_algs);
         } elseif(substr($header['alg'], 0, 2) == 'RS') {
             $pubkeys = array();
             if($_SESSION['provider']['jwks_uri'])
                 $pubkeys['jku'] = $_SESSION['provider']['jwks_uri'];
-            $verified = jwt_verify($signed_jwt, $pubkeys);
+            $verified = jwt_verify($signed_jwt, $pubkeys, $allowed_sig_algs);
         } elseif($header['alg'] == 'none')
             $verified = true;
         log_info("Signature Verification = %d", $verified);
@@ -1298,7 +1309,7 @@ function register_client($url, $options = array()) {
         $data = array(
             'contacts' => array('me@example.com'),
             'application_type' => 'web',
-            'client_name' => 'ABRP-17',
+            'client_name' => 'PHPRP',
             'logo_uri' => RP_URL . '/media/logo.png',
             'redirect_uris' => array(RP_REDIRECT_URI, RP_AUTHCHECK_REDIRECT_URI),
             'post_logout_redirect_uris' => array(RP_POST_LOGOUT_REDIRECT_URI),
@@ -1316,7 +1327,7 @@ function register_client($url, $options = array()) {
         log_debug('register options = %s', $curl_options[CURLOPT_POSTFIELDS]);
         $curl_options[CURLOPT_HTTPHEADER] = array('Content-Type: application/json');
         list($code, $data_content_type, $req_out, $response_headers, $data_responseText) = curl_fetch_url($url, $headers, $curl_options, $is_post);
-        if($code != 200) {
+        if($code != 200 && $code != 201) {
             $g_error .= "Unable to register client.\n{$req_out}\n{$response_headers}\n{$data_responseText}";
             throw new Exception($g_error);
         } elseif(strpos($data_content_type,'application/json') !== false) {
@@ -1638,6 +1649,20 @@ function handle_start() {
                 $g_error .= "Unable to register client";
                 return;
             }
+            $discovery_endpoints = array();
+            if($_REQUEST['saveDis']) {
+                foreach($discovery as $key => $value) {
+                    log_debug("$key = " . print_r($value, true));
+                    if(is_array($discovery[$key]))
+                        $discovery_endpoints[$key] = implode('|', $discovery[$key]);
+                    else
+                        $discovery_endpoints[$key] = $discovery[$key];
+                }
+                $discovery_endpoints['jwks_uri'] = $discovery['jwks_uri'];
+                $discovery_endpoints['authorization_endpoint'] = $discovery['authorization_endpoint'];
+                $discovery_endpoints['token_endpoint'] = $discovery['token_endpoint'];
+                $discovery_endpoints['userinfo_endpoint'] = $discovery['userinfo_endpoint'];
+            }
             $provider = array_merge(
                                      array(
                                             'name' => $discovery['issuer'],
@@ -1650,7 +1675,8 @@ function handle_start() {
                                             'registration_client_uri' => $client_info['registration_client_uri'],
                                             'client_secret_expires_at' => $client_info['client_secret_expires_at']
                                           ),
-                                    $client_options
+                                    $client_options,
+                                    $discovery_endpoints
                                    );
             db_save_provider($discovery['issuer'], $provider);
             $provider = array_merge($provider, $client_info);
@@ -1841,6 +1867,15 @@ function handle_start() {
 //        $custom_query = array();
         if(strstr($_REQUEST['request_option'], 'Custom') !== false) {
             switch($_REQUEST['request_option']) {
+                case 'Custom 18' :
+                    $custom_params['claims'] =  array(
+                                                            'id_token' => array(
+                                                                                'name' => array('essential' => true),
+                                                                                'email' => array('essential' => true)
+                                                                             )
+                                                       );
+                break;
+
                 case 'Custom 19' :
                     $custom_params['claims'] =  array(
                                                             'userinfo' => array(
@@ -1980,6 +2015,17 @@ function handle_start() {
                     $_SESSION['req_auth_time'] = true;
                     $_SESSION['req_max_age'] = $query_params['max_age'];
                     break;
+                    
+                case 'Custom ID Token Claims' :
+                    log_debug("in ID Token claims");
+                    $custom_params['claims'] =  array(
+                                                            'id_token' => array(
+                                                                                'name' => NULL,
+                                                                              ),
+                                                       );
+
+                    break;
+
                     
                 default:
                     break;
@@ -2173,13 +2219,15 @@ function generate_tab_html() {
 $request_method_types = array('GET', 'Request Object', 'Request File');
 $request_method_options = get_option_html('request_method', $request_method_types, $_SESSION['request_method']);
 
-$request_options_types = array('', 'Custom 19', 'Custom 20', 'Custom 21', 'Custom 22', 
-                         'Custom 23', 'Custom 24', 'Custom 25a', 'Custom 25b', 'Custom Req 1', 'Custom Req 2', 'Custom Dist' );
+$request_options_types = array('', 'Custom 18', 'Custom 19', 'Custom 20', 'Custom 21', 'Custom 22', 
+                         'Custom 23', 'Custom 24', 'Custom 25a', 'Custom 25b', 'Custom Req 1', 'Custom Req 2', 'Custom Dist', 'Custom ID Token Claims' );
 $request_options_type_options = get_option_html('request_option', $request_options_types, $_SESSION['request_option']);
 
 
+$default_acr_values = noHTML($_SESSION['default_acr_values']);
+$default_max_age = noHTML($_SESSION['default_max_age']);
 
-$response_types = array('code', 'token', 'code id_token', 'token id_token', 'id_token', 'code token id_token');
+$response_types = array('code', 'token', 'code id_token', 'id_token token', 'id_token', 'code id_token token');
 if($_SESSION['debug'])
     array_unshift($response_types, '');
 $response_type_options = get_option_html('response_type', $response_types, $_SESSION['response_type'] ? $_SESSION['response_type'] : 'code' );
@@ -2226,7 +2274,7 @@ $token_endpoint_auth_signing_alg_type_options = get_option_html('token_endpoint_
 $subject_types = array('public', 'pairwise');
 $subject_type_options = get_option_html('subject_type', $subject_types, $_SESSION['subject_type']);
 
-$request_object_signing_alg_options = get_option_html('request_object_signing_alg', $sig_algs, $_SESSION['request_object_signing_alg']);
+$request_object_signing_alg_options = get_option_html('request_object_signing_alg', $idt_sig_algs, $_SESSION['request_object_signing_alg']);
 $userinfo_signed_response_alg_options = get_option_html('userinfo_signed_response_alg', $sig_algs, $_SESSION['userinfo_signed_response_alg']);
 $id_token_signed_response_alg_options = get_option_html('id_token_signed_response_alg', $idt_sig_algs, $_SESSION['id_token_signed_response_alg']);
 $require_auth_time_options = get_option_html('require_auth_time', array('', 'true', 'false'), $_SESSION['require_auth_time']);
@@ -2351,7 +2399,7 @@ $tabs = <<<EOF
                     $req_obj_enc_options
                     <tr><td colspan='3'><p/></td></tr>
                     <tr><td>Default Max Age</td><td>&nbsp;&nbsp;</td>
-                        <td><input type='text' name='default_max_age' value='{$_SESSION['default_max_age']}'></td>
+                        <td><input type='text' name='default_max_age' value='{$default_max_age}'></td>
                     </tr>
                     <tr><td colspan='3'><p/></td></tr>
                     <tr><td>Require Auth Time</td><td>&nbsp;&nbsp;</td>
@@ -2359,7 +2407,7 @@ $tabs = <<<EOF
                     </tr>
                     <tr><td colspan='3'><p/></td></tr>
                     <tr><td>Default ACR</td><td>&nbsp;&nbsp;</td>
-                        <td><input type='text' name='default_acr_values' value='{$_SESSION['default_acr_values']}'></td>
+                        <td><input type='text' name='default_acr_values' value='{$default_acr_values}'></td>
                     </tr>
                     <tr><td colspan='3'><p/></td></tr>
                     <tr><td>Login Hint</td><td>&nbsp;&nbsp;</td>

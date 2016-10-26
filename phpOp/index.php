@@ -361,14 +361,17 @@ function is_valid_registered_redirect_uri($redirect_uris, $uri) {
  * Decrypts and Verifies a JWT
  * @param $jwt
  * @param $client Array Client Info
+ * @param $allowed_sig_algs Array array of allowed signature 'alg' values
+ * @param $allowed_enc_algs Array array of allowed encryption 'alg' values
+ * @param $allowed_enc_encs Array array of allowed encryption 'enc' values
  * @param $error  String error code error_decrypt or error_sig
  * @return mixed null/decoded payload
  */
-function decrypt_verify_jwt($jwt, $client, &$error) {
+function decrypt_verify_jwt($jwt, $client, $allowed_sig_algs, $allowed_enc_algs, $allowed_enc_encs,&$error) {
     $response = NULL;
     $jwt_parts = jwt_to_array($jwt);
     if(isset($jwt_parts[0]['enc'])) { // encrypted
-        $signed_jwt = jwt_decrypt($jwt, OP_ENC_PKEY, true, OP_ENC_PKEY_PASSPHRASE);
+        $signed_jwt = jwt_decrypt($jwt, OP_ENC_PKEY, true, OP_ENC_PKEY_PASSPHRASE, $allowed_enc_algs, $allowed_enc_encs);
         if(!$signed_jwt) {
             log_error('Unable to decrypt object');
             $error = 'error_decrypt';
@@ -381,14 +384,14 @@ function decrypt_verify_jwt($jwt, $client, &$error) {
         list($header, $payload, $sig) = jwt_to_array($signed_jwt);
         $verified = false;
         if(substr($header['alg'], 0, 2) == 'HS') {
-            $verified = jwt_verify($signed_jwt, $client['client_secret']);
+            $verified = jwt_verify($signed_jwt, $client['client_secret'], $allowed_sig_algs);
         } elseif(substr($header['alg'], 0, 2) == 'RS') {
             $pubkeys = array();
             if($client['jwks_uri'])
                 $pubkeys['jku'] = $client['jwks_uri'];
             if($client['jwks'])
                 $pubkeys['jwk'] = $client['jwks'];
-            $verified = jwt_verify($signed_jwt, $pubkeys);
+            $verified = jwt_verify($signed_jwt, $pubkeys, $allowed_sig_algs);
         } elseif($header['alg'] == 'none')
             $verified = true;
         log_debug("Signature Verification = $verified");
@@ -469,7 +472,10 @@ function handle_auth() {
         }
         if(isset($request_object)) {
             $cryptoError = '';
-            $payload = decrypt_verify_jwt($request_object, $client, $cryptoError);
+            $allowed_sig_algs = empty($client['request_object_signing_alg']) ? null : array($client['request_object_signing_alg']);
+            $allowed_enc_algs = empty($client['request_object_encryption_alg']) ? null :  array($client['request_object_encryption_alg']);
+            $allowed_enc_encs = empty($client['request_object_encryption_enc']) ? null : array($client['request_object_encryption_enc']);
+            $payload = decrypt_verify_jwt($request_object, $client, $allowed_sig_algs, $allowed_enc_algs, $allowed_enc_encs, $cryptoError);
             if(!isset($payload)) {
                 if($cryptoError == 'error_decrypt')
                     throw new OidcException('invalid_request', 'Unable to decrypt request object');
@@ -519,7 +525,8 @@ function handle_auth() {
         } else {
             if(isset($_GET['id_token_hint'])) {
                 $cryptoError = '';
-                $payload = decrypt_verify_jwt($_REQUEST['id_token_hint'], $client, $cryptoError);
+                $allowed_sig_algs = empty($client['id_token_signed_response_alg']) ? null : array($client['id_token_signed_response_alg']);
+                $payload = decrypt_verify_jwt($_REQUEST['id_token_hint'], $client, $allowed_sig_algs, null, null, $cryptoError);
                 if(!isset($payload)) {
                     if($cryptoError == 'error_decrypt')
                         throw new OidcException('invalid_request', 'Unable to decrypt request object');
@@ -717,7 +724,8 @@ function is_client_authenticated() {
                 break;
 
             case 'client_secret_jwt' :
-                $sig_verified = jwt_verify($jwt_assertion, $db_client['client_secret']);
+                $allowed_sig_algs = empty($db_client['token_endpoint_auth_signing_alg']) ? null : ($db_client['token_endpoint_auth_signing_alg'] == 'none' ? array() : array($db_client['token_endpoint_auth_signing_alg']));
+                $sig_verified = jwt_verify($jwt_assertion, $db_client['client_secret'], $allowed_sig_algs);
                 if($db_client['token_endpoint_auth_signing_alg'])
                     $alg_verified = $db_client['token_endpoint_auth_signing_alg'] == $jwt_header['alg'];
                 else
@@ -742,12 +750,13 @@ function is_client_authenticated() {
                 break;
 
             case 'private_key_jwt' :
+                $allowed_sig_algs = empty($db_client['token_endpoint_auth_signing_alg']) ? null : ($db_client['token_endpoint_auth_signing_alg'] == 'none' ? array() : array($db_client['token_endpoint_auth_signing_alg']));
                 $pubkeys = array();
                 if($db_client['jwks_uri'])
                     $pubkeys['jku'] = $db_client['jwks_uri'];
                 if($db_client['jwks'])
                     $pubkeys['jwk'] = $db_client['jwks'];
-                $sig_verified = jwt_verify($jwt_assertion, $pubkeys);
+                $sig_verified = jwt_verify($jwt_assertion, $pubkeys, $allowed_sig_algs);
                 if($db_client['token_endpoint_auth_signing_alg'])
                     $alg_verified = $db_client['token_endpoint_auth_signing_alg'] == $jwt_header['alg'];
                 else
