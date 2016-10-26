@@ -46,7 +46,7 @@ function handle_openid_config() {
                         'jwks_uri' =>  OP_JWK_URL,
                         'registration_endpoint' => $endpoint_base . '/registration',
                         'scopes_supported' => Array('openid', 'profile', 'email', 'address', 'phone', 'offline_access'),
-                        'response_types_supported' => Array('code', 'code token', 'code id_token', 'token', 'token id_token', 'code token id_token', 'id_token'),
+                        'response_types_supported' => Array('code', 'code token', 'code id_token', 'token', 'id_token token', 'code id_token token', 'id_token'),
                         'grant_types_supported' => Array('authorization_code', 'implicit'),
 //                        'acr_values_supported' => Array('http://www.idmanagement.gov/schema/2009/05/icam/openid-trust-level1.pdf'),
                         'acr_values_supported' => Array(),
