@@ -292,9 +292,10 @@ function parse_key_hints($sig_hints) {
  *                      'secret'    => 'my_hmac_secret'
  *                    ]
  *                  ]
+ * @param  array    $allowed_algs        array of allowed/acceptable signature algs
  * @return bool     True if the signatures are verified successfully and False if the signature verification fails
  */
-function jwt_verify($jwt, $sig_hints = NULL) {
+function jwt_verify($jwt, $sig_hints = NULL, $allowed_algs=NULL) {
     $is_compact = false;
     if(is_array($jwt))
         $json_obj = $jwt;
@@ -336,6 +337,12 @@ function jwt_verify($jwt, $sig_hints = NULL) {
             
         if(!isset($header['alg']))
             return false;
+        if(!empty($allowed_algs)) {
+            if(!is_array($allowed_algs))
+                $allowed_algs = array($allowed_algs);
+            if(!in_array($header['alg'], $allowed_algs))
+                return false;  // using alg that is not allowed/supported
+        }
             
         switch($header['alg']) {
             case 'RS256' :
@@ -1009,7 +1016,7 @@ function jwt_encrypt($data, $key_file, $is_private_key=false, $pass_phrase=NULL,
     return jwt_encrypt2($data, $key_file, $is_private_key, $pass_phrase, $header, $enc_key, $alg, $enc, $zip);
 }
 
-function jwt_decrypt($jwe, $key_file, $is_private_key=true, $pass_phrase=NULL) {
+function jwt_decrypt($jwe, $key_file, $is_private_key=true, $pass_phrase=NULL, $allowed_algs=NULL, $allowed_encs=NULL) {
     global $encryption_alg_values_supported, $encryption_enc_values_supported;
 
     $parts = explode('.', $jwe);
@@ -1049,7 +1056,18 @@ function jwt_decrypt($jwe, $key_file, $is_private_key=true, $pass_phrase=NULL) {
     }
     if(!in_array($header['alg'], $encryption_alg_values_supported))
         return false;
-        
+    if(!empty($allowed_algs)) {
+        if(!is_array($allowed_algs))
+            $allowed_algs = array($allowed_algs);
+        if(!in_array($header['alg'], $allowed_algs))
+            return false;
+    }
+    if(!empty($allowed_encs)) {
+        if(!is_array($allowed_encs))
+            $allowed_encs = array($allowed_encs);
+        if(!in_array($header['enc'], $allowed_encs))
+            return false;
+    }
     if($rsa) {
         if($header['alg'] == 'RSA-OAEP') {
             $rsa->setEncryptionMode(CRYPT_RSA_ENCRYPTION_OAEP);
