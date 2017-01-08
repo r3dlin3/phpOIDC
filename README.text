@@ -52,6 +52,7 @@ Dependency/Requirements
   * MDB2_Driver_mysql
   * Doctrine ORM 1.2.4
   * PHPSecLib
+  * cURL
 
 INSTALL
 --------
