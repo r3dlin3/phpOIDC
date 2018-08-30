@@ -86,6 +86,7 @@ CREATE TABLE `client` (
   `token_endpoint_auth_signing_alg` varchar(255) DEFAULT NULL,
   `policy_uri` varchar(255) DEFAULT NULL,
   `jwks_uri` varchar(255) DEFAULT NULL,
+  `jwks` text,
   `jwk_encryption_uri` varchar(255) DEFAULT NULL,
   `x509_uri` varchar(255) DEFAULT NULL,
   `x509_encryption_uri` varchar(255) DEFAULT NULL,
