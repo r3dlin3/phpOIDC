@@ -86,6 +86,7 @@ CREATE TABLE `client` (
   `token_endpoint_auth_signing_alg` varchar(255) DEFAULT NULL,
   `policy_uri` varchar(255) DEFAULT NULL,
   `jwks_uri` varchar(255) DEFAULT NULL,
+  `jwks` text,
   `jwk_encryption_uri` varchar(255) DEFAULT NULL,
   `x509_uri` varchar(255) DEFAULT NULL,
   `x509_encryption_uri` varchar(255) DEFAULT NULL,
@@ -118,6 +119,7 @@ CREATE TABLE `client` (
 DROP TABLE IF EXISTS `provider`;
 CREATE TABLE `provider` (
   `id` int(11) NOT NULL AUTO_INCREMENT,
+  `key_id` varchar(16) UNIQUE,
   `name` text NOT NULL,
   `url` varchar(255) NOT NULL,
   `issuer` varchar(255) NOT NULL,
@@ -166,7 +168,6 @@ CREATE TABLE `provider` (
   `claims_parameter_supported` tinyint(1) DEFAULT NULL,
   `request_parameter_supported` tinyint(1) DEFAULT NULL,
   `request_uri_parameter_supported` tinyint(1) DEFAULT NULL,
-
   PRIMARY KEY (`id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8;
 
@@ -231,7 +232,39 @@ CREATE TABLE `token` (
 -- Insert values into account table
 --
 
-INSERT INTO `account` VALUES (
+INSERT INTO `account` (
+  `id`,
+  `enabled`,
+  `login`,
+  `crypted_password`,
+  `name`,
+  `name_ja_kana_jp`,
+  `name_ja_hani_jp`,
+  `given_name`,
+  `given_name_ja_kana_jp`,
+  `given_name_ja_hani_jp`,
+  `family_name`,
+  `family_name_ja_kana_jp`,
+  `family_name_ja_hani_jp`,
+  `middle_name`,
+  `middle_name_ja_kana_jp`,
+  `middle_name_ja_hani_jp`,
+  `nickname`,
+  `preferred_username`,
+  `profile`,
+  `picture`,
+  `website`,
+  `email`,
+  `email_verified`,
+  `gender`,
+  `birthdate`,
+  `zoneinfo`,
+  `locale`,
+  `phone_number`,
+  `phone_number_verified`,
+  `address`,
+  `updated_at`
+) VALUES (
   0,
   1,
   'alice',
@@ -294,6 +327,6 @@ INSERT INTO `account` VALUES (
  '1-81-234-234234234',
  1,
  '456 underland ct.',
- 8472378234
+ 43453453
 );
 
