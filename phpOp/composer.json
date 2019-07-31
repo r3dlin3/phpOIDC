@@ -1,5 +1,5 @@
 {
-    "name": "NRI/phpOidc/phpop",
+    "name": "nri/phpoidc",
     "description": "PHP OpenID Connect OP ",
     "version": "1.0.0",
     "type": "project",
@@ -16,9 +16,15 @@
     "license": "proprietary",
     "autoload": {
         "psr-0": {
-        }
+        },
+        "classmap": ["Entity"],
+        "files": ["libdb2.php"]
     },
     "require": {
-        "monolog/monolog": "1.6.*"
+        "monolog/monolog": "1.6.*",
+        "doctrine/orm": "2.6.3"
+    },
+    "require-dev": {
+        "phpunit/phpunit": "^8"
     }
 }
