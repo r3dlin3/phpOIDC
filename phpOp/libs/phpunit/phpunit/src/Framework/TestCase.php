@@ -105,11 +105,6 @@ abstract class TestCase extends Assert implements SelfDescribing, Test
     private $dataName;
 
     /**
-     * @var bool
-     */
-    private $useErrorHandler;
-
-    /**
      * @var null|string
      */
     private $expectedException;
@@ -218,6 +213,11 @@ abstract class TestCase extends Assert implements SelfDescribing, Test
      * @var int
      */
     private $outputBufferingLevel;
+
+    /**
+     * @var bool
+     */
+    private $outputRetrievedForAssertion = false;
 
     /**
      * @var Snapshot
@@ -451,6 +451,13 @@ abstract class TestCase extends Assert implements SelfDescribing, Test
         return 1;
     }
 
+    public function getActualOutputForAssertion(): string
+    {
+        $this->outputRetrievedForAssertion = true;
+
+        return $this->getActualOutput();
+    }
+
     public function expectOutputRegex(string $expectedRegex): void
     {
         $this->outputExpectedRegex = $expectedRegex;
@@ -547,12 +554,6 @@ abstract class TestCase extends Assert implements SelfDescribing, Test
 
         if (!$this instanceof WarningTestCase) {
             $this->setTestResultObject($result);
-            $this->setUseErrorHandlerFromAnnotation();
-        }
-
-        if ($this->useErrorHandler !== null) {
-            $oldErrorHandlerSetting = $result->getConvertErrorsToExceptions();
-            $result->convertErrorsToExceptions($this->useErrorHandler);
         }
 
         if (!$this instanceof WarningTestCase &&
@@ -597,6 +598,7 @@ abstract class TestCase extends Assert implements SelfDescribing, Test
                 } else {
                     $globals = '';
                 }
+
                 $includedFiles = '';
                 $iniSettings   = '';
             }
@@ -677,10 +679,6 @@ abstract class TestCase extends Assert implements SelfDescribing, Test
             $result->run($this);
         }
 
-        if (isset($oldErrorHandlerSetting)) {
-            $result->convertErrorsToExceptions($oldErrorHandlerSetting);
-        }
-
         $this->result = null;
 
         return $result;
@@ -711,10 +709,11 @@ abstract class TestCase extends Assert implements SelfDescribing, Test
 
     /**
      * @internal This method is not covered by the backward compatibility promise for PHPUnit
+     *
+     * @deprecated Invoking this method has no effect; it will be removed in PHPUnit 9
      */
     public function setUseErrorHandler(bool $useErrorHandler): void
     {
-        $this->useErrorHandler = $useErrorHandler;
     }
 
     /**
@@ -864,7 +863,7 @@ abstract class TestCase extends Assert implements SelfDescribing, Test
      */
     public function hasExpectationOnOutput(): bool
     {
-        return \is_string($this->outputExpectedString) || \is_string($this->outputExpectedRegex);
+        return \is_string($this->outputExpectedString) || \is_string($this->outputExpectedRegex) || $this->outputRetrievedForAssertion;
     }
 
     /**
@@ -1523,6 +1522,26 @@ abstract class TestCase extends Assert implements SelfDescribing, Test
      */
     protected function createPartialMock($originalClassName, array $methods): MockObject
     {
+        $class_names = \is_array($originalClassName) ? $originalClassName : [$originalClassName];
+
+        foreach ($class_names as $class_name) {
+            $reflection = new \ReflectionClass($class_name);
+
+            $mockedMethodsThatDontExist = \array_filter($methods, function (string $method) use ($reflection) {
+                return !$reflection->hasMethod($method);
+            });
+
+            if ($mockedMethodsThatDontExist) {
+                $this->addWarning(
+                    \sprintf(
+                        'createPartialMock called with method(s) %s that do not exist in %s. This will not be allowed in future versions of PHPUnit.',
+                        \implode(', ', $mockedMethodsThatDontExist),
+                        $class_name
+                    )
+                );
+            }
+        }
+
         return $this->getMockBuilder($originalClassName)
                     ->disableOriginalConstructor()
                     ->disableOriginalClone()
@@ -1808,18 +1827,6 @@ abstract class TestCase extends Assert implements SelfDescribing, Test
                 }
             }
         } catch (UtilException $e) {
-        }
-    }
-
-    private function setUseErrorHandlerFromAnnotation(): void
-    {
-        $useErrorHandler = TestUtil::getErrorHandlerSettings(
-            \get_class($this),
-            $this->name
-        );
-
-        if ($useErrorHandler !== null) {
-            $this->setUseErrorHandler($useErrorHandler);
         }
     }
 
