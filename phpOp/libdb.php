@@ -393,6 +393,13 @@ function db_get_provider_by_issuer($url) {
     return db_get_object($object, $object_field, $object_value);
 }
 
+function db_get_provider_by_key_id($key_id) {
+    $object = 'Provider';
+    $object_field = 'key_id';
+    $object_value = $key_id;
+    return db_get_object($object, $object_field, $object_value);
+}
+
 
 function db_delete_provider($name) {
     $provider = db_get_provider($name);
