@@ -397,7 +397,7 @@ function jwt_verify($jwt, $sig_hints = NULL, $allowed_algs=NULL) {
                 }
                 if(!$verified) {
                     foreach($jwks as $jwk) {
-                        $rsa = jwk_get_rsa_sig_key($jwk, $header['kid'], $header['x5t']);
+                        $rsa = jwk_get_rsa_sig_key($jwk, isset($header['kid']) ? $header['kid'] : null, isset($header['x5t']) ? $header['x5t'] : null);
                         if($rsa) {
                             $rsa->setHash('sha' . substr($header['alg'], 2));
                             $rsa->setSignatureMode(CRYPT_RSA_SIGNATURE_PKCS1);
@@ -510,56 +510,35 @@ function get_url_contents($url) {
  * @return String                   encrypted data
  */
 function aes_cbc_encrypt($data, $key, $key_strength, $iv=NULL) {
+    $method = '';
+    switch ($key_strength) {
+        case 128 :
+            if(strlen($key) != 16) {
+                return NULL;
+            }
+            $method = 'aes-128-cbc';
+            break;
 
-	$cipher = mcrypt_module_open(MCRYPT_RIJNDAEL_128, '', MCRYPT_MODE_CBC, '');
-	if(!$cipher)
-	    return NULL;
-	    
-	$iv_size = mcrypt_enc_get_iv_size($cipher);
-	if(!$iv) {
-	    $iv = str_repeat(chr(0), 16);  // initialize to 16 byte string of "0"s
-	} elseif($iv && $iv_size != strlen($iv)) {
-	    return NULL;
-	}
+        case 256:
+            if(strlen($key) != 32) {
+                return NULL;
+            }
+            $method = 'aes-256-cbc';
+            break;
 
-  switch ($key_strength) {
-    case 128 :
-        if(strlen($key) != 16) {
+        default:
             return NULL;
-        }
-        break;
-    
-    case 256:
-        if(strlen($key) != 32) {
-            return NULL;
-        }
-        break;
-    
-    default:
+    }
+
+    $iv_size = openssl_cipher_iv_length($method);
+
+    if(!$iv && $iv_size) {
+        $iv = str_repeat(chr(0), $iv_size);  // initialize to $iv_size byte string of "0"s
+    } elseif($iv && $iv_size != strlen($iv)) {
         return NULL;
-  }
-  
-	
-	
-	
-	// This is the plain-text to be encrypted:
-	// $cleartext = 'The quick brown fox jumped over the lazy dog';
-	$cleartext = add_pkcs5_padding($data);
-		
-	// The mcrypt_generic_init function initializes the cipher by specifying both
-	// the key and the IV.  The length of the key determines whether we're doing
-	// 128-bit, 192-bit, or 256-bit encryption.  
-	// Let's do 256-bit encryption here:
-	if (mcrypt_generic_init($cipher, $key, $iv) != -1)
-	{
-		// PHP pads with NULL bytes if $cleartext is not a multiple of the block size..
-		$cipherText = mcrypt_generic($cipher,$cleartext );
-		mcrypt_generic_deinit($cipher);
-		return $cipherText;
-	}
-    
+    }
+    return openssl_encrypt($data, $method, $key, OPENSSL_RAW_DATA, $iv);
 }
-
 
 /**
  * AES CBC decrypt data with a symmetric key of the specified size
@@ -571,50 +550,34 @@ function aes_cbc_encrypt($data, $key, $key_strength, $iv=NULL) {
  */
 function aes_cbc_decrypt($data, $key, $key_strength, $iv=NULL) {
 
-	$cipher = mcrypt_module_open(MCRYPT_RIJNDAEL_128, '', MCRYPT_MODE_CBC, '');
-	if(!$cipher)
-	    return NULL;
-	    
-	$iv_size = mcrypt_enc_get_iv_size($cipher);
-	if(!$iv) {
-	    $iv = str_repeat(chr(0), $iv_size);  // initialize to 16 byte string of "0"s
-	} elseif($iv && $iv_size != strlen($iv)) {
-	    return NULL;
-	}
+    $method = '';
+    switch ($key_strength) {
+        case 128 :
+            if(strlen($key) != 16) {
+                return NULL;
+            }
+            $method = 'aes-128-cbc';
+            break;
 
-  switch ($key_strength) {
-    case 128 :
-        if(strlen($key) != 16) {
+        case 256:
+            if(strlen($key) != 32) {
+                return NULL;
+            }
+            $method = 'aes-256-cbc';
+            break;
+
+        default:
             return NULL;
-        }
-        break;
-    
-    case 256:
-        if(strlen($key) != 32) {
-            return NULL;
-        }
-        break;
-    
-    default:
+    }
+
+    $iv_size = openssl_cipher_iv_length($method);
+
+    if(!$iv && $iv_size) {
+        $iv = str_repeat(chr(0), $iv_size);  // initialize to $iv_size byte string of "0"s
+    } elseif($iv && $iv_size != strlen($iv)) {
         return NULL;
-  }
-  
-	// This is the plain-text to be encrypted:
-	// $cleartext = 'The quick brown fox jumped over the lazy dog';
-	$cipherText = $data;
-		
-	// The mcrypt_generic_init function initializes the cipher by specifying both
-	// the key and the IV.  The length of the key determines whether we're doing
-	// 128-bit, 192-bit, or 256-bit encryption.  
-	// Let's do 256-bit encryption here:
-	if (mcrypt_generic_init($cipher, $key, $iv) != -1)
-	{
-		// PHP pads with NULL bytes if $cleartext is not a multiple of the block size..
-		$clearText = mdecrypt_generic($cipher,$cipherText );
-		mcrypt_generic_deinit($cipher);
-		return remove_pkcs5_padding($clearText);
-	}
-    
+    }
+    return openssl_decrypt($data, $method, $key, OPENSSL_RAW_DATA, $iv);
 }
 
 
@@ -959,8 +922,8 @@ function jwt_encrypt2($data, $key_file, $is_private_key=false, $pass_phrase=NULL
         if($enc_key)
             $cmk=$enc_key;
         else
-            $cmk = mcrypt_create_iv($key_length, MCRYPT_DEV_URANDOM);
-        $iv = mcrypt_create_iv(16, MCRYPT_DEV_URANDOM );
+            $cmk = random_bytes($key_length);
+        $iv = random_bytes(16);
         $encoded_enc_key = base64url_encode(encrypt_with_key($cmk, $key_file, $is_private_key, $pass_phrase, $alg));
 
         $header = array (
@@ -1539,25 +1502,17 @@ function bitxor($o1, $o2) {
 
 
 function aes_key_wrap($input, $KEK) {
-    $cipher = mcrypt_module_open(MCRYPT_RIJNDAEL_128, '', MCRYPT_MODE_ECB, '');
-    if(!$cipher)
-        return NULL;
     $input_len = strlen($input);
     $key_length = strlen($KEK) * 8;
-    
+    $method = '';
     if($key_length != 128 && $key_length != 192 && $key_length != 256) {
-        die("aes_key_wrap invalid key length\n");
-    }
-    
-    if($key_length < $input_len * 8) {
-        die("aes_key_wrap insufficient key length for input\n");
+        die("aes_key_wrap invalid key length {$key_length}\n");
+    } else {
+        $method = 'aes-' . $key_length . '-ecb';
     }
 
-    $iv_size = mcrypt_enc_get_iv_size($cipher);
-    $iv = str_repeat(chr(0), 16);  // initialize to 16 byte string of "0"s
-    $s = mcrypt_generic_init($cipher, $KEK, $iv);
-    if( ($s < 0) || ($s === false)) {
-         return NULL;
+    if($key_length < $input_len * 8) {
+        die("aes_key_wrap insufficient key length for input\n");
     }
 
     $n = (int) ceil(($input_len * 8) / 64);
@@ -1565,17 +1520,17 @@ function aes_key_wrap($input, $KEK) {
 
     $A = $iv;
     $R = array();
-    
+
     for($i = 1; $i <= $n; $i++) {
         $R[$i] = substr($input, ($i - 1) * 8, 8);
         if(strlen($R[$i]) < 8) {
             $R[$i] = str_pad($R[$i], 8 - strlen($R[$i]), "\0");
         }
     }
-    
+
     for($j = 0; $j < 6; $j++) {
         for($i = 1; $i <= $n; $i++) {
-            $B = mcrypt_generic($cipher, $A . $R[$i]);
+            $B = openssl_encrypt($A . $R[$i], $method, $KEK, OPENSSL_RAW_DATA | OPENSSL_ZERO_PADDING);
             $R[$i] = substr($B, -8);
             $A = substr($B, 0, 8);
             $t1 = ($n * $j) + $i;
@@ -1584,43 +1539,32 @@ function aes_key_wrap($input, $KEK) {
             $A = bitxor($A, $padded_t);
         }
     }
-    
+
     $C = array();
     $C[0] = $A;
     for($i = 1; $i <= $n; $i++) {
         $C[$i] = $R[$i];
     }
-    mcrypt_generic_deinit($cipher);
-    mcrypt_module_close($cipher);
     return implode('', $C);
+
 }
 
-
 function aes_key_unwrap($input, $KEK) {
-
-    $cipher = mcrypt_module_open(MCRYPT_RIJNDAEL_128, '', MCRYPT_MODE_ECB, '');
-    if(!$cipher)
-        return NULL;
     $input_len = strlen($input);
     $key_length = strlen($KEK) * 8;
-    
+    $method = '';
     if($key_length != 128 && $key_length != 192 && $key_length != 256) {
-        die("aes_key_unwrap invalid key length $key_length\n");
+        die("aes_key_unwrap invalid key length {$key_length}\n");
+    } else {
+        $method = 'aes-' . $key_length . '-ecb';
     }
     $n = ceil(($input_len * 8) / 64) - 1;
-    
     if($key_length < ($n) * 8) {
         die("aes_key_unwrap insufficient key length for input\n");
     }
-    $iv_size = mcrypt_enc_get_iv_size($cipher);
-    $iv = str_repeat(chr(0), 16);  // initialize to 16 byte string of "0"s
-    $s = mcrypt_generic_init($cipher, $KEK, $iv);
-    if( ($s < 0) || ($s === false)) {
-         return NULL;
-    }
     $A = substr($input, 0, 8);
     $R = array();
-    
+
     for($i = 1; $i <= $n; $i++) {
         $R[$i] = substr($input, $i * 8, 8);
         if(strlen($R[$i]) < 8) {
@@ -1633,22 +1577,25 @@ function aes_key_unwrap($input, $KEK) {
             $t = pack('N', $t1);
             $padded_t = str_pad($t, 8, "\0", STR_PAD_LEFT);
             $A = bitxor($A, $padded_t);
-            $B = mdecrypt_generic($cipher, $A . $R[$i]);
+            $B = openssl_decrypt($A . $R[$i], $method, $KEK, OPENSSL_RAW_DATA | OPENSSL_ZERO_PADDING);
             $A = substr($B, 0, 8);
             $R[$i] = substr($B, -8);
         }
     }
-    
+
     $P = array();
     $P[0] = $A;
     for($i = 1; $i <= $n; $i++) {
         $P[$i] = $R[$i];
     }
-    mcrypt_generic_deinit($cipher);
-    mcrypt_module_close($cipher);
-    return implode('', $P);
-
+    $P0 = pack('H*', 'A6A6A6A6A6A6A6A6');
+    if(strcmp($P0, $P[0]) == 0) {
+        unset($P[0]);
+        return implode('', $P);
+    } else
+        return NULL;
 }
+
 
 function add_pkcs5_padding($input, $block_len = 16) {
     $last_block_len = strlen($input) % $block_len;
@@ -1666,267 +1613,40 @@ function remove_pkcs5_padding($input) {
  * GCM Crypto Functions
  *
  */
-
 function gcm_encrypt($K, $IV, $P, $A, $t = 128) {
 
-    $cipher = mcrypt_module_open(MCRYPT_RIJNDAEL_128, '', MCRYPT_MODE_ECB, '');
-    if(!$cipher)
-        return NULL;
     $key_length = strlen($K) * 8;
+    $method = '';
     if($key_length != 128 && $key_length != 192 && $key_length != 256) {
-        die("encryp invalid key length {$key_length}\n");
-    }
-
-    $iv_size = mcrypt_enc_get_iv_size($cipher);
-    $iv = str_repeat(chr(0), 16);  // initialize to 16 byte string of "0"s
-    $s = mcrypt_generic_init($cipher, $K, $iv);
-    if( ($s < 0) || ($s === false)) {
-         die("encryp mcrypt init error $s");
-    }
-    $H = mcrypt_generic($cipher, str_pad('', 16, "\0"));
-    $iv_len = gcm_len($IV);
-    if($iv_len == 96) {
-        $J0 = $IV . pack('H*', '00000001');
+        die("gcm encryp invalid key length {$key_length}\n");
     } else {
-        $s = (128 * ceil($iv_len / 128)) - $iv_len;
-        if(($s + 64) % 8)
-            die("gcm_encrypt s {$s} + 64 not byte size");
-        $packed_iv_len = pack('N', $iv_len);
-        $iv_len_padding = str_pad($packed_iv_len, 8, "\0", STR_PAD_LEFT);
-        $hash_X = $IV . str_pad('', ($s + 64) / 8, "\0") . $iv_len_padding;
-        $J0 = gcm_hash($H, $hash_X);
+        $method = 'aes-' . $key_length . '-gcm';
     }
-    $C = gcm_gctr($K, gcm_inc(32, $J0), $P);
 
-    $u = (128 * ceil(gcm_len($C) / 128)) - gcm_len($C);
-    $v = (128 * ceil(gcm_len($A) / 128)) - gcm_len($A);
-    $a_len_padding = str_pad(pack('N', gcm_len($A)), 8, "\0", STR_PAD_LEFT);
-    $c_len_padding = str_pad(pack('N', gcm_len($C)), 8, "\0", STR_PAD_LEFT);
-
-    $S = gcm_hash($H, $A . str_pad('', $v / 8, "\0") . $C . str_pad('', $u / 8, "\0") . $a_len_padding . $c_len_padding);
-    $T = gcm_MSB($t, gcm_gctr($K, $J0, $S));
-    mcrypt_generic_deinit($cipher);
-    mcrypt_module_close($cipher);
-    return array($C, $T);
+    $tagLength = $t / 8;
+    $T = NULL;
+    $cipherText = openssl_encrypt($P, $method, $K, OPENSSL_RAW_DATA, $IV, $T, $A, $tagLength);
+    if($cipherText) {
+        return array($cipherText, $T);
+    } else
+        return NULL;
 }
 
 
 function gcm_decrypt($K, $IV, $C, $A, $T) {
-
-    $cipher = mcrypt_module_open(MCRYPT_RIJNDAEL_128, '', MCRYPT_MODE_ECB, '');
-    if(!$cipher)
-        return NULL;
     $key_length = strlen($K) * 8;
-
+    $method = '';
     if($key_length != 128 && $key_length != 192 && $key_length != 256) {
-        die("encryp invalid key length\n");
-    }
-
-    $iv_size = mcrypt_enc_get_iv_size($cipher);
-    $iv = str_repeat(chr(0), 16);  // initialize to 16 byte string of "0"s
-    $s = mcrypt_generic_init($cipher, $K, $iv);
-    if( ($s < 0) || ($s === false)) {
-         die("encryp mcrypt init error $s");
-    }
-
-    $H = mcrypt_generic($cipher, str_pad('', 16, "\0"));
-
-    $iv_len = gcm_len($IV);
-    if($iv_len == 96) {
-        $J0 = $IV . pack('H*', '00000001');
+        die("gcm decryp invalid key length {$key_length}\n");
     } else {
-        $s = (128 * ceil($iv_len / 128)) - $iv_len;
-        if(($s + 64) % 8)
-            die("gcm_encrypt s {$s} + 64 not byte size");
-        $packed_iv_len = pack('N', $iv_len);
-        $iv_len_padding = str_pad($packed_iv_len, 8, "\0", STR_PAD_LEFT);
-        $hash_X = $IV . str_pad('', ($s + 64) / 8, "\0") . $iv_len_padding;
-        $J0 = gcm_hash($H, $hash_X);
+        $method = 'aes-' . $key_length . '-gcm';
     }
-    $P = gcm_gctr($K, gcm_inc(32, $J0), $C);
-
-    $u = (128 * ceil(gcm_len($C) / 128)) - gcm_len($C);
-    $v = (128 * ceil(gcm_len($A) / 128)) - gcm_len($A);
-    $a_len_padding = str_pad(pack('N', gcm_len($A)), 8, "\0", STR_PAD_LEFT);
-    $c_len_padding = str_pad(pack('N', gcm_len($C)), 8, "\0", STR_PAD_LEFT);
-
-    $S = gcm_hash($H, $A . str_pad('', $v / 8, "\0") . $C . str_pad('', $u / 8, "\0") . $a_len_padding . $c_len_padding);
-    $T1 = gcm_MSB(gcm_len($T), gcm_gctr($K, $J0, $S));
-    $result = strcmp($T, $T1);
-    if($result)
+    $clearText = openssl_decrypt($C, $method, $K, OPENSSL_RAW_DATA, $IV, $T, $A);
+    if(!$clearText)
         return NULL;
-    mcrypt_generic_deinit($cipher);
-    mcrypt_module_close($cipher);
-    return array($P, $result);
+    return array($clearText, 0);
 }
 
-
-
-/* return the number of bits in x */
-function gcm_len($x) {
-    return strlen($x) * 8;
-}
-
-
-// returns the MSB $len bits of $x
-function gcm_MSB($num_bits, $x) {
-    if(!$num_bits || !$x)
-        die('gcm_MSB invalid params');
-    if($num_bits % 8)
-        die('gcm_MSB num_bits is not byte size');
-    $num_bytes = $num_bits / 8;
-    $len_x = strlen($x);
-    if($num_bytes > strlen($x))
-        die("gcm_MSB num_bits {$num_bits} bytes({$num_bytes}) > x {$len_x}");
-    return substr($x, 0, $num_bytes);
-
-}
-
-// returns the LSB $len bits of $x
-function gcm_LSB($num_bits, $x) {
-    if(!$num_bits || !$x)
-        die('gcm_LSB invalid params');
-    if($num_bits % 8)
-        die('gcm_LSB num_bits is not byte size');
-    $num_bytes = ($num_bits / 8);
-    if($num_bytes > strlen($x))
-        die("gcm_LSB num_bits {$num_bits} > x {$x}");
-    return substr($x, $num_bytes * -1);
-
-}
-
-
-
-function gcm_inc($s_bits, $x) {
-    if(!$s_bits || $s_bits != 32)
-        die("gcm_inc invalid s_bits");
-    if(!$x)
-        die("gcm_inc invalid x");
-    if($s_bits % 8)
-        die('gcm_inc s_bits is not byte size');
-    $lsb = gcm_LSB($s_bits, $x);
-    $X = (_uint32be($lsb) + 1);
-    $res = gcm_MSB(gcm_len($x) - $s_bits, $x) . pack('N', $X);
-    return $res;
-}
-
-
-
-function _uint32be($bin)
- {
-     // $bin is the binary 32-bit BE string that represents the integer
-//     $int_size = PHP_INT_SIZE;
-     $int_size = 4;
-     if ($int_size <= 4){
-         list(,$h,$l) = unpack('n*', $bin);
-         return ($l + ($h*0x010000));
-     }
-     else{
-         list(,$int) = unpack('N', $bin);
-         return $int;
-     }
- }
-
-function gcm_product($X, $Y) {
-    $R = pack('H*', 'E1') . str_pad('', 15, "\0");
-    $Z = str_pad('', 16, "\0");
-    $V = $Y;
-    if(strlen($X) != 16)
-        die('Invalid length for X');
-    $parts = str_split($X, 4);
-    $x = sprintf("%032b%032b%032b%032b", _uint32be($parts[0]), _uint32be($parts[1]), _uint32be($parts[2]), _uint32be($parts[3]));
-    $lsb_mask = "\1";
-    for($i = 0; $i < 128; $i++) {
-        if($x[$i])
-            $Z = bitxor($Z, $V);
-        $lsb_8 = substr($V, -1);
-        if(ord($lsb_8 & $lsb_mask))
-            $V = bitxor(str_right_shift($V), $R);
-        else
-            $V = str_right_shift($V);
-    }
-    return $Z;
-}
-
-
-function gcm_hash($H, $X) {
-    if(!$H or !$X)
-        die("gcm_hash invalid params");
-    if(strlen($X) % 16)
-        die("gcm_hash X is not multiple of 16 bytes");
-    $Y = array();
-    $Y[0] = str_pad('', 16, "\0");
-    $num_blocks = strlen($X) / 16;
-    for($i = 1; $i <= $num_blocks; $i++) {
-        $Y[$i] = gcm_product(bitxor($Y[$i - 1], substr($X, ($i - 1) * 16, 16)), $H);
-    }
-    return $Y[$num_blocks];
-}
-
-function gcm_gctr($K, $ICB, $X) {
-    if($X == '')
-        return '';
-
-    $cipher = mcrypt_module_open(MCRYPT_RIJNDAEL_128, '', MCRYPT_MODE_ECB, '');
-    if(!$cipher)
-        return NULL;
-    $key_length = strlen($K) * 8;
-
-    if($key_length != 128 && $key_length != 192 && $key_length != 256) {
-        die("gcm_gctr invalid key length\n");
-    }
-
-    $iv_size = mcrypt_enc_get_iv_size($cipher);
-    $iv = str_repeat(chr(0), 16);  // initialize to 16 byte string of "0"s
-    $s = mcrypt_generic_init($cipher, $K, $iv);
-    if( ($s < 0) || ($s === false)) {
-         die("gcm_gctr mcrypt init error $s");
-    }
-
-    $n = ceil(gcm_len($X) / 128);
-    $CB = array();
-    $Y = array();
-    $CB[1] = $ICB;
-    for($i = 2; $i <= $n; $i++) {
-        $CB[$i] = gcm_inc(32, $CB[$i - 1]);
-    }
-    for($i = 1; $i < $n; $i++) {
-        $C = mcrypt_generic($cipher, $CB[$i]);
-        $Y[$i] = bitxor(substr($X, ($i - 1) * 16, 16), $C);
-    }
-
-    $Xn = substr($X, ($n - 1) * 16);
-    $C = mcrypt_generic($cipher, $CB[$n]);
-    $Y[$n] = bitxor($Xn, gcm_MSB(gcm_len($Xn), $C));
-    mcrypt_generic_deinit($cipher);
-    mcrypt_module_close($cipher);
-    return implode('', $Y);
-}
-
-
-function str_right_shift($input) {
-//     $width = PHP_INT_SIZE; // doesn't work well on 64-bit systems
-     $width = 4;
-     $parts = array_map('_uint32be', str_split($input, $width));
-     $runs = count($parts);
-     $len = strlen($input) / 4;
-     if(!is_int($len))
-        die('not int len');
-     for($i=$runs - 1; $i >= 0; $i--) {
-        if($i) {
-            $lsb1 = $parts[$i - 1] & 0x00000001;
-            if($lsb1) {
-                $parts[$i] = ($parts[$i] >> 1) | 0x80000000;
-                $parts[$i] = pack('N', $parts[$i]);
-                continue;
-            }
-        }
-        $parts[$i] = ($parts[$i] >> 1) & 0x7FFFFFFF; // get rid of sign bit
-        $parts[$i] = pack('N', $parts[$i]);
-    }
-    $res = implode('', $parts);
-    return $res;
-}
 
 function pretty_json($json) {
 
@@ -2034,3 +1754,5 @@ function get_rsa_key_thumbprint($key) {
     }
     return '';
 }
+
+
