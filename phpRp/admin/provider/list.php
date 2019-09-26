@@ -4,6 +4,7 @@ echo "<div class='table1' style='width:600px;height:150px;'>";
 echo "<table border=1 >"; 
 echo "<tr>";
 echo "<td><b>Id</b></td>";
+echo "<td><b>Key Id</b></td>";
 echo "<td><b>Name</b></td>";
 echo "<td><b>Url</b></td>";
 echo "<td><b>Issuer</b></td>"; 
@@ -19,6 +20,7 @@ while($row = mysql_fetch_array($result)){
 foreach($row AS $key => $value) { $row[$key] = stripslashes($value); } 
 echo "<tr>";
 echo "<td valign='top'>" . nl2br( $row['id']) . "</td>";
+echo "<td valign='top'>" . nl2br( $row['key_id']) . "</td>";
 echo "<td valign='top'>" . nl2br( $row['name']) . "</td>";
 echo "<td valign='top'>" . nl2br( $row['url']) . "</td>";
 echo "<td valign='top'>" . nl2br( $row['issuer']) . "</td>";  
