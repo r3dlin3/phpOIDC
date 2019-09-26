@@ -18,7 +18,7 @@
 include_once("abconstants.php");
 include_once('libjsoncrypto.php');
 include_once("base64url.php");
-include_once('libdb.php');
+include_once('libdb2.php');
 
 header('Content-Type: text/html; charset=utf-8');
 
@@ -40,8 +40,8 @@ if($_SERVER['PATH_INFO'] == '/authcheckcb') {
 function handle_authcheck() {
     if($_SESSION['provider'] && $_SESSION['provider']['authorization_endpoint'] && $_SESSION['id_token']) {
         $client_id = $_SESSION['provider']['client_id'];
-        $state = bin2hex(mcrypt_create_iv(16, MCRYPT_DEV_URANDOM ));
-        $nonce = bin2hex(mcrypt_create_iv(16, MCRYPT_DEV_URANDOM ));
+        $state = bin2hex(random_bytes(16 ));
+        $nonce = bin2hex(random_bytes(16 ));
         $response_type = 'id_token';
         $scope = 'openid';
         $query_params = array(

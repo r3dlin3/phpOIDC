@@ -70,7 +70,7 @@ if(isset($_POST['Db'])) {
                 file_put_contents(RP_DB_CONF_FILE, $configFileContents);
                 $configFileContents = null;
             }
-            require_once('libdb.php');
+            require_once('libdb2.php');
             require_once('migration.php');
 
             $dsn = sprintf('%s://%s:%s@%s:%s/%s', 'mysql', $db_user, $db_password, $db_host, $db_port, $db_name);

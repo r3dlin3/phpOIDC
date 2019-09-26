@@ -17,7 +17,7 @@
 
 include_once("abconstants.php");
 include_once("libjsoncrypto.php");
-include_once('libdb.php');
+require_once ('libdb2.php');
 include_once('logging.php');
 
 error_reporting(E_ERROR | E_WARNING | E_PARSE);
