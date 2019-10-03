@@ -93,9 +93,9 @@ function checkDbConf() {
 }
 
 
-function checkDbConnection()
+function checkDbConnectionOrm1()
 {
-    require_once('libdb.php');
+    require_once('libdb2.php');
     try {
         $db_connection = Doctrine_Manager::connection();
         if(!$db_connection->connect())
@@ -106,8 +106,23 @@ function checkDbConnection()
     }
 }
 
+
+function checkDbConnectionOrm2()
+{
+    require_once('libdb2.php');
+    try {
+        DbEntity::getInstance()->getEntityManager()->getConnection()->connect();
+    }
+    catch(Exception $e) {
+        printf("Connection exception " . $e->getTraceAsString());
+        die(1);
+    }
+}
+
+
 // run from commandline
 if(isset($argv) && isset($argv[0]) && (basename($argv[0]) == basename(__FILE__))) {
+
     if($argc >= 2) {
         list($executable, $command) = $argv;
         $executable = array_shift($argv);
@@ -115,7 +130,7 @@ if(isset($argv) && isset($argv[0]) && (basename($argv[0]) == basename(__FILE__))
 
         switch($command) {
             case 'checkdbconnection' :
-                checkDbConnection();
+                checkDbConnectionOrm2();
                 break;
             case 'configAb' :
                 list($op_sig_kid, $op_enc_kid, $rp_sig_kid, $rp_enc_kid) = $argv;
@@ -136,6 +151,13 @@ if(isset($argv) && isset($argv[0]) && (basename($argv[0]) == basename(__FILE__))
                 if(file_exists(OP_DB_CONF_FILE)) {
                     require_once('migration.php');
                     migrate_db();
+                }
+                break;
+
+            case 'migrateDown' :
+                if(file_exists(OP_DB_CONF_FILE)) {
+                    require_once('migration.php');
+                    migrate_down();
                 }
                 break;
             default:

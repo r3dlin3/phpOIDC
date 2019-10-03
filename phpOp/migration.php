@@ -15,7 +15,7 @@
  * limitations under the License.
  */
 
-require_once('libdb.php');
+require_once('libdb2.php');
 
 function makeMigrationsDir()
 {
@@ -112,6 +112,47 @@ function migrate_db()
 }
 
 
+function migrate_get_current_version()
+{
+    try {
+        $path  = makeMigrationsDir();
+        $migration = new Doctrine_Migration($path);
+        return $migration->getCurrentVersion();
+
+    }
+    catch(Doctrine_Migration_Exception $e) {
+        printf("migration exception %s\n", $e);
+        die(2);
+    }
+    catch(Doctrine_Connection_Exception $e) {
+        printf("migration exception %s\n", $e);
+        die(2);
+    }
+    return 0;
+}
+
+
+function migrate_down()
+{
+    try {
+        $path  = makeMigrationsDir();
+        $migration = new Doctrine_Migration($path);
+        $cur_version = migrate_get_current_version();
+        if($cur_version) {
+            $migration->migrate($cur_version - 1);
+        }
+    }
+    catch(Doctrine_Migration_Exception $e) {
+        if(strstr($e->getMessage(), "Already at version") === false) {
+            throw $e;
+        }
+    }
+    catch(Doctrine_Connection_Exception $e) {
+        printf("migration exception %s\n", $e);
+        die(2);
+    }
+}
+
 function generate_migrations()
 {
     $path = makeMigrationsDir();
@@ -120,18 +161,31 @@ function generate_migrations()
 
 }
 
-$action = 'migrate';
-if(isset($argv[1]))
-    $action = $argv[1];
+if(isset($argv) && isset($argv[0]) && (basename($argv[0]) == basename(__FILE__))) {
+    $action = 'version';
+    if(isset($argv[1]))
+        $action = $argv[1];
 
-switch($action) {
-    case 'generate' :
-        generate_migrations();
-    break;
+    switch($action) {
+        case 'generate' :
+            generate_migrations();
+            break;
 
-    case 'migrate' :
-    default:
-        migrate_db();
-        break;
+        case 'migrate' :
+            migrate_db();
+            break;
+
+        case 'migrateDown' :
+            migrate_down();
+            break;
+
+        case 'version' :
+        default:
+            echo 'Current migration version : ' . migrate_get_current_version() . "\n";
+            break;
+
+    }
 }
+
+
 
