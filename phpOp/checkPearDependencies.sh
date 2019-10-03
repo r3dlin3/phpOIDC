@@ -117,5 +117,5 @@ package_add "pear.php.net" MDB2 MDB2_Driver_mysql
 
 package_add "phpseclib.sourceforge.net"  Math_BigInteger Crypt_AES Crypt_DES Crypt_Hash Crypt_RC4  Crypt_TripleDES Crypt_RSA Crypt_Random Crypt_Rijndael File_ANSI File_ASN1 File_X509
 
-package_add "pear.doctrine-project.org" Doctrine
+#package_add "pear.doctrine-project.org" Doctrine
 
