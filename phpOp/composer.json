@@ -17,8 +17,8 @@
     "autoload": {
         "psr-0": {
         },
-        "classmap": ["Entity"],
-        "files": ["libdb2.php"]
+        "classmap": ["Entity"]
+
     },
     "require": {
         "monolog/monolog": "1.6.*",
