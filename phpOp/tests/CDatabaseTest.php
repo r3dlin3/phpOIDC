@@ -3,6 +3,9 @@
 
 declare(strict_types=1);
 
+require_once (__DIR__ . '/../libdb2.php');
+
+
 use PHPUnit\Framework\TestCase;
 
 final class CDatabaseTest extends  TestCase
