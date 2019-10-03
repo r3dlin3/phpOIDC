@@ -46,12 +46,12 @@ Dependency/Requirements
 -----------------------
 * Apache Web Server with SSL
 * MySQL
-* PHP 5.3+
+* PHP 7.2+
 * PHP Modules:
-  * MDB2
-  * MDB2_Driver_mysql
-  * Doctrine ORM 1.2.4
+  * Doctrine ORM 2.6.X
+  * PDO MySQL
   * PHPSecLib
+  * cURL
 
 INSTALL
 --------
