@@ -3,27 +3,18 @@ Requirements
 -----------------------------------------------------
 Apache Web Server with SSL
 MySQL
-PHP 5.3+
+PHP 7.2+
 PHP Modules:
-  MDB2
-  MDB2_Driver_mysql
-  Doctrine ORM 1.2.4
+  PDO MySQL
+  Doctrine ORM 2.6.X
   PHPSecLib
-
+  cURL
 
 
 PHP Modules Installation
 -----------------------------------------------------
 PHP modules can be installed using the phpOp/checkDependencies.sh script
 or the 'pear' command
-
-  * MDB2 and MDB2_Driver_mysql
-    > pear install MDB2
-    > pear install MDB2_Driver_mysql
-
-  * Doctrine ORM 1.2.4
-    > pear channel-discover pear.doctrine-project.org
-    > pear install doctrine/Doctrine-1.2.4
 
   * PHPSecLib
     > pear channel-discover phpseclib.sourceforge.net
@@ -40,6 +31,9 @@ or the 'pear' command
     > pear install phpseclib/File_X509
     > pear install phpseclib/Math_BigInteger
 
+  * Doctrine ORM 2.6.X
+    > included in libs directory
+    > also updated via composer
 
 
 
