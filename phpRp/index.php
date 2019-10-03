@@ -18,7 +18,7 @@
 include_once("abconstants.php");
 include_once('libjsoncrypto.php');
 include_once("base64url.php");
-include_once('libdb.php');
+include_once('libdb2.php');
 include_once('logging.php');
 
 error_reporting(E_ERROR | E_WARNING | E_PARSE);
@@ -35,6 +35,7 @@ $g_info = NULL;
 $g_scripts = '';
 $g_forms = '';
 $g_headers = array();
+$g_heads = array();
 
 
 $session_path = session_save_path() . RP_PATH;
@@ -57,25 +58,43 @@ function noHTML($input, $encoding = 'UTF-8') {
 }
 
 
-
 if($_SERVER['PATH_INFO'] == '/callback') {
     $showResponse = true;
+    log_error('/callback');
     handle_callback();
+} elseif(substr($_SERVER['PATH_INFO'], 0, 10) == '/callback/') {
+    $showResponse = true;
+    log_error($_SERVER['PATH_INFO']);
+    handle_custom_callback();
 } elseif($_SERVER['PATH_INFO'] == '/logoutcb') {
     $showResponse = false;
     handle_logout_callback();
 } elseif($_SERVER['PATH_INFO'] == '/implicit') {
+    log_error('/implicit');
     $showResponse = true;
     handle_implicit_callback();
-}
-elseif($_SERVER['PATH_INFO'] == '/start')
+} elseif($_SERVER['PATH_INFO'] == '/start')
     handle_start();
 elseif($_SERVER['PATH_INFO'] == '/reqfile')
     handle_reqfile();
 elseif($_SERVER['PATH_INFO'] == '/sector_id') {
     handle_sector_id();
     exit;
+} elseif($_SERVER['PATH_INFO'] == '/profile') {
+    $showResponse = true;
+} elseif($_SERVER['PATH_INFO'] == '/loginerror') {
+    $g_error .= 'Unable to login.';
+} elseif($_SERVER['PATH_INFO'] == '/loginok') {
+    $g_error .= 'Logged In';
+    $showResponse = true;
+    $g_userinfo_response = $_SESSION['userinfo_response'];
+    $g_id_response = $_SESSION['id_token_response'];
+
+    log_error('userinfo response = %s', print_r($g_userinfo_response, true));
+    log_error('idtoken response = %s', print_r($g_id_response, true));
+
 }
+
 
     
 
@@ -85,7 +104,7 @@ header('Content-Type: text/html; charset=utf-8');
 <!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01//EN" "http://www.w3.org/TR/html4/strict.dtd">
 <html>
 <head>
-<title>OpenID Connect Core Draft 17 RP</title>
+<title>OpenID Connect RP</title>
 <meta name = "viewport" content = "width = device-width, initial-scale = 1, user-scalable = yes">
 
 <style type="text/css" title="currentStyle">
@@ -145,7 +164,7 @@ header('Content-Type: text/html; charset=utf-8');
 <img src="<?php echo RP_PATH?>/openid_connect.png" style="width:100%">
 
 <div style="background-color:#dddddd;">
-OpenID Connect Core Draft 17
+OpenID Connect
 <form name='op_form' method='post' action='<?php echo RP_INDEX_PAGE ?>/start'>
 Select your OP : &nbsp;
 <select size="1" name='provider'>
@@ -167,7 +186,8 @@ or Enter OP URL : <input type='text' name='identifier' value='' style='width:500
 ?>
 
 
-<input type='submit' name="submit" value="Connect">&nbsp;&nbsp;<?php if(isset($_SESSION['session_state']) && isset($_SESSION['provider']['check_session_iframe'])) { ?><input type='submit' name="submit" value="Logout"> <?php } ?>
+<input type='submit' name="action_submit" value="Connect">&nbsp;&nbsp;<?php if(isset($_SESSION['session_state']) && isset($_SESSION['provider']['check_session_iframe'])) { ?><input type='submit' name="action_submit" value="Logout"> <?php } ?>
+<input type='button' id="showtab" name="showtab" value="hide">
 <span style="float:right">
 <a href="<?php echo RP_PATH?>/">RP Top</a>
 </span>
@@ -191,18 +211,35 @@ if($g_info) {
 
 $u=$g_userinfo_response;
 $pict = $u['picture'];
-if(!$pict) {
-  $pict = RP_PATH . '/nowprinting350x350.gif';
-}
+//if(!$pict) {
+//  $pict = RP_PATH . '/nowprinting350x350.gif';
+//}
 
 
 
 if($showResponse){
+    if($_SERVER['PATH_INFO'] == '/profile') {
+        if(!empty($_SESSION['id_token'])) {
+            list($header, $payload, $sig) = jwt_to_array($_SESSION['id_token']);
+            printf("{sub=%s, iss=%s}", $payload['sub'], $payload['iss']);
+        }
 ?>
-<div style="width:50%;background-color:#dddddd;border:1px solid #888888;
+
+<?php
+    } else {
+
+
+    if($pict) {
+?>
+    <div style="width:50%;background-color:#dddddd;border:1px solid #888888;
 margin-left:auto;margin-right:auto;text-align:center">
-<img id='idProfileImage' src="<?=$pict?>" style="text-align:center">
-</div>
+        <img id='idProfileImage' src="<?=$pict?>" style="text-align:center">
+    </div>
+<?php
+    }
+?>
+
+
 
 <div id='userinforesponse' style='visibility: <?php echo ($g_userinfo_response ? 'visible' : 'hidden'); ?>' >
 <h1>Welcome <span id='idUserName'><?php echo $g_userinfo_response['name'] ?></span> </h1>
@@ -289,7 +326,8 @@ margin-left:auto;margin-right:auto;text-align:center">
 
 <?php
 
-}
+    } // not /profile block
+} // show response block
 
 if($g_forms)
     echo $g_forms;
@@ -297,6 +335,8 @@ if($g_forms)
 
 
 function handle_implicit() {
+
+    log_error('handle_implicit');
 global $g_scripts, $g_forms, $g_doLoad;
 
 $post = RP_INDEX_PAGE . '/implicit';
@@ -363,23 +403,68 @@ EOF;
 
 function handle_implicit_callback() {
     global $g_error, $g_info, $g_userinfo_response;
+    log_error("handle_implicit_callback");
 
     $code = $_REQUEST['code'];
     $token = $_REQUEST['access_token'];
     $state = $_REQUEST['state'];
+    $id_token = $_REQUEST['id_token'];
     if($_REQUEST['error'])
         return;
 
-    if($code) {
-        handle_callback();
-        return;
-    }
-
-    if(!isset($state) || $state != $_SESSION['state']) {
+    if(empty($state) || $state != $_SESSION['state']) {
         $g_error .= 'state parameter mismatch';
         return;
     }
-    $id_token = $_REQUEST['id_token'];
+
+    if($code) { // check hashes before proceeding
+        $id_token_error = false;
+        if($id_token) {
+            $unpacked_id_token = rp_decrypt_verify_id_token2($id_token);
+            if($unpacked_id_token) {
+                $bit_length = substr($unpacked_id_token['jws'][0]['alg'], 2);
+                switch($bit_length) {
+                    case '384':
+                        $hash_alg = 'sha384';
+                        break;
+                    case '512':
+                        $hash_alg = 'sha512';
+                        break;
+                    case '256':
+                    default:
+                        $hash_alg = 'sha256';
+                        break;
+                }
+                $hash_length = (int) ((int) $bit_length / 2) / 8;
+                if($unpacked_id_token['jws'][1]['at_hash']) {
+                    if($token) {
+                        if(base64url_encode(substr(hash($hash_alg, $token, true), 0, $hash_length)) != $unpacked_id_token['jws'][1]['at_hash']) {
+                            $id_token_error = true;
+                            // $g_error .= "Access Token Hash Verification Failed for access token : {$token}\n";
+
+                        }
+                    }
+                }
+
+                if($unpacked_id_token['jws'][1]['c_hash']) {
+                    if($code) {
+                        if(base64url_encode(substr(hash($hash_alg, $code, true), 0, $hash_length)) != $unpacked_id_token['jws'][1]['c_hash']) {
+                            $id_token_error = true;
+                            // $g_error .= "Code Hash Verification Failed for code {$code}\n";
+                        }
+                    }
+                }
+            } else {
+                header('Location: ' . RP_INDEX_PAGE . '/loginerror');
+                exit;
+            }
+        }
+        if(!$id_token_error) {
+            handle_callback();
+            return;
+        }
+    }
+
     if(!$token && !$id_token) {
         $g_error .= "No Token or ID Token";
         return;
@@ -412,8 +497,11 @@ function handle_implicit_callback() {
                 else {
                     if(base64url_encode(substr(hash($hash_alg, $token, true), 0, $hash_length)) == $unpacked_id_token['jws'][1]['at_hash'])
                         $g_info .= "Access Token Hash Verified\n";
-                    else
+                    else {
                         $g_error .= "Access Token Hash Verification Failed for access token : {$token}\n";
+                        header('Location: ' . RP_INDEX_PAGE . '/loginerror?error=at hash failed');
+                        exit;
+                    }
                 }
             }
 
@@ -424,18 +512,33 @@ function handle_implicit_callback() {
                 else {
                     if(base64url_encode(substr(hash($hash_alg, $code, true), 0, $hash_length)) == $unpacked_id_token['jws'][1]['c_hash'])
                         $g_info .= "Code Hash Verified\n";
-                    else
+                    else {
                         $g_error .= "Code Hash Verification Failed for code {$code}\n";
+                        header('Location: ' . RP_INDEX_PAGE . '/loginerror?error=code hash failed');
+                        exit;
+                    }
                 }
             }
 
+
             if($g_userinfo_response) {
-                if($g_userinfo_response['sub'] != $unpacked_id_token['jws'][1]['sub'])
+                if($g_userinfo_response['sub'] != $unpacked_id_token['jws'][1]['sub']) {
                     $g_error .= 'Invalid UserInfo - sub identifier differs from ID Token sub';
+                    header('Location: ' . RP_INDEX_PAGE . '/loginerror?error=code hash failed');
+                }
+            } else {
+                $_SESSION['userinfo_response'] = $g_userinfo_response;
             }
 
+        } else {
+            header('Location: ' . RP_INDEX_PAGE . '/loginerror');
+            exit;
         }
     }
+    log_error('handle_implicit_callback userinfo response = %s', print_r($_SESSION['userinfo_response'], true));
+    log_error('handle_implicit_callback idtoken response = %s', print_r($_SESSION['id_token_response'], true));
+    header('Location: ' . RP_INDEX_PAGE . '/loginok');
+    exit;
 
 }
 
@@ -506,6 +609,9 @@ function handle_callback() {
   global $g_error, $g_info, $g_userinfo_response;
 
   try {
+
+      log_error('handle_callback');
+
       if($_REQUEST['error'])
           return;
       $code = $_REQUEST['code'];
@@ -535,7 +641,7 @@ function handle_callback() {
       $client_secret = $_SESSION['provider']['client_secret'];
       $token_ep = $_SESSION['provider']['token_endpoint'];
       $userinfo_ep = $_SESSION['provider']['userinfo_endpoint'];
-      $client_redirect_uri = RP_REDIRECT_URI;
+      $client_redirect_uri = RP_REDIRECT_URI . (!empty($_SESSION['provider']['key_id']) ? '/' . $_SESSION['provider']['key_id'] : '');
 
       $url = $token_ep;
 
@@ -561,7 +667,7 @@ function handle_callback() {
                   'iss' => $client_id,
                   'sub' => $client_id,
                   'aud' => $token_ep,
-                  'jti' => bin2hex(mcrypt_create_iv(16, MCRYPT_DEV_URANDOM )),
+                  'jti' => bin2hex(random_bytes(16)),
                   'exp' => time() + (5*60),
                   'iat' => time()
               );
@@ -586,7 +692,7 @@ function handle_callback() {
                   'iss' => $client_id,
                   'sub' => $client_id,
                   'aud' => $token_ep,
-                  'jti' => bin2hex(mcrypt_create_iv(16, MCRYPT_DEV_URANDOM )),
+                  'jti' => bin2hex(random_bytes(16)),
                   'exp' => time() + (5*60),
                   'iat' => time()
               );
@@ -683,9 +789,20 @@ function handle_callback() {
 
                   // compare sub in Userinfo and ID Token
                   if($g_userinfo_response) {
+                      $_SESSION['userinfo_response'] = $g_userinfo_response;
                       if($g_userinfo_response['sub'] != $unpacked_id_token['jws'][1]['sub'])
                           $g_error .= 'Invalid UserInfo - sub identifier differs from ID Token sub';
                   }
+
+                  log_error('handle_callback userinfo response = %s', print_r($_SESSION['userinfo_response'], true));
+                  log_error('handle_callback idtoken response = %s', print_r($_SESSION['id_token_response'], true));
+                  header('Location: ' . RP_INDEX_PAGE . '/loginok');
+                  exit;
+
+              } else {
+                  $g_error .= 'Invalid ID Token';
+                  header('Location:' . RP_INDEX_PAGE . '/loginerror');
+                  exit;
               }
           }
       } else {
@@ -697,6 +814,60 @@ function handle_callback() {
   catch(Exception $e) {
       log_error("handle_callback exception : %s", $e->getMessage());
   }
+}
+
+function url_origin( $s, $use_forwarded_host = false )
+{
+    $ssl      = ( ! empty( $s['HTTPS'] ) && $s['HTTPS'] == 'on' );
+    $sp       = strtolower( $s['SERVER_PROTOCOL'] );
+    $protocol = substr( $sp, 0, strpos( $sp, '/' ) ) . ( ( $ssl ) ? 's' : '' );
+    $port     = $s['SERVER_PORT'];
+    $port     = ( ( ! $ssl && $port=='80' ) || ( $ssl && $port=='443' ) ) ? '' : ':'.$port;
+    $host     = ( $use_forwarded_host && isset( $s['HTTP_X_FORWARDED_HOST'] ) ) ? $s['HTTP_X_FORWARDED_HOST'] : ( isset( $s['HTTP_HOST'] ) ? $s['HTTP_HOST'] : null );
+    $host     = isset( $host ) ? $host : $s['SERVER_NAME'] . $port;
+    return $protocol . '://' . $host;
+}
+
+function get_current_url( $s, $use_forwarded_host = false )
+{
+    return url_origin( $s, $use_forwarded_host ) . $s['REQUEST_URI'];
+}
+
+function handle_custom_callback() {
+    global $g_error, $g_info, $g_userinfo_response;
+
+    $redirect_key_id = substr($_SERVER['PATH_INFO'], 10);
+    $db_provider = db_get_provider_by_key_id($redirect_key_id);
+    if(!$db_provider || empty($db_provider['key_id'])) {
+        header('Location:' . RP_INDEX_PAGE . '/loginerror?error=no key id' );
+        exit;
+    }
+
+    $provider = $_SESSION['provider'];
+    if(!$provider){
+        header('Location:' . RP_INDEX_PAGE . '/loginerror?error=no session provider' );
+        exit;
+    }
+
+    if($db_provider['key_id'] != $provider['key_id']) {
+        header('Location:' . RP_INDEX_PAGE . '/loginerror?error=session provider different' );
+        exit;
+    }
+
+    if(empty($_SESSION['redirect_uri'])) {
+        header('Location:' . RP_INDEX_PAGE . '/loginerror?error=no session redirect_uri');
+        exit;
+    }
+
+    $current_url = substr(get_current_url($_SERVER), 0, strlen($_SESSION['redirect_uri']));
+    log_info('session redirect_uri = %s current url = %s', $_SESSION['redirect_uri'], $current_url);
+    if($_SESSION['redirect_uri'] !=  $current_url) {
+        header('Location:' . RP_INDEX_PAGE . '/loginerror?error=saved session redirect_uri mismatch');
+        exit;
+    }
+
+
+    handle_callback();
 }
 
 
@@ -822,7 +993,7 @@ function get_endpoint_claims($endpoint, $token, $allowed_sig_algs=NULL, $allowed
                     $pubkeys['jku'] = $_SESSION['provider']['jwks_uri'];
                 $verified = jwt_verify($signed_jwt, $pubkeys, $allowed_sig_algs);
             } elseif($header['alg'] == 'none')
-                $verified = true;
+                $verified = jwt_verify($signed_jwt, null, $allowed_sig_algs);
             log_info("Endpoint Info Signature Verification = %d", $verified);
             if($verified) {
                 $endpoint_info = $payload;
@@ -872,6 +1043,7 @@ function get_userinfo($userinfo_ep, $token) {
         $userinfo = json_decode($data_responseText, true);
         post_process_userinfo($userinfo);
         $g_userinfo_response = $userinfo;
+        $_SESSION['userinfo_response'] = $g_userinfo_response;
         if(!$userinfo) {
             $g_error .= "Unable to get UserInfo.\n{$req_out}\n{$response_headers}\n{$data_responseText}";
             log_error('%s', $g_error);
@@ -893,6 +1065,7 @@ function get_userinfo($userinfo_ep, $token) {
                     $g_info .= "UserInfo is Unsigned\n";
                     $g_userinfo_response = json_decode($signed_jwt, true);
                     post_process_userinfo($g_userinfo_response);
+                    $_SESSION['userinfo_response'] = $g_userinfo_response;
                     $signed_jwt = NULL;
                 }
             }
@@ -911,11 +1084,12 @@ function get_userinfo($userinfo_ep, $token) {
                     $pubkeys['jku'] = $_SESSION['provider']['jwks_uri'];
                 $verified = jwt_verify($signed_jwt, $pubkeys, $allowed_sig_algs);
             } elseif($header['alg'] == 'none')
-                $verified = true;
+                $verified = jwt_verify($signed_jwt, null, $allowed_sig_algs);
             log_info("Signature Verification = %d", $verified);
             if($verified) {
                 post_process_userinfo($payload);
                 $g_userinfo_response = $payload;
+                $_SESSION['userinfo_response'] = $g_userinfo_response;
                 $g_info .= "UserInfo Signature Verified\n";
             } else
                 $g_info .= "UserInfo Signature Verification Failed\n";
@@ -955,7 +1129,7 @@ function rp_decrypt_verify_jwt($jwt, $allowed_sig_algs=NULL, $allowed_enc_algs=N
                 $pubkeys['jku'] = $_SESSION['provider']['jwks_uri'];
             $verified = jwt_verify($signed_jwt, $pubkeys, $allowed_sig_algs);
         } elseif($header['alg'] == 'none')
-            $verified = true;
+            $verified = jwt_verify($signed_jwt, null, $allowed_sig_algs);
         log_info("Signature Verification = $verified");
         if($verified) {
             $response = $payload;
@@ -1076,7 +1250,10 @@ function rp_decrypt_verify_id_token($id_token) {
     $allowed_sig_algs = empty($_SESSION['provider']['id_token_signed_response_alg']) ? array('RS256') : array($_SESSION['provider']['id_token_signed_response_alg']);
     $allowed_enc_algs = empty($_SESSION['provider']['id_token_encrypted_response_alg']) ? array() :  array($_SESSION['provider']['id_token_encrypted_response_alg']);
     $allowed_enc_encs = empty($_SESSION['provider']['id_token_encrypted_response_enc']) ? array('A128CBC-HS256') : array($_SESSION['provider']['id_token_encrypted_response_enc']);
-    
+
+    log_error('idt allowed sigs = %s', print_r($allowed_sig_algs, true));
+    log_error('idt allowed encs = %s', print_r($allowed_enc_encs, true));
+    log_error('idt allowed algs = %s', print_r($allowed_enc_algs, true));
     $jwt_parts = jwt_to_array($id_token);
     if(isset($jwt_parts[0]['enc'])) { // encrypted
         $g_info .= "Encrypted ID Token - {$jwt_parts[0]['enc']} {$jwt_parts[0]['alg']} {$jwt_parts[0]['int']}\n";
@@ -1103,7 +1280,7 @@ function rp_decrypt_verify_id_token($id_token) {
                 $pubkeys['jku'] = $_SESSION['provider']['jwks_uri'];
             $verified = jwt_verify($signed_jwt, $pubkeys, $allowed_sig_algs);
         } elseif($header['alg'] == 'none')
-            $verified = true;
+            $verified = jwt_verify($signed_jwt, null, $allowed_sig_algs);
         log_info("Signature Verification = %d", $verified);
         if($verified) {
 
@@ -1145,10 +1322,86 @@ function rp_decrypt_verify_id_token($id_token) {
             }
 
             $g_id_response = $payload;
+            $_SESSION['id_token_response'] = $g_id_response;
             $g_info .= "ID Token Signature Verified\n";
             $_SESSION['id_token'] = $signed_jwt;
-        } else
+        } else {
             $g_info .= "ID Token Signature Verification Failed\n";
+            $response = null;
+        }
+    }
+    return $response;
+}
+
+// decrypt and verify id_token without setting global error information
+function rp_decrypt_verify_id_token2($id_token) {
+    $response = array();
+
+    $allowed_sig_algs = empty($_SESSION['provider']['id_token_signed_response_alg']) ? array('RS256') : array($_SESSION['provider']['id_token_signed_response_alg']);
+    $allowed_enc_algs = empty($_SESSION['provider']['id_token_encrypted_response_alg']) ? array() :  array($_SESSION['provider']['id_token_encrypted_response_alg']);
+    $allowed_enc_encs = empty($_SESSION['provider']['id_token_encrypted_response_enc']) ? array('A128CBC-HS256') : array($_SESSION['provider']['id_token_encrypted_response_enc']);
+
+    $jwt_parts = jwt_to_array($id_token);
+    if(isset($jwt_parts[0]['enc'])) { // encrypted
+        $response['jwe'] = $jwt_parts;
+        $signed_jwt = jwt_decrypt($id_token, RP_ENC_PKEY, true, RP_ENC_PKEY_PASSPHRASE, $allowed_enc_algs, $allowed_enc_encs);
+        if(!$signed_jwt) {
+            return null;
+        }
+    } else { // signed
+        $signed_jwt = $id_token;
+    }
+
+    if($signed_jwt) {
+        list($header, $payload, $sig) = jwt_to_array($signed_jwt);
+        $response['jws'] = array($header, $payload, $sig);
+        if(substr($header['alg'], 0, 2) == 'HS') {
+            $verified = jwt_verify($signed_jwt, $_SESSION['provider']['client_secret'], $allowed_sig_algs);
+        } elseif(substr($header['alg'], 0, 2) == 'RS') {
+            $pubkeys = array();
+            if($_SESSION['provider']['jwks_uri'])
+                $pubkeys['jku'] = $_SESSION['provider']['jwks_uri'];
+            $verified = jwt_verify($signed_jwt, $pubkeys, $allowed_sig_algs);
+        } elseif($header['alg'] == 'none')
+            $verified = jwt_verify($signed_jwt, null, $allowed_sig_algs);
+        if($verified) {
+
+            $info = array(
+                'client_id' => $_SESSION['provider']['client_id'],
+                'iss' => $_SESSION['provider']['issuer'],
+                'nonce' => $_SESSION['nonce']
+            );
+            if(isset($_SESSION['provider']['require_auth_time']))
+                $info['require_auth_time'] = true;
+            if(isset($_SESSION['req_auth_time']))
+                $info['require_auth_time'] = $_SESSION['req_auth_time'];
+
+            if(isset($_SESSION['provider']['default_max_age']))
+                $info['max_age'] = $_SESSION['provider']['default_max_age'];
+            if(isset($_SESSION['req_max_age']))
+                $info['max_age'] = $_SESSION['req_max_age'];
+
+            if(isset($_SESSION['provider']['default_acr_values']) && is_array($_SESSION['provider']['default_acr_values']))
+                $info['acr'] = $_SESSION['provider']['default_acr_values'][0];
+            if(isset($_SESSION['req_acr']))
+                $info['acr'] = $_SESSION['req_acr'];
+
+            $error = '';
+            if(!is_valid_id_token($signed_jwt, $info, $error)) {
+                return null;
+            }
+
+            if(isset($payload['address']) && is_array($payload['address'])) {
+                if(isset($payload['address']['formatted']))
+                    $payload['address'] = $payload['address']['formatted'];
+                else
+                    $payload['address'] = "{$payload['address']['street_address']}\n{$payload['address']['locality']}, {$payload['address']['region']} {$payload['address']['postal_code']}\n{$payload['address']['country']}";
+            }
+            if(isset($payload['aud']) && is_array($payload['aud'])) {
+                $payload['aud'] = implode(', ', $payload['aud']);
+            }
+        } else
+            return null;
     }
     return $response;
 }
@@ -1182,8 +1435,9 @@ function doDiscovery($url) {
 }
 
 function saveHeaders($ch, $str) {
-    global $g_headers;
+    global $g_headers, $g_heads;
     $g_headers[$ch] .= $str;
+    $g_heads[] = $str;
     return strlen($str);
 }
 
@@ -1204,7 +1458,7 @@ function webfinger_get_provider_info($identifier) {
             return NULL;
             // process email address
             $host = substr($identifier, $at + 1);
-            $issuer = RP_PROTOCOL . "$host";
+            $issuer = OP_PROTOCOL . "$host";
             $issuer_url = $issuer;
             $principal = 'acct:' . $identifier;
             log_info("RP - EMAIL principal = %s host = %s issuer = %s", $principal, $host, $issuer);
@@ -1221,7 +1475,7 @@ function webfinger_get_provider_info($identifier) {
                 return NULL;
             $host = $parts['host'];
             $port = $parts['port'] ? ':' . $parts['port'] : '';
-            $issuer = RP_PROTOCOL . "{$host}{$port}";
+            $issuer = OP_PROTOCOL . "{$host}{$port}";
             $issuer_url = $issuer;
             if(isset($parts['path']) && $parts['path'] == '/')
                 $principal = $issuer;
@@ -1311,15 +1565,15 @@ function register_client($url, $options = array()) {
             'application_type' => 'web',
             'client_name' => 'PHPRP',
             'logo_uri' => RP_URL . '/media/logo.png',
-            'redirect_uris' => array(RP_REDIRECT_URI, RP_AUTHCHECK_REDIRECT_URI),
+//            'redirect_uris' => array(RP_REDIRECT_URI, RP_AUTHCHECK_REDIRECT_URI),
             'post_logout_redirect_uris' => array(RP_POST_LOGOUT_REDIRECT_URI),
             'jwks_uri' => RP_JWK_URL,
-//            'jwks' => json_decode($jwks),
+            'jwks' => json_decode(file_get_contents(__DIR__ . '/rp/rp.jwk')),
 //            'sector_identifier_uri' => RP_INDEX_PAGE . '/sector_id',
             'policy_uri' => RP_INDEX_PAGE . '/policy',
 //            'request_uris' => $request_uris,
             'grant_types' => array('authorization_code', 'implicit'),
-            'response_types' => array('code', 'token', 'id_token', 'code token', 'code id_token', 'id_token token', 'code id_token token')
+            'response_types' => array('code', 'token', 'id_token', 'code id_token', 'code token', 'id_token token', 'code id_token token')
         );
 
         $curl_options[CURLOPT_POSTFIELDS] = pretty_json(json_encode(array_merge($data, $options)));
@@ -1587,6 +1841,8 @@ function handle_logout() {
     $params = array('post_logout_redirect_uri' => RP_INDEX_PAGE . '/logoutcb');
     unset($_SESSION['id_token']);
     unset($_SESSION['session_state']);
+    unset($_SESSION['id_token_response']);
+    unset($_SESSION['userinfo_response']);
     if($end_session_endpoint) {
         if($id_token)
             $params['id_token_hint'] = $id_token;
@@ -1603,14 +1859,16 @@ function handle_logout_callback() {
 
 
 function handle_start() {
-    global $g_error;
+    global $g_error, $g_heads;
     $update = false;
-    if($_REQUEST['submit'] == 'Logout') {
+    if($_REQUEST['action_submit'] == 'Logout') {
         handle_logout();
         exit;
     }
 
     unset($_SESSION['id_token']);
+    unset($_SESSION['id_token_response']);
+    unset($_SESSION['userinfo_response']);
     unset($_SESSION['session_state']);
     unset($_SESSION['code_verifier']);
     unset($_SESSION['nonce']);
@@ -1618,6 +1876,8 @@ function handle_start() {
     unset($_SESSION['req_auth_time']);
     unset($_SESSION['req_max_age']);
     unset($_SESSION['req_acr']);
+    unset($_SESSION['redirect_uri']);
+    unset($_SESSION['provider']);
 
     remember_session_form_options($_REQUEST);
     log_debug("handle_start : %s", print_r($_REQUEST, true));
@@ -1644,6 +1904,15 @@ function handle_start() {
                 return;
             }
             $client_options = get_update_options($_REQUEST);
+            $key_id =  bin2hex(random_bytes(8));
+            while(true) {
+                $temp_provider = db_get_provider_by_key_id($key_id);
+                if(!$temp_provider)
+                    break;
+                $key_id =  bin2hex(random_bytes(8));
+            }
+            $redirect_uri = RP_REDIRECT_URI . '/' . $key_id;
+            $client_options['redirect_uris'] = array($redirect_uri, RP_AUTHCHECK_REDIRECT_URI);
             $client_info = register_client($discovery['registration_endpoint'], $client_options);
             if(!$client_info) {
                 $g_error .= "Unable to register client";
@@ -1678,16 +1947,26 @@ function handle_start() {
                                     $client_options,
                                     $discovery_endpoints
                                    );
+            $provider['key_id'] = $key_id;
             db_save_provider($discovery['issuer'], $provider);
             $provider = array_merge($provider, $client_info);
             $provider = array_merge($provider, $discovery);
         } else {
-            $provider->delete();
+            db_delete_entity($provider);
             if(!isset($discovery['registration_endpoint'])) {
                 $g_error .= "Provider not found in db for {$discovery['issuer']} and no registration endpoint";
                 return;
             }
             $client_options = get_update_options($_REQUEST);
+            $key_id =  bin2hex(random_bytes(8));
+            while(true) {
+                $temp_provider = db_get_provider_by_key_id($key_id);
+                if(!$temp_provider)
+                    break;
+                $key_id =  bin2hex(random_bytes(8));
+            }
+            $redirect_uri = RP_REDIRECT_URI . '/' . $key_id;
+            $client_options['redirect_uris'] = array($redirect_uri, RP_AUTHCHECK_REDIRECT_URI);
             $client_info = register_client($discovery['registration_endpoint'], $client_options);
             if(!$client_info) {
                 $g_error .= "Unable to register client";
@@ -1707,6 +1986,7 @@ function handle_start() {
                                           ),
                                     $client_options
                                    );
+            $provider['key_id'] = $key_id;
             db_save_provider($discovery['issuer'], $provider);
             $provider = array_merge($provider, $client_info);
             $provider = array_merge($provider, $discovery);
@@ -1719,12 +1999,24 @@ function handle_start() {
             return;
         }
 
-        $p_info = $db_provider->toArray();
+        $p_info = $db_provider->jsonSerialize();
         if($p_info['authorization_endpoint']) {
             $provider = $p_info;
             if(!$provider['client_id'] || !$provider['client_secret']) {
                 $client_options = get_update_options($_REQUEST);
                 log_debug('update options = %s', print_r($client_options, true));
+                if(empty($provider['key_id'])) {
+                    $key_id =  bin2hex(random_bytes(8));
+                    while(true) {
+                        $temp_provider = db_get_provider_by_key_id($key_id);
+                        if(!$temp_provider)
+                            break;
+                        $key_id =  bin2hex(random_bytes(8));
+                    }
+                    $provider['key_id'] = $key_id;
+                    $redirect_uri = RP_REDIRECT_URI . '/' . $key_id;
+                    $client_options['redirect_uris'] = array($redirect_uri, RP_AUTHCHECK_REDIRECT_URI);
+                }
                 $client_info = register_client($provider['registration_endpoint'], $client_options);
                 if(!$client_info) {
                     $g_error .= "Unable to register client";
@@ -1739,7 +2031,7 @@ function handle_start() {
                                        );
                 db_save_provider($db_provider['name'], $provider);
             }
-            if($p_info['name'] == RP_PROTOCOL . 'self-issued.me') {
+            if($p_info['name'] == OP_PROTOCOL . 'self-issued.me') {
                 $provider['client_id'] = RP_REDIRECT_URI;
                 $provider['client_secret'] = '';
             }
@@ -1756,6 +2048,15 @@ function handle_start() {
                 return;
             }
             $client_options = get_update_options($_REQUEST);
+            $key_id =  bin2hex(random_bytes(8));
+            while(true) {
+                $temp_provider = db_get_provider_by_key_id($key_id);
+                if(!$temp_provider)
+                    break;
+                $key_id =  bin2hex(random_bytes(8));
+            }
+            $redirect_uri = RP_REDIRECT_URI . '/' . $key_id;
+            $client_options['redirect_uris'] = array($redirect_uri, RP_AUTHCHECK_REDIRECT_URI);
             $client_info = register_client($discovery['registration_endpoint'], $client_options);
             log_debug('update options = %s', print_r($client_options, true));
             if(!$client_info) {
@@ -1776,7 +2077,9 @@ function handle_start() {
                                           ),
                                     $client_options
                                    );
-            $db_provider->delete();
+            db_delete_provider($db_provider);
+            $provider['key_id'] = $key_id;
+
             db_save_provider($discovery['issuer'], $provider);
             $provider = array_merge($provider, $client_info);
             $provider = array_merge($provider, $discovery);
@@ -1785,10 +2088,11 @@ function handle_start() {
     
     $_SESSION['provider'] = $provider;
     log_debug('final provider info %s', print_r($provider, true));
-    $state = bin2hex(mcrypt_create_iv(16, MCRYPT_DEV_URANDOM ));
-    $nonce = bin2hex(mcrypt_create_iv(16, MCRYPT_DEV_URANDOM ));
+    $state = bin2hex(random_bytes(16));
+    $nonce = bin2hex(random_bytes(16));
     $_SESSION['nonce'] = $nonce;
     $_SESSION['state'] = $state;
+    $_SESSION['redirect_uri'] = RP_REDIRECT_URI . '/' . $provider['key_id'];
     $response_type = '';
     if($_REQUEST['response_type'])
         $response_type = $_REQUEST['response_type'];
@@ -1802,7 +2106,7 @@ function handle_start() {
     }
     $query_params = array(
                             'state' => $state,
-                            'redirect_uri' => RP_REDIRECT_URI,
+                            'redirect_uri' => RP_REDIRECT_URI . '/' . $provider['key_id'],
                             'response_type' => $response_type,
                             'client_id' => $provider['client_id'],
                             'nonce' => $nonce
@@ -1833,7 +2137,7 @@ function handle_start() {
     $query_params['scope'] = implode(' ', $unique_scopes);
     log_debug('scopes = %s', print_r($query_params['scope'], true));
 
-    $code_verifier = base64url_encode(mcrypt_create_iv(32, MCRYPT_DEV_URANDOM));
+    $code_verifier = base64url_encode(random_bytes(32));
     $_SESSION['code_verifier'] = $code_verifier;
     $code_challenge = base64url_encode(hash('sha256', $code_verifier, true));
     $query_params['code_challenge_method'] = 'S256';
@@ -2042,7 +2346,7 @@ function handle_start() {
             }
         } else {
             if(strstr($request_method, 'Request File') !== false) {
-                $fileid = bin2hex(mcrypt_create_iv(32, MCRYPT_DEV_URANDOM ));
+                $fileid = bin2hex(random_bytes(32));
                 // $query_params['request_uri'] = RP_INDEX_PAGE . "/reqfile?fileid={$fileid}";
             } else
                 $fileid = NULL;
@@ -2121,7 +2425,37 @@ function handle_start() {
     }
     $url = $provider['authorization_endpoint'] . '?' . http_build_query($query_params);
     log_info("redirect to %s", $url);
+    if(substr($url, 0, 41) == 'https://rp.certification.openid.net:8080/') {
+//        list($status_code, $data_content_type, $req_out, $response_headers, $response) = curl_fetch_url($url);
+//        log_info("headers = %s", print_r($response_headers, true));
+//        log_info("returned from redirect");
+//        $transfer_headers = array('http/1.1', 'content-type', 'location');
+//        foreach($response_headers as $head) {
+//            foreach($transfer_headers as $th) {
+//                if(strpos(strtolower($head), $th) !== false) {
+//                    header($head);
+//                    log_info('setting header %s', $head);
+//                }
+//            }
+//        }
+//        echo $response;
+
+        $response = get_url($url);
+        log_info("headers = %s", print_r($g_heads, true));
+        log_info("returned from redirect");
+        $transfer_headers = array('http/1.1', 'content-type', 'location');
+        foreach($g_heads as $head) {
+            foreach($transfer_headers as $th) {
+                if(strpos(strtolower($head), $th) !== false) {
+                    header($head);
+                    log_info('setting header %s', $head);
+                }
+            }
+        }
+        echo $response;
+    } else {
     header("Location: $url");
+    }
     exit;
 }
 
@@ -2136,11 +2470,12 @@ function make_post_data($pairs) {
 }
 
 function get_url($url) {
-    global $g_error, $g_headers;
+    global $g_error, $g_headers, $g_heads;
     log_debug("get_url %s", $url);
 
     $ch = curl_init();
     $g_headers[$ch] = '';
+    $g_heads = array();
     $curl_options = array(
                              CURLOPT_URL => $url ,
                              // CURLOPT_HEADER => true,
@@ -2148,7 +2483,9 @@ function get_url($url) {
                              CURLINFO_HEADER_OUT => true,
                              CURLOPT_SSL_VERIFYPEER => false,
                              CURLOPT_SSL_VERIFYHOST => 0,
-                             CURLOPT_RETURNTRANSFER => 1
+                             CURLOPT_RETURNTRANSFER => 1,
+                             CURLOPT_FOLLOWLOCATION => false
+//                             CURLOPT_FOLLOWLOCATION => true
                          );
     curl_setopt_array($ch, $curl_options);
     $data_responseText = curl_exec($ch);
@@ -2163,11 +2500,23 @@ function get_url($url) {
     if($code != 200) {
         if($data_responseText && substr($url, 0, 7) == 'file://')
             return $data_responseText;
+        if($code == 302) {
+            foreach ($g_heads as $key => $r) {
+                list($headername, $headervalue) = explode(":", $r, 2);
+                log_debug("%s = %s", $headername, $headervalue);
+                if($headername == 'location') {
+                    header('Location: ' . $headervalue);
+                    exit;
+                }
+            }
+        }
         $g_error .= "Unable to fetch URL $url status = {$code}.\n{$req_out}\n{$response_headers}\n{$data_responseText}";
         log_error($g_error);
+        log_debug("GET %s - %s\n%s\n%s", $url, $req_out, $response_headers, $data_responseText);
         return NULL;
     } else {
         log_debug("GOT %s", $data_responseText);
+        log_debug("GET %s - %s\n%s\n%s", $url, $req_out, $response_headers, $data_responseText);
         return $data_responseText;
     }
 }
@@ -2227,7 +2576,7 @@ $request_options_type_options = get_option_html('request_option', $request_optio
 $default_acr_values = noHTML($_SESSION['default_acr_values']);
 $default_max_age = noHTML($_SESSION['default_max_age']);
 
-$response_types = array('code', 'token', 'code id_token', 'id_token token', 'id_token', 'code id_token token');
+$response_types = array('code', 'token', 'code token', 'code id_token', 'id_token token', 'id_token', 'code id_token token');
 if($_SESSION['debug'])
     array_unshift($response_types, '');
 $response_type_options = get_option_html('response_type', $response_types, $_SESSION['response_type'] ? $_SESSION['response_type'] : 'code' );
@@ -2265,7 +2614,7 @@ $enc_cek_algs = array('', 'RSA1_5', 'RSA-OAEP');
 $enc_plaintext_algs = array('', 'A128GCM', 'A256GCM', 'A128CBC-HS256', 'A256CBC-HS512');
 
 
-$token_endpoint_auth_methods = array('client_secret_post', 'client_secret_basic', 'client_secret_jwt', 'private_key_jwt');
+$token_endpoint_auth_methods = array('client_secret_basic', 'client_secret_post', 'client_secret_jwt', 'private_key_jwt');
 $token_endpoint_auth_method_options = get_option_html('token_endpoint_auth_method', $token_endpoint_auth_methods, $_SESSION['token_endpoint_auth_method']);
 
 $token_endpoint_auth_signing_alg_types = array('', 'HS256', 'HS384', 'HS512', 'RS256', 'RS384', 'RS512');
@@ -2493,7 +2842,8 @@ function curl_fetch_url($url, $headers = NULL, $c_options = NULL, $is_post = fal
         CURLINFO_HEADER_OUT => true,
         CURLOPT_SSL_VERIFYPEER => false,
         CURLOPT_SSL_VERIFYHOST => 0,
-        CURLOPT_RETURNTRANSFER => 1
+        CURLOPT_RETURNTRANSFER => 1,
+        CURLOPT_FOLLOWLOCATION => true
     );
     if(isset($c_options) && is_array($c_options)) {
         foreach($c_options as $key => $value) {
@@ -2542,6 +2892,20 @@ if(isset($_SESSION['session_state']) && isset($_SESSION['provider']['check_sessi
  //   log_debug('session = %s', print_r($_SESSION, true));
 }
 ?>
+
+<script type="text/javascript">
+    $("#showtab").click(function()
+        {
+            if($("out-tabs").is(":visible")) {
+                $("#showtab").val("hide")
+            } else
+                $("#showtab").val("show");
+            $("#outer-tabs").toggle();
+        }
+    );
+
+</script>
+
 
 
 </body>
