@@ -1,7 +1,5 @@
 <?php
 // connect to db
-require_once "Doctrine.php";
-spl_autoload_register(array('Doctrine', 'autoload'));
 require_once(__DIR__ . '/../dbconf.php');
 
 $link = mysql_connect(DB_HOST, DB_USER, DB_PASSWORD);
