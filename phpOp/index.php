@@ -17,7 +17,7 @@
 
 include_once("abconstants.php");
 include_once("libjsoncrypto.php");
-include_once('libdb.php');
+include_once('libdb2.php');
 include_once('logging.php');
 include_once('OidcException.php');
 include_once('apache_header.php');
@@ -220,7 +220,7 @@ EOF;
 
 function create_token_info($uname, $attribute_list=NULL, $get=NULL, $req=NULL) {
     while(true) {
-        $token_name = base64url_encode(mcrypt_create_iv(32, MCRYPT_DEV_URANDOM));
+        $token_name = base64url_encode(random_bytes(32));
         if(!db_find_token($token_name))
             break;
     }
@@ -280,7 +280,8 @@ function clean_session($persist=0){
 
 
 function send_error($url, $error, $description=NULL, $error_uri=NULL, $state=NULL, $response_mode='query', $http_error_code = '400') {
-    log_error("url:%s error:%s desc:%s uri:%s state:%s code:%d", $url, $error, $description, $error_uri, $state, $http_error_code);
+    log_error('@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@');
+    log_info("url:%s error:%s desc:%s uri:%s state:%s code:%d", $url, $error, $description, $error_uri, $state, $http_error_code);
     if($url) {
         $params = array('error' => $error);
         if($state) $params['state'] = $state;
@@ -734,7 +735,8 @@ function is_client_authenticated() {
                     $audience = OP_ENDPOINT . '/1/token';
                 else
                     $audience = OP_ENDPOINT . '/token';
-                $aud_verified = (is_array($jwt_payload['aud']) ? $jwt_payload['aud'][0] : $jwt_payload['aud'])  == $audience;
+                $key_aud = is_array($jwt_payload['aud']) ? $jwt_payload['aud'][0] : $jwt_payload['aud'];
+                $aud_verified = in_array($key_aud, array($audience, OP_URL));
                 $now = time();
                 $time_verified = abs(($now - $jwt_payload['iat']) <= 180 ) && abs(($now - $jwt_payload['exp']) < 180);
                 if(!$sig_verified)
@@ -765,7 +767,8 @@ function is_client_authenticated() {
                     $audience = OP_ENDPOINT . '/1/token';
                 else
                     $audience = OP_ENDPOINT . '/token';
-                $aud_verified = (is_array($jwt_payload['aud']) ? $jwt_payload['aud'][0] : $jwt_payload['aud']) == $audience;
+                $key_aud = is_array($jwt_payload['aud']) ? $jwt_payload['aud'][0] : $jwt_payload['aud'];
+                $aud_verified = in_array($key_aud, array($audience, OP_URL));
                 $now = time();
                 $time_verified = abs(($now - $jwt_payload['iat']) <= 180 ) && abs(($now - $jwt_payload['exp']) < 180);
                 if(!$sig_verified)
@@ -798,6 +801,7 @@ function is_client_authenticated() {
 
 function handle_token() {
 
+    log_info('****** handle_token');
     try
     {
         $grant_type = strtolower($_REQUEST['grant_type']);
@@ -811,6 +815,15 @@ function handle_token() {
         if(!$auth_code)
             throw new OidcException('invalid_grant', 'no such code');
         $request_info = json_decode($auth_code['info'], true);
+
+        if(empty($_REQUEST['redirect_uri']))
+            throw new OidcException('invalid_request', 'missing redirect_uri');
+        log_info('%s <> %s', $_REQUEST['redirect_uri'], $request_info['g']['redirect_uri'] );
+        if($_REQUEST['redirect_uri'] != $request_info['g']['redirect_uri']) {
+            log_error('***  throwing redirect mismatch error');
+            throw new OidcException('invalid_request', 'mismatch redirect_uri');
+        }
+
         $client_authenticated = is_client_authenticated();
         if($client_authenticated) {
             if(ENABLE_PKCE) {
@@ -835,7 +848,7 @@ function handle_token() {
             }
 
             while(true) {
-                $token_name = base64url_encode(mcrypt_create_iv(32, MCRYPT_DEV_URANDOM));
+                $token_name = base64url_encode(random_bytes(32));
                 if(!db_find_token($token_name))
                     break;
             }
@@ -849,7 +862,7 @@ function handle_token() {
                 'token_type' => TOKEN_TYPE_ACCESS,
                 'info' => $auth_code['info']
             );
-            db_save_user_token($auth_code->Account['login'], $token_name, $fields);
+            db_save_user_token($auth_code->getAccount()->getLogin(), $token_name, $fields);
             $access_token = $token_name;
 
             $response_types = explode(' ', $request_info['g']['response_type']);
@@ -969,14 +982,14 @@ function handle_token() {
 
             if(in_array('offline_access', $scopes) && in_array('code', $response_types) && in_array('token', $response_types) && in_array('consent', $prompts)) {
                 while(true) {
-                    $refresh_token_name = base64url_encode(mcrypt_create_iv(32, MCRYPT_DEV_URANDOM));
+                    $refresh_token_name = base64url_encode(random_bytes(32));
                     if(!db_find_token($refresh_token_name))
                         break;
                 }
                 $fields['token'] = $refresh_token_name;
                 $fields['token_type'] = TOKEN_TYPE_REFRESH;
                 $fields['expiration_at'] = strftime('%G-%m-%d %T', time() + (24*60*60));
-                db_save_user_token($auth_code->Account['login'], $refresh_token_name, $fields);
+                db_save_user_token($auth_code->getAccount()->getLogin(), $refresh_token_name, $fields);
                 $refresh_token = $refresh_token_name;
             }
 
@@ -994,18 +1007,23 @@ function handle_token() {
             if($id_token)
                 $token_response['id_token'] = $id_token;
             log_debug('token response = %s',  print_r($token_response, true));
-            $auth_code->delete();
+            db_delete_entity($auth_code);
             echo json_encode($token_response);
         } else
             throw new OidcException('invalid_client', 'invalid client credentials');
     }
     catch(OidcException $e)
     {
+        log_info('****** handle_token oidcexception');
         send_error(NULL, $e->error_code, $e->desc);
     }
     catch(BearerException $e)
     {
+        log_info('****** handle_token BearerException');
         send_bearer_error('400', $e->error_code, $e->desc);
+    }
+    catch(Exception $e) {
+        log_info('***** handle_token general exception');
     }
 
 }
@@ -1512,7 +1530,7 @@ function handle_login() {
             $_SESSION['username']=$username;
             $_SESSION['persist']=$_POST['persist'];
             $_SESSION['auth_time'] = time();
-            $_SESSION['ops'] = bin2hex(mcrypt_create_iv(16, MCRYPT_DEV_URANDOM));
+            $_SESSION['ops'] = bin2hex(random_bytes(16));
             setcookie('ops', $_SESSION['ops'], 0, '/');
             log_debug("Auth_time = %s", $_SESSION['auth_time']);
             $GET=$_SESSION['get'];
@@ -1633,7 +1651,7 @@ function handle_client_registration() {
         foreach ($tmp_headers as $header => $value) {
             $headers[strtolower($header)] = $value;
         }
-        if(!$headers['content-type'] || $headers['content-type'] != 'application/json') {
+        if(!$headers['content-type'] || substr($headers['content-type'], 0, 16) != 'application/json') {
             throw new OidcException('invalid_client_metadata', 'Unexpected content type');
         }
         $json = file_get_contents('php://input');
@@ -1679,10 +1697,10 @@ function handle_client_registration() {
 
         );
 
-        $client_id = base64url_encode(mcrypt_create_iv(16, MCRYPT_DEV_URANDOM));
-        $client_secret = base64url_encode(mcrypt_create_iv(10, MCRYPT_DEV_URANDOM));
-        $reg_token = base64url_encode(mcrypt_create_iv(10, MCRYPT_DEV_URANDOM));
-        $reg_client_uri_path = base64url_encode(mcrypt_create_iv(16, MCRYPT_DEV_URANDOM));
+        $client_id = base64url_encode(random_bytes(16));
+        $client_secret = base64url_encode(random_bytes(10));
+        $reg_token = base64url_encode(random_bytes(10));
+        $reg_client_uri_path = base64url_encode(random_bytes(16));
         $params = Array(
             'client_id' => $client_id,
             'client_id_issued_at' => time(),
@@ -2057,7 +2075,7 @@ function send_response($username, $authorize = false)
 
         if($offline_access) {
             while(true) {
-                $refresh_token_name = base64url_encode(mcrypt_create_iv(32, MCRYPT_DEV_URANDOM));
+                $refresh_token_name = base64url_encode(random_bytes(32));
                 if(!db_find_token($refresh_token_name))
                     break;
             }
@@ -2166,7 +2184,7 @@ function send_response($username, $authorize = false)
         }
         $url_parts = parse_url($rpep);
         $origin = sprintf("%s://%s%s", $url_parts['scheme'], $url_parts['host'], isset($url_parts['port']) ? ':' . $url_parts['port'] : '');
-        $salt = bin2hex(mcrypt_create_iv(16, MCRYPT_DEV_URANDOM));
+        $salt = bin2hex(random_bytes(16));
         log_debug("ss = sha256(%s%s%s%s).%s", $client_id, $origin, $_SESSION['ops'], $salt, $salt);
         $session_state = hash('sha256', "{$client_id}{$origin}{$_SESSION['ops']}{$salt}") . '.' . $salt;
         $response_params['session_state'] = $session_state;
