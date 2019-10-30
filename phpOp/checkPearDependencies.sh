@@ -113,7 +113,7 @@ package_delete()
 # package_delete "phpseclib.sourceforge.net" Crypt_RSA Crypt_Random Crypt_AES Crypt_RC4 Crypt_Rijndael Crypt_TripleDES File_ANSI File_X509 Crypt_DES Crypt_Hash Math_BigInteger File_ASN1
 
 # package_delete pear.doctrine-project.org Doctrine
-package_add "pear.php.net" MDB2 MDB2_Driver_mysql
+# package_add "pear.php.net" MDB2 MDB2_Driver_mysql
 
 package_add "phpseclib.sourceforge.net"  Math_BigInteger Crypt_AES Crypt_DES Crypt_Hash Crypt_RC4  Crypt_TripleDES Crypt_RSA Crypt_Random Crypt_Rijndael File_ANSI File_ASN1 File_X509
 
