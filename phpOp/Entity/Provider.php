@@ -226,14 +226,15 @@ class Provider extends BaseEntity implements JsonSerializable, ArrayAccess
     public function offsetSet($offset, $value)
     {
         $method = $this->getSetterName(self::$tableFields, $offset);
-        if($method)
+        if($method && method_exists($this, $method)) {
             $this->{$method}($value);
+        }
     }
 
     public function offsetGet($offset)
     {
         $method = $this->getGetterName(self::$tableFields, $offset);
-        if($method)
+        if($method && method_exists($this, $method))
             return $this->{$method}();
         else
             return null;

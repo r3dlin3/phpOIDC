@@ -19,6 +19,8 @@ require_once('doctrine2_bootstrap.php');
 
 require_once('PasswordHash.php');
 
+require_once('logging.php');
+
 
 function db_check_credential($username, $password) : bool {
     $qb = DbEntity::getInstance()->getEntityManager()->createQueryBuilder();
@@ -71,74 +73,6 @@ function db_get_user($username) : ?Account {
     return ($result && count($result)) ? $result[0] : null;
 }
 
-
-/////////////////////////////////////////////////////////////////
-
-//    function db_get_user_objects($username, $object, $sort_field) {
-//
-//        $q = Doctrine_Query::create()
-//                ->select('o.*')
-//                ->from("$object o")
-//                ->innerJoin('o.Account a')
-//                ->where('a.login = ?', array($username))
-//                ->orderBy("o.{$sort_field} ASC");
-//    //    printf("%s\n", $q->getSqlQuery());
-//        return $q->execute();
-//    }
-
-
-//    function db_get_user_object($username, $object, $object_field, $object_value) {
-//
-//        $q = Doctrine_Query::create()
-//                ->select('o.*')
-//                ->from("$object o")
-//                ->innerJoin('o.Account a')
-//                ->where("a.login = ? and o.{$object_field} = ?", array($username, $object_value));
-//    //    printf("%s\n", $q->getSqlQuery());
-//        $res = $q->execute();
-//        return ($res && $res->count() == 1) ? $res->getFirst() : false;
-//    }
-
-//    function db_delete_user_object($username, $object, $object_field, $object_value) {
-//        $q = Doctrine_Query::create()
-//                ->select('o.*')
-//                ->from("$object o")
-//                ->innerJoin('o.Account a')
-//                ->where("a.login = ? and o.{$object_field} = ?", array($username, $object_value));
-//    //    printf("%s\n", $q->getSqlQuery());
-//        $res = $q->execute();
-//        if($res && $res->count() == 1)
-//            $res[0]->delete();
-//        return true;
-//    }
-
-
-//    function db_save_user_object($username, $object, $object_field, $object_value, $object_values) {
-//        if(!is_array($object_values) || !$object_field || !$object_value)
-//            return false;
-//        $q = Doctrine_Query::create()
-//                ->select('o.*')
-//                ->from("$object o")
-//                ->innerJoin('o.Account a')
-//                ->where("a.login = ? and o.{$object_field} = ?", array($username, $object_value));
-//        $res = $q->execute();
-//        $object =  ($res && $res->count() == 1) ? $res[0] : new $object();
-//        if(!$object->exists()) {
-//            // Set Account
-//            $user = db_get_user($username);
-//            if($user)
-//                $object['account_id'] = $user['id'];
-//            else
-//                return false;
-//            $object[$object_field] = $object_value;
-//        }
-//        $object->merge($object_values);
-//        $object->save();
-//        return true;
-//    }
-
-
-
 ////////////////////////////////////////////////////////
 function db_find_token($token) : ?Token {
     $qb = DbEntity::getInstance()->getEntityManager()->createQueryBuilder();
@@ -183,7 +117,7 @@ function db_find_refresh_token($token) : ?Token  {
 
 function db_save_token($token, $token_type, $user, $client, $issued, $expiration, $data=NULL, $details=NULL) : void {
     if(is_array($data));
-        unset($data['name']);
+    unset($data['name']);
     $account = db_get_user($user);
     if($account) {
         $dbToken = new Token();
@@ -312,13 +246,6 @@ function db_save_user_trusted_client($username, $client_id) : void {
 /////////////////////////////////////////////////////////////////
 
 function db_get_accounts() : array {
-//    $qb = DbEntity::getInstance()->getEntityManager()->createQueryBuilder();
-//    $qb->select('a')
-//        ->from('Account', 'a')
-//        ->orderBy('a.login', 'ASC');
-//    $result = $qb->getQuery()->getResult();
-//    return $result;
-
     return db_get_objects('Account', 'login');
 }
 
@@ -326,6 +253,9 @@ function db_get_account($username) : ?Account {
     return db_get_user($username);
 }
 
+function db_get_account_by_id($id) : ?Account {
+    return db_get_object('Account', 'id', $id);
+}
 
 function db_save_account($username, $account_values) {
     if(!is_array($account_values) || !$username)
@@ -344,6 +274,38 @@ function db_save_account($username, $account_values) {
     return false;
 }
 
+function db_save_account_by_id($id, $account_values) {
+    if(!is_array($account_values) || !$id)
+        return false;
+    $qb = DbEntity::getInstance()->getEntityManager()->createQueryBuilder();
+    $em = $qb->getEntityManager();
+    $account = db_get_account_by_id($id);
+    if($account) {
+        foreach ($account_values as $key => $val) {
+            $account[$key] = $val;
+        }
+        $em->flush();
+        return true;
+    }
+    return false;
+}
+
+function db_create_account($username, $account_values) {
+    if(!is_array($account_values) || !$username)
+        return false;
+    $qb = DbEntity::getInstance()->getEntityManager()->createQueryBuilder();
+    $em = $qb->getEntityManager();
+    $account = db_get_account($username);
+    if(!$account) {
+        return db_save_object('Account', 'login', $username, $account_values);
+    }
+    return false;
+}
+
+
+function db_delete_account_by_id($id) : bool {
+    return db_delete_object('Account', 'id', $id);
+}
 
 ///////////////////////////////////////////////////
 
@@ -414,103 +376,48 @@ function db_save_object( $object, $object_field, $object_value, $object_values) 
 }
 
 
-
-
-
 function db_get_providers() : array
 {
-//    $qb = DbEntity::getInstance()->getEntityManager()->createQueryBuilder();
-//    $qb->select('p')
-//        ->from('Provider', 'p')
-//        ->orderBy('p.name', 'ASC');
-//    return $qb->getQuery()->getResult();
     return db_get_objects('Provider', 'name');
 }
 
 
 function db_get_provider($name) : ?Provider {
-//    $qb = DbEntity::getInstance()->getEntityManager()->createQueryBuilder();
-//    $qb->select('p')
-//        ->from('Provider', 'p')
-//        ->where('p.name = :name')
-//        ->setParameter('name', $name);
-//    $result = $qb->getQuery()->getResult();
-//    return ($result && count($result)) ? $result[0] : null;
     return db_get_object('Provider', 'name', $name);
 }
 
 function db_get_provider_by_url($url) : ?Provider {
-//    $qb = DbEntity::getInstance()->getEntityManager()->createQueryBuilder();
-//    $qb->select('p')
-//        ->from('Provider', 'p')
-//        ->where('p.url = :url')
-//        ->setParameter('url', $url);
-//    $result = $qb->getQuery()->getResult();
-//    return ($result && count($result)) ? $result[0] : null;
     return db_get_object('Provider', 'url', $url);
 }
 
 
 function db_get_provider_by_issuer($issuer) : ?Provider {
-//    $qb = DbEntity::getInstance()->getEntityManager()->createQueryBuilder();
-//    $qb->select('p')
-//        ->from('Provider', 'p')
-//        ->where('p.issuer = :issuer')
-//        ->setParameter('issuer', $issuer);
-//    $result = $qb->getQuery()->getResult();
-//    return ($result && count($result)) ? $result[0] : null;
     return db_get_object('Provider', 'issuer', $issuer);
 }
 
 function db_get_provider_by_key_id($key_id) : ?Provider {
-//    $qb = DbEntity::getInstance()->getEntityManager()->createQueryBuilder();
-//    $qb->select('p')
-//        ->from('Provider', 'p')
-//        ->where('p.key_id = :key_id')
-//        ->setParameter('key_id', $key_id);
-//    $result = $qb->getQuery()->getResult();
-//    return ($result && count($result)) ? $result[0] : null;
     return db_get_object('Provider', 'key_id', $key_id);
+}
+
+function db_get_provider_by_id($id) : ?Provider {
+    return db_get_object('Provider', 'id', $id);
 }
 
 
 function db_delete_provider($name) : bool {
-//    $qb = DbEntity::getInstance()->getEntityManager()->createQueryBuilder();
-//    $provider = db_get_provider($name);
-//    if($provider) {
-//        $qb->getEntityManager()->remove($provider);
-//        $qb->getEntityManager()->flush();
-//    }
     return db_delete_object('Provider', 'name', $name);
 }
 
+function db_delete_provider_by_id($id) : bool {
+    return db_delete_object('Provider', 'id', $id);
+}
 
 function db_save_provider($name, $provider_values) : bool {
-//    if(!is_array($provider_values) || !$name)
-//        return false;
-//    $qb = DbEntity::getInstance()->getEntityManager()->createQueryBuilder();
-//    $em = $qb->getEntityManager();
-//    $qb->select('p')
-//        ->from('Provider', 'p')
-//        ->where('p.name = :name')
-//        ->setParameter('name', $name);
-//    $result = $qb->getQuery()->getResult();
-//    $provider = null;
-//    if($result && count($result)) {
-//        $provider = $result[0];
-//    } else {
-//        $provider = new Provider();
-//        $provider->setName($name);
-//        $em->persist($provider);
-//    }
-//    foreach ($provider_values as $key => $val) {
-//        $provider[$key] = $val;
-//    }
-//    $provider->setName($name);
-//    $em->flush();
-//    return true;
-
     return db_save_object('Provider', 'name', $name, $provider_values);
+}
+
+function db_save_provider_by_id($id, $provider_values) : bool {
+    return db_save_object('Provider', 'id', $id, $provider_values);
 }
 
 
@@ -522,22 +429,13 @@ function db_get_clients() : array {
 
 
 function db_get_client($client) : ?Client{
-//    $qb = DbEntity::getInstance()->getEntityManager()->createQueryBuilder();
-//    $qb->select('c')
-//        ->from('Client', 'c')
-//        ->where('c.client_id = :client_id')
-//        ->setParameter('client_id', $client);
-//    $result = $qb->getQuery()->getResult();
-//    return ($result && count($result)) ? $result[0] : null;
     $object = 'Client';
     $object_field = 'client_id';
     $object_value = $client;
     return db_get_object($object, $object_field, $object_value);
-
 }
 
 function db_get_client_by_registration_token($registration_token) : ?Client{
-
     $object = 'Client';
     $object_field = 'registration_access_token';
     $object_value = $registration_token;
@@ -545,13 +443,18 @@ function db_get_client_by_registration_token($registration_token) : ?Client{
 }
 
 function db_get_client_by_registration_uri_path($registration_client_uri_path) : ?Client{
-
     $object = 'Client';
     $object_field = 'registration_client_uri_path';
     $object_value = $registration_client_uri_path;
     return db_get_object($object, $object_field, $object_value);
 }
 
+function db_get_client_by_id($id) : ?Client{
+    $object = 'Client';
+    $object_field = 'id';
+    $object_value = $id;
+    return db_get_object($object, $object_field, $object_value);
+}
 
 function db_save_client($name, $client_values) : bool {
     $object = 'Client';
@@ -562,8 +465,21 @@ function db_save_client($name, $client_values) : bool {
 }
 
 
+function db_save_client_by_id($id, $client_values) : bool {
+    $object = 'Client';
+    $object_field = 'id';
+    $object_value = $id;
+    $object_values = $client_values;
+    return db_save_object($object, $object_field, $object_value, $object_values);
+}
+
+
 function db_delete_client($name) : bool {
     return db_delete_object('Client', 'client_id', $name);
+}
+
+function db_delete_client_by_id($id) : bool {
+    return db_delete_object('Client', 'id', $id);
 }
 
 function db_check_client_credential($client_id, $client_secret) : bool {
