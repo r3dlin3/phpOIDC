@@ -10,18 +10,18 @@ echo "<td><b>Client Name</b></td>";
 echo "<td><b></b></td>";
 echo "<td><b></b></td>";
 
-echo "</tr>"; 
-$result = mysql_query("SELECT * FROM `client`") or trigger_error(mysql_error()); 
-while($row = mysql_fetch_array($result)){ 
-foreach($row AS $key => $value) { $row[$key] = stripslashes($value); } 
-echo "<tr>";  
-echo "<td valign='top'>" . nl2br( $row['id']) . "</td>";  
-echo "<td valign='top'>" . nl2br( $row['client_id']) . "</td>";
-echo "<td valign='top'>" . nl2br( $row['client_secret']) . "</td>";  
-echo "<td valign='top'>" . nl2br( $row['client_name']) . "</td>";
+echo "</tr>";
+$result = db_get_clients();
+foreach($result as $row){
+    foreach($row AS $key => $value) { $row[$key] = stripslashes($value); }
+    echo "<tr>";
+    echo "<td valign='top'>" . nl2br( $row['id']) . "</td>";
+    echo "<td valign='top'>" . nl2br( $row['client_id']) . "</td>";
+    echo "<td valign='top'>" . nl2br( $row['client_secret']) . "</td>";
+    echo "<td valign='top'>" . nl2br( $row['client_name']) . "</td>";
 
-echo "<td valign='top'><a href='index.php?action=edit&id={$row['id']}'>Edit</a></td><td><a href='index.php?action=delete&id={$row['id']}'>Delete</a></td> ";
-echo "</tr>"; 
+    echo "<td valign='top'><a href='index.php?action=edit&id={$row['id']}'>Edit</a></td><td><a href='index.php?action=delete&id={$row['id']}'>Delete</a></td> ";
+    echo "</tr>";
 } 
 echo "</table>";
 echo "<br/><a href='index.php?action=new'>New Row</a>";

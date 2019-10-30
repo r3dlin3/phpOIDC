@@ -2,13 +2,11 @@
 if (isset($_GET['id']) ) {
 $id = (int) $_GET['id']; 
 if (isset($_POST['submitted'])) { 
-foreach($_POST AS $key => $value) { $_POST[$key] = mysql_real_escape_string($value); } 
-$sql = "UPDATE `client` SET  `client_id_issued_at` =  '{$_POST['client_id_issued_at']}' ,  `client_id` =  '{$_POST['client_id']}' ,  `client_secret` =  '{$_POST['client_secret']}' ,  `client_secret_expires_at` =  '{$_POST['client_secret_expires_at']}' ,  `registration_access_token` =  '{$_POST['registration_access_token']}' ,  `registration_client_uri_path` =  '{$_POST['registration_client_uri_path']}' ,  `contacts` =  '{$_POST['contacts']}' ,  `application_type` =  '{$_POST['application_type']}' ,  `client_name` =  '{$_POST['client_name']}' ,  `logo_uri` =  '{$_POST['logo_uri']}' ,  `tos_uri` =  '{$_POST['tos_uri']}' ,  `redirect_uris` =  '{$_POST['redirect_uris']}' ,  `post_logout_redirect_uris` =  '{$_POST['post_logout_redirect_uris']}' ,  `token_endpoint_auth_method` =  '{$_POST['token_endpoint_auth_method']}' ,  `token_endpoint_auth_signing_alg` =  '{$_POST['token_endpoint_auth_signing_alg']}' ,  `policy_uri` =  '{$_POST['policy_uri']}' ,  `jwks_uri` =  '{$_POST['jwks_uri']}' ,  `jwks` =  '{$_POST['jwks']}' ,  `jwk_encryption_uri` =  '{$_POST['jwk_encryption_uri']}' ,  `x509_uri` =  '{$_POST['x509_uri']}' ,  `x509_encryption_uri` =  '{$_POST['x509_encryption_uri']}' ,  `sector_identifier_uri` =  '{$_POST['sector_identifier_uri']}' ,  `subject_type` =  '{$_POST['subject_type']}' ,  `request_object_signing_alg` =  '{$_POST['request_object_signing_alg']}' ,  `userinfo_signed_response_alg` =  '{$_POST['userinfo_signed_response_alg']}' ,  `userinfo_encrypted_response_alg` =  '{$_POST['userinfo_encrypted_response_alg']}' ,  `userinfo_encrypted_response_enc` =  '{$_POST['userinfo_encrypted_response_enc']}' ,  `id_token_signed_response_alg` =  '{$_POST['id_token_signed_response_alg']}' ,  `id_token_encrypted_response_alg` =  '{$_POST['id_token_encrypted_response_alg']}' ,  `id_token_encrypted_response_enc` =  '{$_POST['id_token_encrypted_response_enc']}' ,  `default_max_age` =  '{$_POST['default_max_age']}' ,  `require_auth_time` =  '{$_POST['require_auth_time']}' ,  `default_acr_values` =  '{$_POST['default_acr_values']}' ,  `initiate_login_uri` =  '{$_POST['initiate_login_uri']}' ,  `post_logout_redirect_uri` =  '{$_POST['post_logout_redirect_uri']}' ,  `request_uris` =  '{$_POST['request_uris']}' ,  `grant_types` =  '{$_POST['grant_types']}' ,  `response_types` =  '{$_POST['response_types']}'   WHERE `id` = '$id' ";
-mysql_query($sql) or die(mysql_error()); 
-echo (mysql_affected_rows()) ? "Edited row.<br />" : "Nothing changed. <br />"; 
-echo "<a href='index.php?action=list'>Back To Listing</a>";
+    db_save_client_by_id($id, $_POST);
+    echo "Edited row.<br />" ;
+    echo "<a href='index.php?action=list'>Back To Listing</a>";
 } 
-$row = mysql_fetch_array ( mysql_query("SELECT * FROM `client` WHERE `id` = '$id' ")); 
+$row = db_get_client_by_id($id);
 ?>
 
 <form action='' method='POST'>
@@ -64,4 +62,6 @@ $row = mysql_fetch_array ( mysql_query("SELECT * FROM `client` WHERE `id` = '$id
     <p><input type='submit' value='Edit Row' /><input type='hidden' value='1' name='submitted' />
 
 </form>
-<? } ?> 
+<?php }
+
+?>

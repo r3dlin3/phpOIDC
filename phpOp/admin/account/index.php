@@ -1,6 +1,6 @@
 <?php
 header('Content-Type: text/html; charset=utf8');
-include(__DIR__ . '/../config.php');
+include(__DIR__ . '/../../libdb2.php');
 ?>
 <html>
 <head>
@@ -34,7 +34,18 @@ switch($path_info) {
 
 }
 
-include($file);
+try {
+    include($file);
+}
+catch(Exception $e) {
+    echo "<pre>\n" . $e->getTraceAsString() . "\n ";
+
+    while($e) {
+        printf("%d - %s <br/>\n", $e->getCode(), $e->getMessage());
+        $e = $e->getPrevious();
+    }
+    echo "</pre>\n";
+}
 ?>
 
 </body>

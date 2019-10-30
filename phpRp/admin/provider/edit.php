@@ -1,14 +1,12 @@
-<? 
+<?php
 if (isset($_GET['id']) ) { 
 $id = (int) $_GET['id']; 
 if (isset($_POST['submitted'])) { 
-foreach($_POST AS $key => $value) { $_POST[$key] = mysql_real_escape_string($value); } 
-$sql = "UPDATE `provider` SET  `key_id` =  '{$_POST['key_id']}' , `name` =  '{$_POST['name']}' ,  `url` =  '{$_POST['url']}' ,  `issuer` =  '{$_POST['issuer']}' ,  `client_id` =  '{$_POST['client_id']}' ,  `client_secret` =  '{$_POST['client_secret']}' ,  `client_id_issued_at` =  '{$_POST['client_id_issued_at']}' ,  `client_secret_expires_at` =  '{$_POST['client_secret_expires_at']}' ,  `registration_access_token` =  '{$_POST['registration_access_token']}' ,  `registration_client_uri` =  '{$_POST['registration_client_uri']}' ,  `authorization_endpoint` =  '{$_POST['authorization_endpoint']}' ,  `token_endpoint` =  '{$_POST['token_endpoint']}' ,  `userinfo_endpoint` =  '{$_POST['userinfo_endpoint']}' ,  `check_id_endpoint` =  '{$_POST['check_id_endpoint']}' ,  `check_session_iframe` =  '{$_POST['check_session_iframe']}' ,  `end_session_endpoint` =  '{$_POST['end_session_endpoint']}' ,  `jwks_uri` =  '{$_POST['jwks_uri']}' ,  `jwk_encryption_uri` =  '{$_POST['jwk_encryption_uri']}' ,  `x509_uri` =  '{$_POST['x509_uri']}' ,  `x509_encryption_uri` =  '{$_POST['x509_encryption_uri']}' ,  `registration_endpoint` =  '{$_POST['registration_endpoint']}' ,  `scopes_supported` =  '{$_POST['scopes_supported']}' ,  `response_types_supported` =  '{$_POST['response_types_supported']}' ,  `grant_types_supported` =  '{$_POST['grant_types_supported']}' ,  `acr_values_supported` =  '{$_POST['acr_values_supported']}' ,  `subject_types_supported` =  '{$_POST['subject_types_supported']}' ,  `userinfo_signing_alg_values_supported` =  '{$_POST['userinfo_signing_alg_values_supported']}' ,  `userinfo_encryption_alg_values_supported` =  '{$_POST['userinfo_encryption_alg_values_supported']}' ,  `userinfo_encryption_enc_values_supported` =  '{$_POST['userinfo_encryption_enc_values_supported']}' ,  `id_token_signing_alg_values_supported` =  '{$_POST['id_token_signing_alg_values_supported']}' ,  `id_token_encryption_alg_values_supported` =  '{$_POST['id_token_encryption_alg_values_supported']}' ,  `id_token_encryption_enc_values_supported` =  '{$_POST['id_token_encryption_enc_values_supported']}' ,  `request_object_signing_alg_values_supported` =  '{$_POST['request_object_signing_alg_values_supported']}' ,  `request_object_encryption_alg_values_supported` =  '{$_POST['request_object_encryption_alg_values_supported']}' ,  `request_object_encryption_enc_values_supported` =  '{$_POST['request_object_encryption_enc_values_supported']}' ,  `token_endpoint_auth_methods_supported` =  '{$_POST['token_endpoint_auth_methods_supported']}' ,  `token_endpoint_auth_signing_alg_values_supported` =  '{$_POST['token_endpoint_auth_signing_alg_values_supported']}' ,  `display_values_supported` =  '{$_POST['display_values_supported']}' ,  `claim_types_supported` =  '{$_POST['claim_types_supported']}' ,  `claims_supported` =  '{$_POST['claims_supported']}' ,  `service_documentation` =  '{$_POST['service_documentation']}' ,  `claims_locales_supported` =  '{$_POST['claims_locales_supported']}' ,  `ui_locales_supported` =  '{$_POST['ui_locales_supported']}' ,  `require_request_uri_registration` =  '{$_POST['require_request_uri_registration']}' ,  `op_policy_uri` =  '{$_POST['op_policy_uri']}' ,  `op_tos_uri` =  '{$_POST['op_tos_uri']}' ,  `claims_parameter_supported` =  '{$_POST['claims_parameter_supported']}' ,  `request_parameter_supported` =  '{$_POST['request_parameter_supported']}' ,  `request_uri_parameter_supported` =  '{$_POST['request_uri_parameter_supported']}'   WHERE `id` = '$id' ";
-mysql_query($sql) or die(mysql_error()); 
-echo (mysql_affected_rows()) ? "Edited row.<br />" : "Nothing changed. <br />"; 
-echo "<a href='index.php?action=list'>Back To Listing</a>";
+    db_save_provider_by_id($id, $_POST);
+    echo "Edited row.<br />" ;
+    echo "<a href='index.php?action=list'>Back To Listing</a>";
 } 
-$row = mysql_fetch_array ( mysql_query("SELECT * FROM `provider` WHERE `id` = '$id' ")); 
+$row = db_get_provider_by_id($id)
 ?>
 
 <form action='' method='POST'>
@@ -73,4 +71,4 @@ $row = mysql_fetch_array ( mysql_query("SELECT * FROM `provider` WHERE `id` = '$
     <p><input type='submit' value='Edit Row' /><input type='hidden' value='1' name='submitted' />
 
 </form>        
-<? } ?> 
+<?php } ?>
