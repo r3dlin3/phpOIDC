@@ -16,7 +16,7 @@
  */
 
 
-define("LOGFILE", dirname($_SERVER['SCRIPT_FILENAME']) . '/app.log');
+define("LOGFILE", __DIR__ . '/app.log');
 define("LOGLEVEL", 'DEBUG');
 
 /*
