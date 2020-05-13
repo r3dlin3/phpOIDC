@@ -1,0 +1,48 @@
+<?xml version="1.0"?>
+<psalm
+    errorLevel="7"
+    resolveFromConfigFile="true"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xmlns="https://getpsalm.org/schema/config"
+    xsi:schemaLocation="https://getpsalm.org/schema/config vendor/vimeo/psalm/config.xsd"
+>
+    <projectFiles>
+        <file name="OidcException.php" />
+        <file name="PasswordHash.php" />
+        <file name="abconstants.php" />
+        <file name="apache_header.php" />
+        <file name="base64url.php" />
+        <file name="cli-config.php" />
+        <file name="config.php" />
+        <file name="dbconf.php" />
+        <file name="discovery.php" />
+        <file name="doctrine2_bootstrap.php" />
+        <file name="doctrine_bootstrap.php" />
+        <file name="index.php" />
+        <file name="libconfig.php" />
+        <file name="libdb.php" />
+        <file name="libdb2.php" />
+        <file name="libjsoncrypto.php" />
+        <file name="logging.php" />
+        <file name="makejwk.php" />
+        <file name="migration.php" />
+        <file name="opframe.php" />
+        <directory  name="Entity/" />
+        <directory  name="migrations/" />
+        <directory  name="admin/" />
+        <directory  name="tests/" />
+        <directory  name="models/" />
+        <file name="libs/autoload.php" />
+        <file name="libs/composer/ClassLoader.php" />
+        <file name="libs/composer/autoload_classmap.php" />
+        <file name="libs/composer/autoload_files.php" />
+        <file name="libs/composer/autoload_namespaces.php" />
+        <file name="libs/composer/autoload_psr4.php" />
+        <file name="libs/composer/autoload_real.php" />
+        <file name="libs/composer/autoload_static.php" />
+        <directory  name="models/generated/" />
+        <ignoreFiles>
+            <directory name="libs" />
+        </ignoreFiles>
+    </projectFiles>
+</psalm>
