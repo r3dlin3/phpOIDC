@@ -14,13 +14,8 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
+require_once('libs/autoload.php');
 include_once('base64url.php');
-include_once('Math/BigInteger.php');
-include_once('Crypt/Random.php');
-include_once('Crypt/Hash.php');
-include_once('Crypt/RSA.php');
-
 
 $signing_alg_values_supported = Array('none', 'HS256', 'HS384', 'HS512', 'RS256', 'RS384', 'RS512');
 $encryption_alg_values_supported = Array('RSA1_5', 'RSA-OAEP');
@@ -185,9 +180,9 @@ function jwk_get_rsa_use_key($jwk, $use = NULL, $kid = NULL, $x5t = NULL) {
     $rsa = NULL;
     if($rsa_key) {
         if(isset($rsa_key['n']) && isset($rsa_key['e'])) {
-            $modulus = new Math_BigInteger('0x' . bin2hex(base64url_decode($rsa_key['n'])), 16);
-            $exponent = new Math_BigInteger('0x' . bin2hex(base64url_decode($rsa_key['e'])), 16);
-            $rsa = new Crypt_RSA();
+            $modulus = new phpseclib\Math\BigInteger('0x' . bin2hex(base64url_decode($rsa_key['n'])), 16);
+            $exponent = new phpseclib\Math\BigInteger('0x' . bin2hex(base64url_decode($rsa_key['e'])), 16);
+            $rsa = new \phpseclib\Crypt\RSA();
             $rsa->modulus = $modulus;
             $rsa->exponent = $exponent;
             $rsa->publicExponent = $exponent;
@@ -198,8 +193,8 @@ function jwk_get_rsa_use_key($jwk, $use = NULL, $kid = NULL, $x5t = NULL) {
             if($key) {
                 $details = openssl_pkey_get_details($key);
                 $pubkey = $details['key'];
-                $rsa = new Crypt_RSA();
-                if(!$rsa->loadkey($pubkey, CRYPT_RSA_PUBLIC_FORMAT_PKCS1))
+                $rsa = new \phpseclib\Crypt\RSA();
+                if(!$rsa->loadkey($pubkey, \phpseclib\Crypt\RSA::PUBLIC_FORMAT_PKCS1))
                     return false;
             }
         }
@@ -400,7 +395,7 @@ function jwt_verify($jwt, $sig_hints = NULL, $allowed_algs=NULL) {
                         $rsa = jwk_get_rsa_sig_key($jwk, isset($header['kid']) ? $header['kid'] : null, isset($header['x5t']) ? $header['x5t'] : null);
                         if($rsa) {
                             $rsa->setHash('sha' . substr($header['alg'], 2));
-                            $rsa->setSignatureMode(CRYPT_RSA_SIGNATURE_PKCS1);
+                            $rsa->setSignatureMode(\phpseclib\Crypt\RSA::SIGNATURE_PKCS1);
                             $status = $rsa->verify("{$json_obj['header'][$i]}.{$json_obj['payload']}", $sig);
                             if($status) {
                                 $verified = true;
@@ -669,11 +664,11 @@ function encrypt_with_key($data, $key_file,  $is_private_key=true, $pass_phrase=
                 else
                     $status = openssl_public_encrypt($data, $cipherText, $key);
             } else {
-                $rsa = new Crypt_RSA();
+                $rsa = new \phpseclib\Crypt\RSA();
                 if($rsa) {
                     if($is_private_key) {
                         $rsa->setPassword($pass_phrase);
-                        if(!$rsa->loadkey($key_contents, CRYPT_RSA_PRIVATE_FORMAT_PKCS1))
+                        if(!$rsa->loadkey($key_contents, \phpseclib\Crypt\RSA::PRIVATE_FORMAT_PKCS1))
                             return false;
                     }
                     else {
@@ -684,14 +679,14 @@ function encrypt_with_key($data, $key_file,  $is_private_key=true, $pass_phrase=
                                 if($key) {
                                     $details = openssl_pkey_get_details($key);
                                     $pubkey = $details['key'];
-                                    if(!$rsa->loadkey($pubkey, CRYPT_RSA_PUBLIC_FORMAT_PKCS1))
+                                    if(!$rsa->loadkey($pubkey, \phpseclib\Crypt\RSA::PUBLIC_FORMAT_PKCS1))
                                         return false;
                                 }
                     
                             } else {
                                 if(isset($key_contents['n']) && isset($key_contents['e'])) {
-                                    $modulus = new Math_BigInteger('0x' . bin2hex(base64url_decode($key_contents['n'])), 16);
-                                    $exponent = new Math_BigInteger('0x' . bin2hex(base64url_decode($key_contents['e'])), 16);
+                                    $modulus = new phpseclib\Math\BigInteger('0x' . bin2hex(base64url_decode($key_contents['n'])), 16);
+                                    $exponent = new phpseclib\Math\BigInteger('0x' . bin2hex(base64url_decode($key_contents['e'])), 16);
                                     $rsa->modulus = $modulus;
                                     $rsa->exponent = $exponent;
                                     $rsa->publicExponent = $exponent;
@@ -703,11 +698,11 @@ function encrypt_with_key($data, $key_file,  $is_private_key=true, $pass_phrase=
                         } else {
                             $details = openssl_pkey_get_details($key);
                             $pubkey = $details['key'];
-                            if(!$rsa->loadkey($pubkey, CRYPT_RSA_PUBLIC_FORMAT_PKCS1))
+                            if(!$rsa->loadkey($pubkey, \phpseclib\Crypt\RSA::PUBLIC_FORMAT_PKCS1))
                                 return false;
                         }
                     }
-                    $rsa->setEncryptionMode(CRYPT_RSA_ENCRYPTION_PKCS1);
+                    $rsa->setEncryptionMode(\phpseclib\Crypt\RSA::ENCRYPTION_PKCS1);
                     $status = $rsa->encrypt($data);
                     $cipherText = $status;               
                 }
@@ -715,11 +710,11 @@ function encrypt_with_key($data, $key_file,  $is_private_key=true, $pass_phrase=
         break;
         
         case 'RSA-OAEP':
-        $rsa = new Crypt_RSA();
+        $rsa = new \phpseclib\Crypt\RSA();
         if($rsa) {
             if($is_private_key) {
                 $rsa->setPassword($pass_phrase);
-                if(!$rsa->loadkey($key_contents, CRYPT_RSA_PRIVATE_FORMAT_PKCS1))
+                if(!$rsa->loadkey($key_contents, \phpseclib\Crypt\RSA::PRIVATE_FORMAT_PKCS1))
                     return false;
             }
             else {
@@ -731,14 +726,14 @@ function encrypt_with_key($data, $key_file,  $is_private_key=true, $pass_phrase=
                         if($key) {
                             $details = openssl_pkey_get_details($key);
                             $pubkey = $details['key'];
-                            if(!$rsa->loadkey($pubkey, CRYPT_RSA_PUBLIC_FORMAT_PKCS1))
+                            if(!$rsa->loadkey($pubkey, \phpseclib\Crypt\RSA::PUBLIC_FORMAT_PKCS1))
                                 return false;
                         }
             
                     } else {
                         if(isset($key_contents['n']) && isset($key_contents['e'])) {
-                            $modulus = new Math_BigInteger('0x' . bin2hex(base64url_decode($key_contents['n'])), 16);
-                            $exponent = new Math_BigInteger('0x' . bin2hex(base64url_decode($key_contents['e'])), 16);
+                            $modulus = new phpseclib\Math\BigInteger('0x' . bin2hex(base64url_decode($key_contents['n'])), 16);
+                            $exponent = new phpseclib\Math\BigInteger('0x' . bin2hex(base64url_decode($key_contents['e'])), 16);
                             $rsa->modulus = $modulus;
                             $rsa->exponent = $exponent;
                             $rsa->publicExponent = $exponent;
@@ -750,11 +745,11 @@ function encrypt_with_key($data, $key_file,  $is_private_key=true, $pass_phrase=
                 } else {
                     $details = openssl_pkey_get_details($key);
                     $pubkey = $details['key'];
-                    if(!$rsa->loadkey($pubkey, CRYPT_RSA_PUBLIC_FORMAT_PKCS1))
+                    if(!$rsa->loadkey($pubkey, \phpseclib\Crypt\RSA::PUBLIC_FORMAT_PKCS1))
                         return false;
                 }
             }
-            $rsa->setEncryptionMode(CRYPT_RSA_ENCRYPTION_OAEP);
+            $rsa->setEncryptionMode(\phpseclib\Crypt\RSA::ENCRYPTION_OAEP);
             $rsa->setHash('sha1');
             $rsa->setMGFHash('sha1');
             $status = $rsa->encrypt($data);
@@ -814,16 +809,16 @@ function decrypt_with_key($data, $key_file, $is_private_key=true, $pass_phrase=N
             if($rsa) {
                 if($is_private_key) {
                     $rsa->setPassword($pass_phrase);
-                    if(!$rsa->loadkey($key_contents, CRYPT_RSA_PRIVATE_FORMAT_PKCS1))
+                    if(!$rsa->loadkey($key_contents, \phpseclib\Crypt\RSA::PRIVATE_FORMAT_PKCS1))
                         return false;
                 }
                 else {
                     $details = openssl_pkey_get_details($key);
                     $pubkey = $details['key'];
-                    if(!$rsa->loadkey($pubkey, CRYPT_RSA_PUBLIC_FORMAT_PKCS1))
+                    if(!$rsa->loadkey($pubkey, \phpseclib\Crypt\RSA::PUBLIC_FORMAT_PKCS1))
                         return false;
                 }
-                $rsa->setEncryptionMode(CRYPT_RSA_ENCRYPTION_PKCS1);
+                $rsa->setEncryptionMode(\phpseclib\Crypt\RSA::ENCRYPTION_PKCS1);
                 $status = $rsa->decrypt($data);
                 $plainText = $status;               
             }
@@ -836,16 +831,16 @@ function decrypt_with_key($data, $key_file, $is_private_key=true, $pass_phrase=N
         if($rsa) {
             if($is_private_key) {
                 $rsa->setPassword($pass_phrase);
-                if(!$rsa->loadkey($key_contents, CRYPT_RSA_PRIVATE_FORMAT_PKCS1))
+                if(!$rsa->loadkey($key_contents, \phpseclib\Crypt\RSA::PRIVATE_FORMAT_PKCS1))
                     return false;
             }
             else {
                 $details = openssl_pkey_get_details($key);
                 $pubkey = $details['key'];
-                if(!$rsa->loadkey($pubkey, CRYPT_RSA_PUBLIC_FORMAT_PKCS1))
+                if(!$rsa->loadkey($pubkey, \phpseclib\Crypt\RSA::PUBLIC_FORMAT_PKCS1))
                     return false;
             }
-            $rsa->setEncryptionMode(CRYPT_RSA_ENCRYPTION_OAEP);
+            $rsa->setEncryptionMode(\phpseclib\Crypt\RSA::ENCRYPTION_OAEP);
             $rsa->setHash('sha1');
             $rsa->setMGFHash('sha1');
             $status = $rsa->decrypt($data);
@@ -992,11 +987,11 @@ function jwt_decrypt($jwe, $key_file, $is_private_key=true, $pass_phrase=NULL, $
     if(is_array($key_file)) {
         $rsa = new Crypt_RSA();
         if($rsa) {
-            $rsa->modulus = new Math_BigInteger('0x' . bin2hex(base64url_decode($key_file['n'])), 16);
-            $rsa->exponent = new Math_BigInteger('0x' . bin2hex(base64url_decode($key_file['d'])), 16);
-            $rsa->publicExponent = new Math_BigInteger('0x' . bin2hex(base64url_decode($key_file['e'])), 16);
+            $rsa->modulus = new phpseclib\Math\BigInteger('0x' . bin2hex(base64url_decode($key_file['n'])), 16);
+            $rsa->exponent = new phpseclib\Math\BigInteger('0x' . bin2hex(base64url_decode($key_file['d'])), 16);
+            $rsa->publicExponent = new phpseclib\Math\BigInteger('0x' . bin2hex(base64url_decode($key_file['e'])), 16);
             $rsa->k = strlen($rsa->modulus->toBytes());
-            $rsa->setEncryptionMode(CRYPT_RSA_ENCRYPTION_PKCS1);
+            $rsa->setEncryptionMode(\phpseclib\Crypt\RSA::SIGNATURE_PKCS1);
         }
     }
     elseif(is_string($key_file) && is_file($key_file)) {
@@ -1033,7 +1028,7 @@ function jwt_decrypt($jwe, $key_file, $is_private_key=true, $pass_phrase=NULL, $
     }
     if($rsa) {
         if($header['alg'] == 'RSA-OAEP') {
-            $rsa->setEncryptionMode(CRYPT_RSA_ENCRYPTION_OAEP);
+            $rsa->setEncryptionMode(\phpseclib\Crypt\RSA::ENCRYPTION_OAEP);
             $rsa->setHash('sha1');
             $rsa->setMGFHash('sha1');
         }
@@ -1710,14 +1705,14 @@ function get_mod_exp_from_key($key_contents, $pass_phrase = NULL, $is_private_ke
     if($rsa) {
         if($is_private_key) {
             $rsa->setPassword($pass_phrase);
-            if(!$rsa->loadkey($key_contents, CRYPT_RSA_PRIVATE_FORMAT_PKCS1)) {
+            if(!$rsa->loadkey($key_contents, \phpseclib\Crypt\RSA::PRIVATE_FORMAT_PKCS1)) {
                 return NULL;
             }
         }
         else {
             $details = openssl_pkey_get_details($key);
             $pubkey = $details['key'];
-            if(!$rsa->loadkey($pubkey, CRYPT_RSA_PUBLIC_FORMAT_PKCS1))
+            if(!$rsa->loadkey($pubkey, \phpseclib\Crypt\RSA::PUBLIC_FORMAT_PKCS1))
                 return NULL;
         }
         return array($rsa->modulus->toBytes(), $is_private_key ? $rsa->publicExponent->toBytes() : $rsa->exponent->toBytes());
