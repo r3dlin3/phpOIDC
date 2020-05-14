@@ -16,10 +16,10 @@
  */
 
 include_once("abconstants.php");
-include_once('libjsoncrypto.php');
-include_once("base64url.php");
-include_once('libdb2.php');
-include_once('logging.php');
+include_once('../phpOp/libjsoncrypto.php');
+include_once("../phpOp/base64url.php");
+include_once('../phpOp/libdb2.php');
+include_once('../phpOp/logging.php');
 
 error_reporting(E_ERROR | E_WARNING | E_PARSE);
 
@@ -210,7 +210,7 @@ if($g_info) {
 }
 
 $u=$g_userinfo_response;
-$pict = $u['picture'];
+//$pict = $u['picture'];
 //if(!$pict) {
 //  $pict = RP_PATH . '/nowprinting350x350.gif';
 //}

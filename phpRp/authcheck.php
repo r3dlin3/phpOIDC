@@ -16,9 +16,9 @@
  */
 
 include_once("abconstants.php");
-include_once('libjsoncrypto.php');
-include_once("base64url.php");
-include_once('libdb2.php');
+include_once('../phpOp/libjsoncrypto.php');
+include_once("../phpOp/base64url.php");
+include_once('../phpOp/libdb2.php');
 
 header('Content-Type: text/html; charset=utf-8');
 

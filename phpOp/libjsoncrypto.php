@@ -14,8 +14,8 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-require_once('libs/autoload.php');
-include_once('base64url.php');
+require_once(__DIR__.'/libs/autoload.php');
+include_once(__DIR__."/base64url.php");
 
 $signing_alg_values_supported = Array('none', 'HS256', 'HS384', 'HS512', 'RS256', 'RS384', 'RS512');
 $encryption_alg_values_supported = Array('RSA1_5', 'RSA-OAEP');
@@ -180,8 +180,8 @@ function jwk_get_rsa_use_key($jwk, $use = NULL, $kid = NULL, $x5t = NULL) {
     $rsa = NULL;
     if($rsa_key) {
         if(isset($rsa_key['n']) && isset($rsa_key['e'])) {
-            $modulus = new phpseclib\Math\BigInteger('0x' . bin2hex(base64url_decode($rsa_key['n'])), 16);
-            $exponent = new phpseclib\Math\BigInteger('0x' . bin2hex(base64url_decode($rsa_key['e'])), 16);
+            $modulus = new \phpseclib\Math\BigInteger('0x' . bin2hex(base64url_decode($rsa_key['n'])), 16);
+            $exponent = new \phpseclib\Math\BigInteger('0x' . bin2hex(base64url_decode($rsa_key['e'])), 16);
             $rsa = new \phpseclib\Crypt\RSA();
             $rsa->modulus = $modulus;
             $rsa->exponent = $exponent;
@@ -805,7 +805,7 @@ function decrypt_with_key($data, $key_file, $is_private_key=true, $pass_phrase=N
             else
                 $status = openssl_public_decrypt($data, $plainText, $key);
         } else {
-            $rsa = new Crypt_RSA();
+            $rsa = new \phpseclib\Crypt\RSA();
             if($rsa) {
                 if($is_private_key) {
                     $rsa->setPassword($pass_phrase);
@@ -827,7 +827,7 @@ function decrypt_with_key($data, $key_file, $is_private_key=true, $pass_phrase=N
         break;
         
         case 'RSA-OAEP':
-        $rsa = new Crypt_RSA();
+        $rsa = new \phpseclib\Crypt\RSA();
         if($rsa) {
             if($is_private_key) {
                 $rsa->setPassword($pass_phrase);
@@ -985,7 +985,7 @@ function jwt_decrypt($jwe, $key_file, $is_private_key=true, $pass_phrase=NULL, $
     $obj = array_map('base64url_decode', $parts);
 
     if(is_array($key_file)) {
-        $rsa = new Crypt_RSA();
+        $rsa = new \phpseclib\Crypt\RSA();
         if($rsa) {
             $rsa->modulus = new phpseclib\Math\BigInteger('0x' . bin2hex(base64url_decode($key_file['n'])), 16);
             $rsa->exponent = new phpseclib\Math\BigInteger('0x' . bin2hex(base64url_decode($key_file['d'])), 16);
