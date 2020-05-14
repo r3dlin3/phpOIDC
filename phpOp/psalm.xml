@@ -20,7 +20,6 @@
         <file name="doctrine_bootstrap.php" />
         <file name="index.php" />
         <file name="libconfig.php" />
-        <file name="libdb.php" />
         <file name="libdb2.php" />
         <file name="libjsoncrypto.php" />
         <file name="logging.php" />
