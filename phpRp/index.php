@@ -2031,7 +2031,8 @@ function handle_start() {
                                        );
                 db_save_provider($db_provider['name'], $provider);
             }
-            if($p_info['name'] == OP_PROTOCOL . 'self-issued.me') {
+            // https://openid.net/specs/openid-connect-core-1_0.html#SelfIssued
+            if($p_info['name'] == 'https://self-issued.me') {
                 $provider['client_id'] = RP_REDIRECT_URI;
                 $provider['client_secret'] = '';
             }

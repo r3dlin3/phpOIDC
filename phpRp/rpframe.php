@@ -15,7 +15,7 @@
  * limitations under the License.
  */
 
-include_once("../phpOp/abconstants.php");
+include_once("abconstants.php");
 include_once('../phpOp/libjsoncrypto.php');
 include_once("../phpOp/base64url.php");
 include_once('../phpOp/libdb2.php');
