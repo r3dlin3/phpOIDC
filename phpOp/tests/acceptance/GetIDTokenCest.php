@@ -20,9 +20,13 @@ class GetIDTokenCest
         // Login Page
         $I->seeElement('input', ['name' => 'username']);
         $I->seeElement('input', ['name' => 'password']);
-        $I->click('//form/*[@type="submit"]');
+        $I->fillField(['name' => 'username'], 'alice');
+        $I->fillField(['name' => 'password'], new PasswordArgument('wonderland'));
+        $I->click('#login');
+        
         // Consent Page
-        $I->checkOption('agreed');
+        // $I->makeHtmlSnapshot('consent');
+        $I->dontSeeElement('.alert');
         $I->selectOption('trust', 'once');
         $I->click('confirm');
         

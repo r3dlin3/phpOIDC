@@ -66,32 +66,50 @@ switch($path_info) {
 logw_debug("Request: %s\nInput: %s\nSession:%s", count($_REQUEST) ? print_r($_REQUEST, true) : 'req[ ]', file_get_contents('php://input'), isset($_SESSION) ? print_r($_SESSION, true) : 'sess[ ]');
 
 
-if($path_info == '/auth')
-    handle_auth();
-elseif($path_info == '/token')
-    handle_token();
-elseif($path_info == '/validatetoken')
-    handle_validatetoken();
-elseif($path_info == '/userinfo')
-    handle_userinfo();
-elseif($path_info == '/distributedinfo')
-    handle_distributedinfo();
-elseif($path_info == '/login')
-    handle_login();
-elseif($path_info == '/oplogin')
-    echo loginform('', '', null, true);
-elseif($path_info == '/confirm_userinfo')
-    handle_confirm_userinfo();
-elseif($path_info == '/registration')
-    handle_client_registration();
-elseif(strpos($path_info, '/client') !== false)
-    handle_client_operations();
-elseif($path_info == '/endsession')
-    handle_end_session();
-elseif($path_info == '/logout')
-    handle_logout();
-else
-    handle_default($path_info);
+switch($path_info) {
+    case '/token':
+        handle_token();
+        break;
+    case '/validatetoken':
+        handle_validatetoken();
+        break;
+        case '/userinfo':
+            handle_userinfo();
+        break;
+        case '/distributedinfo':
+            handle_distributedinfo();
+        break;
+        case '/registration':
+            handle_client_registration();
+        break;
+    case '/sessioninfo':
+        break;
+    case '/client':   
+        break;
+    case '/login':  
+        handle_login(); 
+        break;
+    case '/oplogin':  
+        echo loginform('', '', null, true);
+        break;
+    case '/confirm_userinfo':  
+        handle_confirm_userinfo();
+        break;
+    case '/endsession':  
+        handle_end_session();
+        break;
+    case '/logout':  
+        handle_logout();
+    break;
+    case '/auth': 
+        handle_auth();
+    break;
+    case (preg_match('/\/client.*/', $path_info) ? true : false) :
+        handle_client_operations();
+        break;
+    default:
+        handle_default($path_info);
+}
 
 exit();
 
@@ -1505,9 +1523,7 @@ function handle_login() {
             $_SESSION['ops'] = bin2hex(random_bytes(16));
             setcookie('ops', $_SESSION['ops'], 0, '/');
             log_debug("Auth_time = %s", $_SESSION['auth_time']);
-            $GET=$_SESSION['get'];
             log_debug("session id = %s", session_id());
-            $display = $_SESSION['rpfA']['display'];
             log_debug("prompt = %s", $_SESSION['rpfA']['prompt']);
             $prompt = isset($_SESSION['rpfA']['prompt']) ? explode(' ', $_SESSION['rpfA']['prompt']) : array();
             $num_prompts = count($prompt);
