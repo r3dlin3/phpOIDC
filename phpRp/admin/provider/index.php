@@ -1,6 +1,7 @@
 <?php
 header('Content-Type: text/html; charset=utf8');
-include(__DIR__ . '/../../libdb2.php');
+include_once(__DIR__ . '/../../../phpOp/libdb2.php');
+
 
 ?>
 <html>

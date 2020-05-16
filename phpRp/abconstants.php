@@ -22,46 +22,21 @@ define("LOGLEVEL", 'DEBUG');
 /*
 * Specifies the OP's server name/IP address. By default, it uses what the client uses
 */
-if (!defined('OP_SERVER_NAME'))
-    define('OP_SERVER_NAME', $_SERVER['SERVER_NAME']);
+
 
 if (!defined('RP_SERVER_NAME'))
     define('RP_SERVER_NAME', $_SERVER['SERVER_NAME']);
 
 /*
-* Specifies the OP's protocol
-*/
-define("OP_PROTOCOL", 'https://');
-
-/*
-* Specifies the OP's protocol port 
-* Should use ':port_num' format, e.g. :80
-*/
-define("OP_PORT", '');
-
-/*
-* Specifies the OP's PATH
-* 
-*/
-define("OP_PATH", '/' . basename(dirname($_SERVER['SCRIPT_FILENAME'])));
-
-
-/*
-* Specifies the OP's URL
-* 
-*/
-define("OP_URL", OP_PROTOCOL . OP_SERVER_NAME . OP_PORT . OP_PATH);
-
-/*
 * Specifies the RP's protocol 
 */
-define("RP_PROTOCOL", 'https://');
+define("RP_PROTOCOL", 'http://');
 
 /*
 * Specifies the RP's protocol port 
 * Should use ':port_num' format e.g. :80
 */
-define("RP_PORT", '');
+define("RP_PORT", ':8080');
 
 /*
 * Specifies the RP's PATH
@@ -74,43 +49,6 @@ define("RP_PATH", '/' . basename(dirname($_SERVER['SCRIPT_FILENAME'])));
 * 
 */
 define("RP_URL", RP_PROTOCOL . RP_SERVER_NAME . RP_PORT . RP_PATH);
-
-
-/**
-* path to the OP's private key for signing
-*/
-define("OP_SIG_PKEY", dirname($_SERVER['SCRIPT_FILENAME']) . "/op_sig.key");
-
-/**
-* OP's pass phrase for the private key file 
-*/
-define("OP_SIG_PKEY_PASSPHRASE","");
-
-
-/**
- * path to the OP's private key for encryption
- */
-define("OP_ENC_PKEY", dirname($_SERVER['SCRIPT_FILENAME']) . "/op_enc.key");
-
-/**
- * OP's pass phrase for the private key file
- */
-define("OP_ENC_PKEY_PASSPHRASE","");
-
-/**
-* URL to OP's public JWK
-*/
-define("OP_JWK_URL", OP_URL . '/op.jwk');
-
-/**
-* OP's Signature Kid
-*/
-define("OP_SIG_KID", 'PHPOP-00S');
-
-/**
-* OP's Encryption Kid
-*/
-define("OP_ENC_KID", 'PHPOP-00E');
 
 /**
 * path to the RP's private key for signing
@@ -146,17 +84,6 @@ define("RP_SIG_KID", 'PHPRP-00S');
 * RP's Encryption Kid
 */
 define("RP_ENC_KID", 'PHPRP-00E');
-
-/**
-* OP endpoints and metadata
-*
-*/
-define('OP_INDEX_PAGE', OP_URL . '/index.php');
-define('OP_AUTH_EP', OP_INDEX_PAGE . '/auth');
-define('OP_TOKEN_EP', OP_INDEX_PAGE . '/token');
-define('OP_USERINFO_EP', OP_INDEX_PAGE . '/userinfo');
-define('OP_CHECKSESSION_EP', OP_INDEX_PAGE . '/checksession');
-define('OP_SESSIONINFO_EP', OP_INDEX_PAGE . '/sessioninfo');
 
 
 /**

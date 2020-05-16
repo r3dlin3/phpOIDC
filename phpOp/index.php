@@ -100,44 +100,19 @@ exit();
  * Show Login form.
  * @return String HTML Login form.
  */
-function loginform($display_name = '', $user_id = '', $client = null, $oplogin=false){
-   
-   if($display_name && $user_id) {
-       $userid_field = " <b>{$display_name}</b><input type='hidden' name='username_display' value='{$display_name}'><input type='hidden' name='username' value='{$user_id}'><br/>";
-   } else {
-       $userid_field = '<input type="text" name="username" value="alice">(or bob)';
-   }
-    $logo_uri = '';
-    $tos_uri = '';
-    $policy_uri = '';
-    if($client) {
-        if($client['policy_uri'])
-            $policy_uri = sprintf('<a href="%s">Policy</a>', $client['policy_uri']);
-        if($client['tos_uri'])
-            $policy_uri = sprintf('<a href="%s">TOS</a>', $client['tos_uri']);
-        if($client['logo_uri'])
-            $logo_uri = sprintf('<img src="%s">', $client['logo_uri']);
-    }
-
-   $login_handler = $oplogin ? 'op' : '';
-    
-   $str='
-  <html>
-  <head><title>' . OP_SERVER_NAME . ' OP</title>
-  <meta name="viewport" content="width=320">
-  </head>
-  <body style="background-color:#FFEEEE;">
-  <h1>' . OP_SERVER_NAME . ' OP Login</h1>' . "\n  " . $logo_uri . '
-  <form method="POST" action="' . $_SERVER['SCRIPT_NAME'] . "/{$login_handler}login\">
-  Username:" . $userid_field . '<br />
-  Password:<input type="password" name="password" value="wonderland">(or underland)<br />
-  <input type="checkbox" name="persist" checked>Keep me logged in. <br />
-  <input type="submit">
-  </form>' . "\n  " . $policy_uri . "\n{$tos_uri}" . '
-  </body>
-  </html>
-  ';
-  return $str;
+function loginform($display_name = '', $user_id = '', $client = null, $oplogin = false, $error = false)
+{
+    global $twig;
+    $login_handler = $oplogin ? 'op' : '';
+    $action_url = $_SERVER['SCRIPT_NAME'] . '/'.$login_handler.'login';
+    $template = $twig->load('login.twig');
+    $str = $template->render(['display_name' => $display_name, 
+                              'user_id' => $user_id,
+                              'client' => $client,
+                              'action_url' => $action_url,
+                              'error' => $error
+                              ]);
+    return $str;
 }
 
 
@@ -147,28 +122,23 @@ function loginform($display_name = '', $user_id = '', $client = null, $oplogin=f
  * @return String HTML to be shown.
  */
 function confirm_userinfo(){
-  $req=$_SESSION['rpfA'];
-  $scopes = explode(' ', $req['scope']);
-  $response_types = explode(' ', $req['response_type']);
-  $offline_access = in_array('offline_access', $scopes) && in_array('code', $response_types) ? 'YES' : 'NO';
-  $axlabel=get_default_claims();
+    $req = $_SESSION['rpfA'];
+    $scopes = explode(' ', $req['scope']);
+    $response_types = explode(' ', $req['response_type']);
 
-  $requested_claims = get_all_requested_claims($req, $req['scope']);
-  log_info('requested claims = %s', print_r($requested_claims, true));
+    if (in_array('offline_access', $scopes) && in_array('code', $response_types)) {
+        $key = array_search('offline_access', $scopes);
+        unset($scopes[$key]);
+    }
+    
+    $axlabel=get_default_claims();
+
+    $requested_claims = get_all_requested_claims($req, $req['scope']);
+    log_info('requested claims = %s', print_r($requested_claims, true));
 
     $attributes = '';
     $account = db_get_account($_SESSION['username']);
-    foreach($requested_claims as $claim => $required) {
-        if($required == 1) {
-            $star = "<font color='red'>*</font>";
-        } else {
-            $star = '';
-        }
-        $claim_label = "{$axlabel[$claim]}{$star}";
-        $claim_value = $account[$claim];
 
-        $attributes .= "<tr><td>{$claim_label}</td><td>{$claim_value}</td><td></td></tr>\n";
-    }
 
 
 $attribute_form_template = <<<EOF
@@ -590,9 +560,11 @@ function handle_auth() {
 
             if(!array_key_exists('max_age', $_REQUEST) && $client['default_max_age'])
                 $_REQUEST['max_age'] = $client['default_max_age'];
-            if($_REQUEST['max_age'])
+            if(isset($_REQUEST['max_age']))
                 $_REQUEST['claims']['id_token']['auth_time'] =  array('essential' => true);
-            if((!$_REQUEST['claims']['id_token'] || !array_key_exists('auth_time', $_REQUEST['claims']['id_token'])) && $client['require_auth_time'])
+            if ( $client['require_auth_time'] && (
+                array_key_exists('claims',$_REQUEST) && array_key_exists('id_token',$_REQUEST['claims']) &&  !$_REQUEST['claims']['id_token'] 
+                    || !array_key_exists('auth_time', $_REQUEST['claims']['id_token'])))
                 $_REQUEST['claims']['id_token']['auth_time'] = array('essential' => true);
             if(!$_REQUEST['claims']['id_token'] || !array_key_exists('acr', $_REQUEST['claims']['id_token'])) {
                 if($_REQUEST['acr_values'])
@@ -603,17 +575,20 @@ function handle_auth() {
 
             $_SESSION['rpfA'] = $_REQUEST;
         }
-        log_debug("prompt = %s", $_SESSION['rpfA']['prompt']);
-        $prompt = $_SESSION['rpfA']['prompt'] ? explode(' ', $_SESSION['rpfA']['prompt']) : array();
+        $prompt = array_key_exists('prompt', $_SESSION['rpfA']) && $_SESSION['rpfA']['prompt'] ? explode(' ', $_SESSION['rpfA']['prompt']) : array();
         $num_prompts = count($prompt);
+        log_debug("num prompt = %d %s", $num_prompts,  print_r($prompt, true));
         if($num_prompts > 1 && in_array('none', $prompt))
             throw new OidcException('interaction_required', "conflicting prompt parameters {$_SESSION['rpfA']['prompt']}");
+
         if(in_array('none', $prompt))
             $showUI = false;
         else
             $showUI = true;
-        log_debug("num prompt = %d %s", $num_prompts,  print_r($prompt, true));
-        if($_SESSION['username']) {
+
+        $_SESSION['client'] = $client;
+
+        if(isset($_SESSION['username'])) {
             if(in_array('login', $prompt)){
                 echo loginform($requested_userid_display, $requested_userid, $client);
                 exit();
@@ -650,6 +625,7 @@ function handle_auth() {
         } else {
             if(!$showUI)
                 throw new OidcException('interaction_required', 'unauthenticated and prompt set to none');
+            log_debug("SESSION : %s", print_r($_SESSION, true));
             echo loginform($requested_userid_display, $requested_userid, $client);
         }
     }
@@ -1553,7 +1529,7 @@ function handle_login() {
             } else
                 send_response($username, true);
         } else { // Credential did not match so try again.
-            echo loginform($_REQUEST['username_display'], $_REQUEST['username']);
+            echo loginform($_REQUEST['username_display'], $username, $_SESSION['client'], false, true);
         }
     }
     catch(OidcException $e)
