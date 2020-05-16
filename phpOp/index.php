@@ -1563,39 +1563,27 @@ function handle_file($file)
     echo file_get_contents($file);
 }
 
-function handle_default($file = null) {
+function handle_default($file = null)
+{
 
-if($file && file_exists(__DIR__ . $file)) {
-    log_info("file = %s", __DIR__ . $file);
-    echo file_get_contents(__DIR__ . $file);
-    exit;
-}
+    if ($file && file_exists(__DIR__ . $file)) {
+        log_info("file = %s", __DIR__ . $file);
+        echo file_get_contents(__DIR__ . $file);
+        exit;
+    }
+    global $twig;
+    $error = $_REQUEST['error'];
+    $desc = $_REQUEST['error_description'];
 
-$error = $_REQUEST['error'];
-$desc = $_REQUEST['error_description'];
+    if (!isset($error)) {
+        $error = '"' . $file . '" not found';
+    }
 
-if(!$error)
-    $error_html = NULL;
-else $error_html = <<<EOF
-<p>Error : $error</p>
-<p>Desc  : $desc</p>
-EOF;
-
-$server_name = OP_SERVER_NAME;
-
-$html = <<<EOF
-  <html>
-  <head><title>$server_name OP</title>
-  </head>
-  <body style="background-color:#FFEEEE;">
-  <h1>$server_name OP</h1>
-  $error_html
-  </body>
-  </html>
-EOF;
-
-echo $html;
-
+    $template = $twig->load('error.twig');
+    $str = $template->render(['error' => $error, 
+                              'desc' => $desc,
+                              ]);
+    echo $str;
 }
 
 
