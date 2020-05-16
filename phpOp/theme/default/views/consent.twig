@@ -1,0 +1,84 @@
+{% extends 'master.twig' %}
+
+{% block title %}Consent{% endblock %}
+
+{% block content %}
+<div class="brand">
+    <img src="{{ constant('THEME_URI') }}/img/logo.jpg" alt="logo">
+</div>
+<div class="card fat">
+    <div class="card-body">
+        <h4 class="card-title">{{ site.name }} Authorization OP </h4>
+        <div class="media">
+            {% if client.policy_uri is not empty %}
+            <img src="{{ client.logo_uri }}" class="mr-3" alt="{{ client.client_name }}">
+            {% endif %}
+            <div class="media-body">
+                <h5 class="mt-0">{{ client.client_name }}</h5>
+                This application wants to access the following information:
+            </div>
+        </div>
+
+        <div class="accordion mb-3" id="accordionScopes">
+            {% for scope in scopes %}
+            <div class="card">
+                <div class="card-header py-1 pl-0" id="heading-{{scope}}">
+                    <h2 class="mb-0">
+                        <button class="btn btn-block text-left collapsed py-0" type="button" data-toggle="collapse"
+                            data-target="#collapse-{{scope}}" aria-expanded="false" aria-controls="collapse-{{scope}}">
+                            <i class="bi" aria-hidden="true"></i> {{ scope_label[scope] }}
+                        </button>
+                    </h2>
+                </div>
+                <div id="collapse-{{scope}}" class="collapse" aria-labelledby="heading-{{scope}}"
+                    data-parent="#accordionScopes">
+                    <div class="card-body">
+                        {{ scope_description[scope] }}
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+
+        <p class="card-text"> 
+            {% if client.policy_uri is not empty or client.tos_uri is not empty %}
+                {{ client.client_name }} has provided a <a href="{{ client.policy_uri }}">policy</a> and <a href="{{ client.tos_uri }}" class="card-link">terms of use</a>.
+            {% elseif client.policy_uri is not empty %}
+                {{ client.client_name }} has provided a <a href="{{ client.policy_uri }}">policy</a>.
+            {% elseif client.tos_uri is not empty %}
+                {{ client.client_name }} has provided  <a href="{{ client.tos_uri }}" class="card-link">terms of use</a>.
+            {% else %}
+                <b>
+                {{ client.client_name }} has not provided any policy nor terms of use.
+                </b>
+            {% endif %}
+        </p>
+        <form method="POST" class="my-login-validation" action="{{ action_url }}" novalidate="">
+            <div class="form-check">
+                <input class="form-check-input" type="radio" name="trust" id="trustonce" value="once" checked>
+                <label class="form-check-label" for="trustonce">
+                    Trust this site this time only
+                </label>
+            </div>
+            <div class="form-check">
+                <input class="form-check-input" type="radio" name="trust" id="trustalways" value="always">
+                <label class="form-check-label" for="trustalways">
+                    Trust this site always
+                </label>
+            </div>
+            <div class="row mt-3">
+                <div class="col">
+                    <button type="submit" class="btn btn-outline-secondary btn-block" name="confirm" value="denied">
+                        Deny
+                    </button>
+                </div>
+                <div class="col">
+                    <button type="submit" class="btn btn-primary btn-block" tabindex="1" name="confirm" value="confirmed" autofocus>
+                        Accept
+                    </button>
+                </div>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}

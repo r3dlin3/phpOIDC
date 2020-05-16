@@ -121,69 +121,42 @@ function loginform($display_name = '', $user_id = '', $client = null, $oplogin =
  * @param  String $r     Request String (JSON)
  * @return String HTML to be shown.
  */
-function confirm_userinfo(){
+function confirm_userinfo()
+{
+    global $twig;
     $req = $_SESSION['rpfA'];
     $scopes = explode(' ', $req['scope']);
     $response_types = explode(' ', $req['response_type']);
 
+    // Remove offline_access scope if it will not be issued
     if (in_array('offline_access', $scopes) && in_array('code', $response_types)) {
         $key = array_search('offline_access', $scopes);
         unset($scopes[$key]);
     }
-    
-    $axlabel=get_default_claims();
+
+    $claims_label = get_default_claims();
+    $scope_label = get_default_scope_labels();
+    $scope_description = get_default_scope_descriptions();
+    $client = $_SESSION['client'];
 
     $requested_claims = get_all_requested_claims($req, $req['scope']);
     log_info('requested claims = %s', print_r($requested_claims, true));
 
-    $attributes = '';
     $account = db_get_account($_SESSION['username']);
+    $action_url = $_SERVER['SCRIPT_NAME'] . '/confirm_userinfo';
 
-
-
-$attribute_form_template = <<<EOF
-  <div class='persona'>
-  <form method="POST" action="{$_SERVER['SCRIPT_NAME']}/confirm_userinfo">
-  <input type="hidden" name="mode" value="ax_confirm">
-  <table cellspacing="0" cellpadding="0" width="600">
-  <thead><tr><th>Attribute</th><th>Value</th><th>Confirm</th></tr></thead>
-  $attributes
-  <tr><td colspan="3">&nbsp;</td></tr>
-  <thead><tr><td><b>Offline Access Requested</b></td><td>$offline_access</td><td></td></tr></thead>
-  <tr><td colspan="3">&nbsp;</td></tr>
-  <tr><td colspan="3">&nbsp;</td></tr>
-  <tr><td colspan="3"><input type="checkbox" name="agreed" value="1" checked>I Agree to provide the above information. <br/>
-  <input type="radio" name="trust" value="once" checked>Trust this site this time only <br />
-  <input type="radio" name="trust" value="always" >Trust this site always <br/>
-  </td></tr>
-  <tr><td colspan="3"><input type="submit" name="confirm" value="confirmed"> </td></tr></table>
-  </form>
-  </div>
-EOF;
-
-
-$styles = <<<EOF
-
-    <style type="text/css">
-      /*demo page css*/
-      body{ font: 80% "Trebuchet MS", sans-serif; margin: 50px;}
-      .persona table{ font: 100% "verdana", san-serif; }
-      .persona td { font: 100% "verdana", san-serif;}
-    </style>
-EOF;
-
-  $str= '
-  <html>
-  <head><title>' . OP_SERVER_NAME . ' AX Confirm</title>
-  <meta name="viewport" content="width=620">' . $styles . '
-  </head>
-  <body style="background-color:#FFEEEE;">
-  <h1>' . OP_SERVER_NAME . ' AX Confirm</h1>
-  <h2>RP requests following AX values...</h2>' . $attribute_form_template . '
-  </body>
-  </html>
-  ';
-  return $str;
+    $template = $twig->load('consent.twig');
+    $str = $template->render(['display_name' => "", 
+                              'user_id' => "",
+                              'claims_label' => $claims_label,
+                              'scope_label' => $scope_label,
+                              'scope_description' => $scope_description,
+                              'scopes' => $scopes,
+                              'account' => $account,
+                              'action_url' => $action_url,
+                              'client' => $client
+                              ]);
+    return $str;
 }
 
 
@@ -1066,6 +1039,29 @@ function handle_validatetoken()
 
 }
 
+function get_default_scope_labels()
+{
+    return array(
+        "openid"         => "ID Token",
+        "profile"        => "Profile",
+        "email"          => "E-Mail address",
+        "address"        => "Postal address",
+        "phone"          => "Phone",
+        "offline_access" => "Offline access"
+    );
+}
+function get_default_scope_descriptions()
+{
+    return array(
+        "openid"         => "The ID Token is a security token that contains Claims about the Authentication of an End-User, including the username.",
+        "profile"        => "This scope value requests access to the End-User's default profile Claims, which are: name, family_name, given_name, middle_name, nickname, preferred_username, profile, picture, website, gender, birthdate, zoneinfo, locale, and updated_at.",
+        "email"          => "This scope value requests access to the email and email_verified Claims.",
+        "address"        => "This scope value requests access to the address Claim.",
+        "phone"          => "This scope value requests access to the phone_number and phone_number_verified Claims.",
+        "offline_access" => "This scope value requests that an OAuth 2.0 Refresh Token be issued that can be used to obtain an Access Token that grants access to the End-User's UserInfo Endpoint even when the End-User is not present (not logged in)."
+    );
+}
+
 function get_default_claims()
 {
     return array(
@@ -1540,28 +1536,25 @@ function handle_login() {
 }
 
 
-function handle_confirm_userinfo() {
-
-    $rpfA=$_SESSION['rpfA'];
+function handle_confirm_userinfo()
+{
+    $rpfA = $_SESSION['rpfA'];
     $client_id = $rpfA['client_id'];
     $authorized = false;
-    if($_REQUEST['confirm'] == 'confirmed') {
-        if ($_REQUEST['agreed']=="1") {
-            $authorized = true;
-        }
+    if ($_REQUEST['confirm'] == 'confirmed') {
+        $authorized = true;
     }
     $trusted_site = db_get_user_trusted_client($_SESSION['username'], $client_id);
-    if($_REQUEST['trust'] == 'always') {
+    if ($_REQUEST['trust'] == 'always') {
         log_debug("Trust = Always for %s", $client_id);
-        if(!$trusted_site)
+        if (!$trusted_site)
             db_save_user_trusted_client($_SESSION['username'], $client_id);
     } else {
-        if($trusted_site)
+        if ($trusted_site)
             db_delete_user_trusted_client($_SESSION['username'], $client_id);
     }
 
     send_response($_SESSION['username'], $authorized);
-
 }
 
 

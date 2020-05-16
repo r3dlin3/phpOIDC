@@ -1475,7 +1475,7 @@ function webfinger_get_provider_info($identifier) {
                 return NULL;
             $host = $parts['host'];
             $port = $parts['port'] ? ':' . $parts['port'] : '';
-            $issuer = OP_PROTOCOL . "{$host}{$port}";
+            $issuer = $parts['scheme'] . "{$host}{$port}";
             $issuer_url = $issuer;
             if(isset($parts['path']) && $parts['path'] == '/')
                 $principal = $issuer;
@@ -1666,7 +1666,8 @@ function remember_session_form_options($request) {
                         'default_max_age',
                         'require_auth_time',
                         'default_acr_values',
-                        'login_hint'
+                        'login_hint',
+                        'xdebug_session_start'
                    );
                     
     foreach($options as $r_key) {
@@ -1860,7 +1861,6 @@ function handle_logout_callback() {
 
 function handle_start() {
     global $g_error, $g_heads;
-    $update = false;
     if($_REQUEST['action_submit'] == 'Logout') {
         handle_logout();
         exit;
@@ -2112,6 +2112,7 @@ function handle_start() {
                             'client_id' => $provider['client_id'],
                             'nonce' => $nonce
                          );
+    // Get selected scopes
     $scope_types = array('openid', 'profile', 'email', 'address', 'phone', 'offline_access');
     $scopes = array();
     foreach($scope_types as $scope_type) {
@@ -2123,7 +2124,7 @@ function handle_start() {
     if(isset($provider['scopes_supported'])) {
         $provider_scopes = $provider['scopes_supported'];
         if(!is_array($provider_scopes))
-            $provider_scopes = explode(' ', $provider_scopes);
+            $provider_scopes = explode('|', $provider_scopes);
         log_debug('provider scopes = %s', print_r($provider_scopes, true));
         $diff = array_diff($provider_scopes, $scope_types);
         log_debug('diff = %s', print_r($diff, true));
@@ -2134,7 +2135,8 @@ function handle_start() {
     }
     else
         $provider_scopes = array();
-    $unique_scopes = array_unique(array_merge($scopes, $provider_scopes), SORT_STRING );    
+    $unique_scopes = array_unique(array_merge($scopes, $provider_scopes), SORT_STRING );
+    log_debug('diff = %s', print_r($diff, true));
     $query_params['scope'] = implode(' ', $unique_scopes);
     log_debug('scopes = %s', print_r($query_params['scope'], true));
 
@@ -2166,6 +2168,9 @@ function handle_start() {
 
     if($_REQUEST['login_hint'])
         $query_params['login_hint'] = $_REQUEST['login_hint'];
+
+    if(isset($_REQUEST['xdebug_session_start']))
+        $query_params['XDEBUG_SESSION_START'] = 1;
 
     $custom_params = array();
     if($_REQUEST['request_option']) {
@@ -2762,6 +2767,13 @@ $tabs = <<<EOF
                     <tr><td colspan='3'><p/></td></tr>
                     <tr><td>Login Hint</td><td>&nbsp;&nbsp;</td>
                         <td><input type='text' name='login_hint'></td>
+                    </tr>
+                    <tr><td colspan='3'><p/></td></tr>
+                    <tr><td>Add XDEBUG_SESSION_START query parameter </td><td>&nbsp;&nbsp;</td>
+                        <td>
+                        <input type="checkbox" name="xdebug_session_start" value="on">
+                        </td>
+                        
                     </tr>
                 </table>
 

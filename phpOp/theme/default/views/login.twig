@@ -5,14 +5,14 @@
 {% block content %}
 <div class="brand">
     {% if client.policy_uri is not empty %}
-    <img src="{{ client.logo_uri }}" alt="{{ client.name }}">
+    <img src="{{ client.logo_uri }}" alt="{{ client.client_name }}">
     {% else %}
     <img src="img/logo.jpg" alt="logo">
     {% endif %}
 </div>
 <div class="card fat">
     <div class="card-body">
-        <h4 class="card-title">{{ client.name }} OP Login </h4>
+        <h4 class="card-title">{{ client.client_name }} OP Login </h4>
         {% if error %}
         <div class="alert alert-danger" role="alert">
             Authentication error
