@@ -15,7 +15,7 @@
  * limitations under the License.
  */
 
-require_once("abconstants.php");
+require_once("config.php");
 require_once("libjsoncrypto.php");
 require_once('libdb2.php');
 

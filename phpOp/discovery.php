@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-include_once("abconstants.php");
+include_once("config.php");
 include_once("libjsoncrypto.php");
 require_once('libdb2.php');
 include_once('logging.php');
@@ -34,18 +34,18 @@ exit;
 
 function handle_openid_config()
 {
-    global $signing_alg_values_supported, $encryption_alg_values_supported, $encryption_enc_values_supported;
+    global $signing_alg_values_supported, $encryption_alg_values_supported, $encryption_enc_values_supported, $config;
     $endpoint_base =  OP_INDEX_PAGE;
-
+    $op_url = $config['OP']['op_url'];
     $discovery = array(
         'version' => '3.0',
-        'issuer' => OP_URL,
-        'authorization_endpoint' => $endpoint_base . '/auth',
-        'token_endpoint' => $endpoint_base . '/token',
-        'userinfo_endpoint' => $endpoint_base . '/userinfo',
-        'check_session_iframe' => OP_URL . '/opframe.php',
+        'issuer' => $op_url,
+        'authorization_endpoint' => OP_AUTH_EP,
+        'token_endpoint' => OP_TOKEN_EP,
+        'userinfo_endpoint' => OP_USERINFO_EP,
+        'check_session_iframe' => $op_url . '/opframe.php',
         'end_session_endpoint' => $endpoint_base . '/endsession',
-        'jwks_uri' =>  OP_JWK_URL,
+        'jwks_uri' =>  $config['OP']['jwk_url'],
         'registration_endpoint' => $endpoint_base . '/registration',
         'scopes_supported' => array('openid', 'profile', 'email', 'address', 'phone', 'offline_access'),
         'response_types_supported' => array('code', 'code token', 'code id_token', 'token', 'id_token token', 'code id_token token', 'id_token'),
@@ -94,6 +94,7 @@ function handle_openid_config()
 
 function send_webfinger_discovery($subject = NULL)
 {
+    global $config;
     header('Access-Control-Allow-Origin: *');
     header('Content-Type: application/jrd+json');
 
@@ -107,7 +108,7 @@ function send_webfinger_discovery($subject = NULL)
             'links' => array(
                 array(
                     'rel' => 'http://openid.net/specs/connect/1.0/issuer',
-                    'href' => OP_URL
+                    'href' => $config['OP']['op_url']
                 )
             )
         )
@@ -118,6 +119,7 @@ function send_webfinger_discovery($subject = NULL)
 
 function handle_webfinger_discovery()
 {
+    global $config;
     $principal = $_REQUEST['resource'];
     $service = $_REQUEST['rel'];
     if (!$principal && !$service) {
@@ -130,7 +132,12 @@ function handle_webfinger_discovery()
         header('HTTP/1.0 400 Bad Request');
         exit;
     }
-    $hosts = array(OP_SERVER_NAME, OP_PROTOCOL . OP_SERVER_NAME, OP_PROTOCOL . OP_SERVER_NAME . OP_PORT, OP_URL);
+    $op_url = $config['OP']['op_url'];
+    $url_info = parse_url($op_url);
+    $base_url = $url_info["scheme"] . '://' . $url_info["host"] . (array_key_exists('port', $url_info) ? ':'.$url_info['port'] : '');
+
+    // $hosts = array($config['OP']['op_server_name'], OP_PROTOCOL . OP_SERVER_NAME, OP_PROTOCOL . OP_SERVER_NAME . OP_PORT, $op_url);
+    $hosts = array($config['OP']['op_server_name'], $base_url, $op_url);
 
     if ($principal && substr($principal, 0, 5) == 'acct:')
         $principal = substr($principal, 5);
@@ -148,7 +155,7 @@ function handle_webfinger_discovery()
         if ($port_pos !== false)
             $domain = substr($domain, 0, $port_pos);
         $domain_parts = explode('.', $domain);
-        $server_parts = explode('.', OP_SERVER_NAME);
+        $server_parts = explode('.', $config['OP']['op_server_name']);
         // check to see domain matches
         $domain_start = count($domain_parts) - 1;
         $server_start = count($server_parts) - 1;
@@ -171,18 +178,19 @@ function handle_webfinger_discovery()
         }
         $host = $parts['host'];
         $port = $parts['port'] ? ':' . $parts['port'] : '';
-        $issuer = OP_PROTOCOL . "{$host}{$port}";
+        $issuer = $parts['scheme'] . '://' . $host . $port;
         if (isset($parts['path'])) {
             if ($parts['path'] == '/')
                 $principal = $issuer;
-            else if ($parts['path'] == OP_PATH) // OP Issuer Path
-                $principal = OP_URL;
+            else if ($parts['path'] == $config['OP']['path']) // OP Issuer Path
+                $principal = $config['OP']['op_url'];
             else {
                 $principal = substr($parts['path'], 1);
                 log_debug("principal = %s", $principal);
             }
-        } else
+        } else {
             $principal = $issuer;
+        }
     }
 
     if (!in_array($principal, $hosts) && !db_get_user($principal)) {

@@ -9,12 +9,11 @@
     <projectFiles>
         <file name="OidcException.php" />
         <file name="PasswordHash.php" />
-        <file name="abconstants.php" />
+        <file name="config.php" />
         <file name="apache_header.php" />
         <file name="base64url.php" />
         <file name="cli-config.php" />
         <file name="config.php" />
-        <file name="dbconf.php" />
         <file name="discovery.php" />
         <file name="doctrine2_bootstrap.php" />
         <file name="doctrine_bootstrap.php" />

@@ -15,7 +15,7 @@
  * limitations under the License.
  */
 
-include_once("abconstants.php");
+include_once("config.php");
 include_once("libjsoncrypto.php");
 include_once('libdb2.php');
 include_once('logging.php');
@@ -26,9 +26,6 @@ error_reporting(E_ERROR | E_WARNING | E_PARSE);
 
 define("DEBUG",0);
 
-define("OP_ENDPOINT", OP_INDEX_PAGE);
-
-
 define("TOKEN_TYPE_AUTH_CODE", 0);
 define("TOKEN_TYPE_ACCESS",    1);
 define("TOKEN_TYPE_REFRESH",   2);
@@ -36,16 +33,12 @@ define("TOKEN_TYPE_REFRESH",   2);
 
 header('Content-Type: text/html; charset=utf8');
 
-$session_path = session_save_path() . OP_PATH;
-if(!file_exists($session_path))
-    mkdir($session_path);
-session_save_path($session_path);
+// $session_path = session_save_path() . OP_PATH;
+// if(!file_exists($session_path))
+//     mkdir($session_path);
+// session_save_path($session_path);
 
-$path_info = NULL;
-define("SERVER_ID", OP_URL );
-$path_info = $_SERVER['PATH_INFO'];
-
-
+$path_info = array_key_exists('PATH_INFO', $_SERVER) ? $_SERVER['PATH_INFO'] : NULL;
 switch($path_info) {
     case '/token':
     case '/validatetoken':
@@ -73,14 +66,14 @@ switch($path_info) {
     case '/validatetoken':
         handle_validatetoken();
         break;
-        case '/userinfo':
-            handle_userinfo();
+    case '/userinfo':
+        handle_userinfo();
         break;
-        case '/distributedinfo':
-            handle_distributedinfo();
+    case '/distributedinfo':
+        handle_distributedinfo();
         break;
-        case '/registration':
-            handle_client_registration();
+    case '/registration':
+        handle_client_registration();
         break;
     case '/sessioninfo':
         break;
@@ -103,6 +96,9 @@ switch($path_info) {
     break;
     case '/auth': 
         handle_auth();
+    break;
+    case '/register_form': 
+        handle_register_form();
     break;
     case (preg_match('/\/client.*/', $path_info) ? true : false) :
         handle_client_operations();
@@ -133,6 +129,21 @@ function loginform($display_name = '', $user_id = '', $client = null, $oplogin =
     return $str;
 }
 
+
+function handle_register_form() {
+    global $twig;
+    global $register_form;
+
+    $action_url = $_SERVER['SCRIPT_NAME'] . '/register';
+    $login_url = $_SERVER['SCRIPT_NAME'] . '/login';
+    
+    $template = $twig->load('register.twig');
+    $str = $template->render(['form' => $register_form,
+                              'action_url' => $action_url,
+                              'login_url' => $login_url,
+                              ]);
+    return $str;
+}
 
 /**
  * Show Confirmation Dialogue for Attributes.
@@ -366,6 +377,7 @@ function decrypt_verify_jwt($jwt, $client, $allowed_sig_algs, $allowed_enc_algs,
 }
 
 function handle_auth() {
+    global $config;
     $state = isset($_REQUEST['state']) ? $_REQUEST['state'] : NULL;
     $error_page = OP_INDEX_PAGE;
     $response_mode = 'query';
@@ -394,7 +406,7 @@ function handle_auth() {
         if(count(array_diff($response_types, $known_response_types)))
             throw new OidcException('invalid_response_type', "Unknown response_type {$_REQUEST['response_type']}");
 
-        if(ENABLE_PKCE) {
+        if($config['OP']['enable_pkce']) {
             if(in_array('code', $response_types)) {
                 if(!isset($_REQUEST['code_challenge']))
                     throw new OidcException('invalid_request', 'code challenge required');
@@ -558,7 +570,7 @@ function handle_auth() {
                     || !array_key_exists('auth_time', $_REQUEST['claims']['id_token'])))
                 $_REQUEST['claims']['id_token']['auth_time'] = array('essential' => true);
             if(!$_REQUEST['claims']['id_token'] || !array_key_exists('acr', $_REQUEST['claims']['id_token'])) {
-                if($_REQUEST['acr_values'])
+                if(array_key_exists('acr_values',$_REQUEST))
                     $_REQUEST['claims']['id_token']['acr'] = array('essential' => true, 'values' => explode(' ', $_REQUEST['acr_values']));
                 elseif($client['default_acr_values'])
                     $_REQUEST['claims']['id_token']['acr'] = array('essential' => true, 'values' => explode('|', $client['default_acr_values']));
@@ -634,6 +646,8 @@ function handle_auth() {
 function is_client_authenticated() {
 
     try {
+        global $config;
+        $configop=$config['OP'];
         $auth_type = '';
         if(isset($_REQUEST['client_assertion_type'])) {
             $auth_type = $_REQUEST['client_assertion_type'];
@@ -699,11 +713,11 @@ function is_client_authenticated() {
                 else
                     $alg_verified = true;
                 if(substr($_SERVER['PATH_INFO'], 0, 2) == '/1')
-                    $audience = OP_ENDPOINT . '/1/token';
+                    $audience = OP_INDEX_PAGE . '/1/token';
                 else
-                    $audience = OP_ENDPOINT . '/token';
+                    $audience = OP_INDEX_PAGE . '/token';
                 $key_aud = is_array($jwt_payload['aud']) ? $jwt_payload['aud'][0] : $jwt_payload['aud'];
-                $aud_verified = in_array($key_aud, array($audience, OP_URL));
+                $aud_verified = in_array($key_aud, array($audience, $configop['op_url']));
                 $now = time();
                 $time_verified = abs(($now - $jwt_payload['iat']) <= 180 ) && abs(($now - $jwt_payload['exp']) < 180);
                 if(!$sig_verified)
@@ -731,11 +745,11 @@ function is_client_authenticated() {
                 else
                     $alg_verified = true;
                 if(substr($_SERVER['PATH_INFO'], 0, 2) == '/1')
-                    $audience = OP_ENDPOINT . '/1/token';
+                    $audience = OP_INDEX_PAGE . '/1/token';
                 else
-                    $audience = OP_ENDPOINT . '/token';
+                    $audience = OP_INDEX_PAGE . '/token';
                 $key_aud = is_array($jwt_payload['aud']) ? $jwt_payload['aud'][0] : $jwt_payload['aud'];
-                $aud_verified = in_array($key_aud, array($audience, OP_URL));
+                $aud_verified = in_array($key_aud, array($audience, $configop['op_url']));
                 $now = time();
                 $time_verified = abs(($now - $jwt_payload['iat']) <= 180 ) && abs(($now - $jwt_payload['exp']) < 180);
                 if(!$sig_verified)
@@ -768,6 +782,7 @@ function is_client_authenticated() {
 
 function handle_token() {
 
+    global $config;
     log_info('****** handle_token');
     try
     {
@@ -793,7 +808,7 @@ function handle_token() {
 
         $client_authenticated = is_client_authenticated();
         if($client_authenticated) {
-            if(ENABLE_PKCE) {
+            if($config['OP']['enable_pkce']) {
                 if(!isset($_REQUEST['code_verifier']))
                     throw new OidcException('invalid_grant', 'code verifier required');
                 $code_verifier = $_REQUEST['code_verifier'];
@@ -935,7 +950,7 @@ function handle_token() {
                         throw new OidcException('invalid_request', 'no such user');
                     $idt_claims = get_account_claims($db_user, array_intersect_key($request_info['l'], $requested_id_token_claims));
                 }
-                $id_token_obj = make_id_token(wrap_userid($db_client, $request_info['u']), SERVER_ID, $db_client['client_id'], $idt_claims, $nonce, $c_hash, $at_hash, $auth_time, $ops, $acr );
+                $id_token_obj = make_id_token(wrap_userid($db_client, $request_info['u']), $config['OP']['op_url'], $db_client['client_id'], $idt_claims, $nonce, $c_hash, $at_hash, $auth_time, $ops, $acr );
 
                 log_debug('handle_token id_token_obj = %s', print_r($id_token_obj, true));
                 $cryptoError = '';
@@ -1352,7 +1367,7 @@ function handle_distributedinfo() {
 
     try
     {
-        global $signing_alg_values_supported, $encryption_alg_values_supported, $encryption_enc_values_supported;
+        global $signing_alg_values_supported, $encryption_alg_values_supported, $encryption_enc_values_supported, $config;
 
         $token = $_REQUEST['access_token'];
         if(!$token) {
@@ -1431,9 +1446,10 @@ function handle_distributedinfo() {
                 if(substr($db_client['userinfo_signed_response_alg'], 0, 2) == 'HS') {
                     $sig_key = $db_client['client_secret'];
                 } elseif(substr($db_client['userinfo_signed_response_alg'], 0, 2) == 'RS') {
-                    $sig_param['jku'] = OP_JWK_URL;
-                    $sig_param['kid'] = OP_SIG_KID;
-                    $sig_key = array('key_file' => OP_SIG_PKEY, 'password' => OP_SIG_PKEY_PASSPHRASE);
+                    $configop = $config['OP'];
+                    $sig_param['jku'] = $configop['jwk_url'];
+                    $sig_param['kid'] = $configop['sig_kid'];
+                    $sig_key = array('key_file' => $configop['sig_pkey'], 'password' =>$configop['sig_pkey_passphrase']);
                 }
                 log_debug("DistributedInfo Using Sig Alg %s", $sig_param['alg'] );
                 $userinfo_jwt = jwt_sign($userinfo, $sig_param, $sig_key);
@@ -1726,7 +1742,7 @@ function handle_client_registration() {
         }
         log_debug("client registration params = %s", print_r($params, true));
         db_save_client($client_id, $params);
-        $reg_uri = OP_ENDPOINT . '/client/' . $reg_client_uri_path;
+        $reg_uri = OP_INDEX_PAGE . '/client/' . $reg_client_uri_path;
         unset($params['registration_client_uri_path']);
 
         $client_json = Array(
@@ -1889,6 +1905,7 @@ function make_id_token($username, $issuer, $aud, $claims = array(), $nonce = NUL
 function get_account_claims($db_user, $requested_claims)
 {
     $claims = array();
+    global $config;
     log_debug("account requested claims = %s", print_r($requested_claims, true));
     foreach($requested_claims as $key => $value) {
         $mapped_key = $key;
@@ -1914,7 +1931,7 @@ function get_account_claims($db_user, $requested_claims)
                 break;
 
             case 'picture' :
-                $claims[$mapped_key] = sprintf("%s/profiles/%s", OP_URL, $db_user[$key]);
+                $claims[$mapped_key] = sprintf("%s/profiles/%s", $config['OP']['op_url'], $db_user[$key]);
                 break;
 
             default :
@@ -1984,6 +2001,7 @@ function send_auth_response($url, $params, $response_mode) {
 
 function send_response($username, $authorize = false)
 {
+    global $config;
     $GET=$_SESSION['get'];
     $rpfA=$_SESSION['rpfA'];
     $rpep=$GET['redirect_uri'];
@@ -2143,7 +2161,7 @@ function send_response($username, $authorize = false)
                 else
                     throw new OidcException('access_denied', 'no such user');
             }
-            $id_token_obj = make_id_token(wrap_userid($db_client, $username), SERVER_ID, $client_id, $idt_claims, $nonce, $c_hash, $at_hash, $auth_time, $ops, $acr );
+            $id_token_obj = make_id_token(wrap_userid($db_client, $username), $config['OP']['op_url'], $client_id, $idt_claims, $nonce, $c_hash, $at_hash, $auth_time, $ops, $acr );
 
             log_debug('sen_response id_token_obj = %s', print_r($id_token_obj, true));
             $cryptoError = null;
@@ -2196,7 +2214,7 @@ function send_response($username, $authorize = false)
 
 function sign_encrypt($payload, $sig, $alg, $enc, $jwks_uri = null, $jwks = null, $client_secret = null, &$cryptoError = null)
 {
-    global $signing_alg_values_supported, $encryption_alg_values_supported, $encryption_enc_values_supported;
+    global $signing_alg_values_supported, $encryption_alg_values_supported, $encryption_enc_values_supported, $config;
     log_debug("sign_encrypt sig = %s alg = %s enc = %s", $sig, $alg, $enc);
     $jwt = is_array($payload) ? json_encode($payload) : $payload;
 
@@ -2208,9 +2226,10 @@ function sign_encrypt($payload, $sig, $alg, $enc, $jwks_uri = null, $jwks = null
             if(substr($sig, 0, 2) == 'HS') {
                 $sig_key = $client_secret;
             } elseif(substr($sig, 0, 2) == 'RS') {
-                $sig_param['kid'] = OP_SIG_KID;
-                $sig_param['jku'] = OP_JWK_URL;
-                $sig_key = array('key_file' => OP_SIG_PKEY, 'password' => OP_SIG_PKEY_PASSPHRASE);
+                $configop = $config['OP'];
+                $sig_param['jku'] = $configop['jwk_url'];
+                $sig_param['kid'] = $configop['sig_kid'];
+                $sig_key = array('key_file' => $configop['sig_pkey'], 'password' =>$configop['sig_pkey_passphrase']);
             }
         } else {
             log_error("sig alg %s not supported", $sig);

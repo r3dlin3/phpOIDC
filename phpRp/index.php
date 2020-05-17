@@ -1458,7 +1458,7 @@ function webfinger_get_provider_info($identifier) {
             return NULL;
             // process email address
             $host = substr($identifier, $at + 1);
-            $issuer = OP_PROTOCOL . "$host";
+            $issuer = 'https://' . $host;
             $issuer_url = $issuer;
             $principal = 'acct:' . $identifier;
             log_info("RP - EMAIL principal = %s host = %s issuer = %s", $principal, $host, $issuer);
@@ -1475,7 +1475,7 @@ function webfinger_get_provider_info($identifier) {
                 return NULL;
             $host = $parts['host'];
             $port = $parts['port'] ? ':' . $parts['port'] : '';
-            $issuer = $parts['scheme'] . "{$host}{$port}";
+            $issuer = $parts['scheme'] .'://'.$host.$port;
             $issuer_url = $issuer;
             if(isset($parts['path']) && $parts['path'] == '/')
                 $principal = $issuer;

@@ -14,7 +14,20 @@ class DiscoveryCest
         $I->seeResponseIsJson();
         $I->seeResponseMatchesJsonType([
             'authorization_endpoint' => 'string:url',
+            'token_endpoint' => 'string:url',
+            'userinfo_endpoint' => 'string:url',
+            'check_session_iframe' => 'string:url',
+            'end_session_endpoint' => 'string:url',
+            'jwks_uri' => 'string:url',
             'issuer' => 'string'
+        ]);
+
+        list($jwk_url) = $I->grabDataFromResponseByJsonPath('$.jwks_uri');
+        $I->sendGET($jwk_url);
+        $I->seeResponseCodeIs(200);
+        $I->seeResponseIsJson();
+        $I->seeResponseMatchesJsonType([
+            'keys' => 'array',
         ]);
     }
 

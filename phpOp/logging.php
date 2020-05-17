@@ -16,14 +16,11 @@
  */
 
 require_once('libs/autoload.php');
-// require_once('abconstants.php');
-
 
 use Monolog\Processor\WebProcessor;
 use Monolog\Logger;
 use Monolog\Handler\StreamHandler;
 use Monolog\Formatter\LineFormatter;
-use Monolog\Formatter\NormalizerFormatter;
 
 class PhpOidcLogger
 {
@@ -41,6 +38,14 @@ class PhpOidcLogger
      */
     static protected $logWebInstance;
 
+    static $LOGFILE;
+    
+    static protected $LOGLEVEL;
+
+    static public function init() {
+        self::$LOGFILE  = getenv('LOGFILE') ?: (__DIR__ . '/app.log');
+        self::$LOGLEVEL = getenv('LOGLEVEL') ?: 'DEBUG';
+    }
 
     /**
      * Method to return the Monolog instance
@@ -50,7 +55,7 @@ class PhpOidcLogger
     static public function getInstance()
     {
         if (! self::$logInstance) {
-            self::configureInstance(LOGFILE, LOGLEVEL);
+            self::configureInstance(self::$LOGFILE, self::$LOGLEVEL);
         }
 
         return self::$logInstance;
@@ -64,7 +69,7 @@ class PhpOidcLogger
     static public function getWebInstance()
     {
         if (! self::$logWebInstance) {
-            self::configureWebInstance(LOGFILE, LOGLEVEL);
+            self::configureWebInstance(self::$LOGFILE, self::$LOGLEVEL);
         }
 
         return self::$logWebInstance;
@@ -143,6 +148,9 @@ class PhpOidcLogger
     }
 
 }
+
+PhpOidcLogger::init();
+
 
 function log_debug($format, $args = null)
 {

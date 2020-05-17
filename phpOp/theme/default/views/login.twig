@@ -35,9 +35,11 @@
 
             <div class="form-group">
                 <label for="password">Password
-                    <a href="forgot.html" class="float-right">
+                {% if site.enable_password_reset == true %}
+                    <a href="{{ site.password_reset_url }}" class="float-right">
                         Forgot Password?
                     </a>
+                {% endif %}
                 </label>
                 <input id="password" type="password" class="form-control" name="password" required data-eye tabindex="2">
                 <div class="invalid-feedback">
@@ -57,12 +59,14 @@
                     Login
                 </button>
             </div>
+            {% if site.enable_registration == true %}
             <div class="mt-4 text-center">
                 Don't have an account?
             </div>
             <div class="text-center">
-                <a class="btn btn-outline-primary btn-block mt-2" href="register.html">Create an account</a>
+                <a class="btn btn-outline-primary btn-block mt-2" href="{{ site.registration_url }}">Create an account</a>
             </div>
+            {% endif %}
         </form>
     </div>
     {% if client.policy_uri is not empty or client.tos_uri is not empty %}
