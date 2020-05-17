@@ -15,7 +15,7 @@
  * limitations under the License.
  */
 
-require_once('doctrine2_bootstrap.php');
+require_once(__DIR__.'/doctrine2_bootstrap.php');
 
 require_once('PasswordHash.php');
 
