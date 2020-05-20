@@ -96,6 +96,31 @@ $config = [
     ]
 ];
 
+///////////////
+// I18n
+///////////////
+
+// create the accept factory
+$accept_factory = new Aura\Accept\AcceptFactory($_SERVER);
+
+// factory the accept object
+$accept = $accept_factory->newInstance();
+
+// language negotiation
+$available_languages = array('en', 'fr');
+$language = $accept->negotiateLanguage($available_languages);
+$locale = $language->getValue();
+
+// Set language
+putenv('LANGUAGE=' . $locale);
+setlocale(LC_ALL, $locale);
+
+define('DOMAIN', 'messages');
+// Specify the location of the translation tables
+bindtextdomain(DOMAIN, __DIR__ . '/locales');
+bind_textdomain_codeset(DOMAIN, 'UTF-8');
+// Choose domain
+textdomain(DOMAIN);
 
 $loader = new \Twig\Loader\FilesystemLoader($config['site']['views_path']);
 $twig = new \Twig\Environment($loader, [
@@ -103,12 +128,7 @@ $twig = new \Twig\Environment($loader, [
     'auto_reload' => $config['twig']['auto_reload']
 ]);
 $twig->addGlobal('site', $config['site']);
-
-
-
-
-
-
+$twig->addExtension(new Twig_Extensions_Extension_I18n());
 
 $register_form = [
     [

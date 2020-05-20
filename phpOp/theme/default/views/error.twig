@@ -1,13 +1,13 @@
 {% extends 'master.twig' %}
 
-{% block title %}Error{% endblock %}
+{% block title %}{% trans "Error" %}{% endblock %}
 
 {% block content %}
 <div class="brand">
     <img src="{{ site.theme_uri }}/img/logo.jpg" alt="logo">
 </div>
 <div class="card fat text-white bg-danger">
-    <div class="card-header">{{ site.name }} Error</div>
+    <div class="card-header">{% trans %}{{ site.name }} Error{% endtrans %}</div>
     <div class="card-body">
         <h4 class="card-title">{{ error }}</h4>
         <p class="card-text"> 

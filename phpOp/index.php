@@ -164,8 +164,6 @@ function confirm_userinfo()
     }
 
     $claims_label = get_default_claims();
-    $scope_label = get_default_scope_labels();
-    $scope_description = get_default_scope_descriptions();
     $client = $_SESSION['client'];
 
     $requested_claims = get_all_requested_claims($req, $req['scope']);
@@ -178,8 +176,6 @@ function confirm_userinfo()
     $str = $template->render(['display_name' => "", 
                               'user_id' => "",
                               'claims_label' => $claims_label,
-                              'scope_label' => $scope_label,
-                              'scope_description' => $scope_description,
                               'scopes' => $scopes,
                               'account' => $account,
                               'action_url' => $action_url,
@@ -343,8 +339,9 @@ function is_valid_registered_redirect_uri($redirect_uris, $uri) {
 function decrypt_verify_jwt($jwt, $client, $allowed_sig_algs, $allowed_enc_algs, $allowed_enc_encs,&$error) {
     $response = NULL;
     $jwt_parts = jwt_to_array($jwt);
+    global $config;
     if(isset($jwt_parts[0]['enc'])) { // encrypted
-        $signed_jwt = jwt_decrypt($jwt, OP_ENC_PKEY, true, OP_ENC_PKEY_PASSPHRASE, $allowed_enc_algs, $allowed_enc_encs);
+        $signed_jwt = jwt_decrypt($jwt, $config['OP']['enc_pkey'], true, $config['OP']['op_enc_pkey_passphrase'], $allowed_enc_algs, $allowed_enc_encs);
         if(!$signed_jwt) {
             log_error('Unable to decrypt object');
             $error = 'error_decrypt';
@@ -529,7 +526,7 @@ function handle_auth() {
                         if($port_pos !== false)
                             $domain = substr($domain, 0, $port_pos);
                         $domain_parts = explode('.', $domain);
-                        $server_parts = explode('.', OP_SERVER_NAME);
+                        $server_parts = explode('.', $config['OP']['op_server_name']);
                         // check to see domain matches
                         $domain_start = count($domain_parts) - 1;
                         $server_start = count($server_parts) - 1;
@@ -1072,29 +1069,6 @@ function handle_validatetoken()
 
 }
 
-function get_default_scope_labels()
-{
-    return array(
-        "openid"         => "ID Token",
-        "profile"        => "Profile",
-        "email"          => "E-Mail address",
-        "address"        => "Postal address",
-        "phone"          => "Phone",
-        "offline_access" => "Offline access"
-    );
-}
-function get_default_scope_descriptions()
-{
-    return array(
-        "openid"         => "The ID Token is a security token that contains Claims about the Authentication of an End-User, including the username.",
-        "profile"        => "This scope value requests access to the End-User's default profile Claims, which are: name, family_name, given_name, middle_name, nickname, preferred_username, profile, picture, website, gender, birthdate, zoneinfo, locale, and updated_at.",
-        "email"          => "This scope value requests access to the email and email_verified Claims.",
-        "address"        => "This scope value requests access to the address Claim.",
-        "phone"          => "This scope value requests access to the phone_number and phone_number_verified Claims.",
-        "offline_access" => "This scope value requests that an OAuth 2.0 Refresh Token be issued that can be used to obtain an Access Token that grants access to the End-User's UserInfo Endpoint even when the End-User is not present (not logged in)."
-    );
-}
-
 function get_default_claims()
 {
     return array(
@@ -1259,7 +1233,15 @@ function get_all_requested_claims($request, $scope) {
     log_debug("unique keys = %s", print_r($all_keys, true));
     $requested_claims = array();
     foreach($all_keys as $key) {
-        $requested_claims[$key] = max($userinfo_claims[$key], $id_token_claims[$key]);
+        $userinfo_claim = 0;
+        if (array_key_exists($key, $userinfo_claims)) {
+            $userinfo_claim = $userinfo_claims[$key];
+        }
+        $id_token_claim = 0;
+        if (array_key_exists($key, $id_token_claims)) {
+            $id_token_claim = $id_token_claims[$key];
+        }
+        $requested_claims[$key] = max($userinfo_claim, $id_token_claim);
     }
     log_debug("requested_claims = %s", print_r($requested_claims, true));
     return $requested_claims;
