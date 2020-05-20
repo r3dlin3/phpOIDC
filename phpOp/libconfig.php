@@ -15,15 +15,10 @@
  * limitations under the License.
  */
 
-
-
-
-define('OP_DB_CONF_FILE',                   __DIR__ . '/dbconf.php');
 define('RP_DB_CONF_FILE',                   dirname(__DIR__)  . '/phpRp/dbconf.php');
-define('DB_CONF_TEMPLATE',                  __DIR__ . '/dbconf.php.sample');
-define('AB_CONF_TEMPLATE',                   __DIR__ . '/abconstants.php.sample');
-define('OP_AB_CONF_FILE',                   __DIR__ . '/abconstants.php');
-define('RP_AB_CONF_FILE',                   dirname(__DIR__)  . '/phpRp/abconstants.php');
+define('AB_CONF_TEMPLATE',                   __DIR__ . '/config.php.sample');
+define('OP_AB_CONF_FILE',                   __DIR__ . '/config.php');
+define('RP_AB_CONF_FILE',                   dirname(__DIR__)  . '/phpRp/config.php');
 
 
 function configureDB($template, $configFile, $host, $port, $db, $user, $password, &$replacedText = null) {

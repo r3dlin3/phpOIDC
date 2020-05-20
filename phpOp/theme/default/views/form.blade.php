@@ -10,12 +10,12 @@ references:
     {%- set class_attr = class_attr ~ ' form-checkbox' -%}
 {%- endif -%}
 <{{ row.element|default('div') }} class="{{ class_attr }}">
-{% if row.type == "computed" -%}
+@if (row.type == "computed" -%}
     {# Do nothing #}
 {%- elseif type== "checkbox" -%}
     {{- form_widget(row) -}}
     {{- form_label(row) -}}
-{% else %}
+@else
     {{- form_label(row) -}}
     {{- form_widget(row) -}}
 {%- endif %}
@@ -33,7 +33,7 @@ references:
 
 {% macro form_widget(row) %}
 {%- set type = type|default('text') -%}
-<input type="{{ type }}" {{ widget_attributes(row) }} {% if value is not empty %}value="{{ value }}" {% endif %}/>
+<input type="{{ type }}" {{ widget_attributes(row) }} @if (value is not empty %}value="{{ value }}" @endif/>
 {% endmacro %}
 
 {%- macro widget_attributes(row) -%}

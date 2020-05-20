@@ -4,25 +4,19 @@
     <meta charset="utf-8">
     <meta name="author" content="Kodinger">
     <meta name="viewport" content="width=device-width,initial-scale=1">
-    {% set _block = block('title') %}
-    {% set maintitle = site.name %}
-    {% if _block is not empty %}
-        <title>{{ _block|raw }} | {{ maintitle }}</title>
-    {% else %}
-        <title>{{ maintitle }}</title>
-    {% endif %}
+    <title>@yield('title') | {{ $site['name'] }}</title>
     <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.0/css/bootstrap.min.css"
         integrity="sha384-9aIt2nRpC12Uk9gS9baDl411NQApFmC26EwAOH8WgZl5MYYxFfc+NcPb1dKGj7Sk" crossorigin="anonymous">
-    <link rel="stylesheet" type="text/css" href="{{ site.theme_uri }}/css/main.css">
+    <link rel="stylesheet" type="text/css" href="{!! $site['theme_uri'] !!}/css/main.css">
 </head>
 <body class="my-login-page">
     <section class="h-100">
         <div class="container h-100">
             <div class="row justify-content-md-center h-100">
                 <div class="card-wrapper">
-                    {% block content %}{% endblock %}
+                    @yield('content')
                     <div class="footer">
-                        {% trans "Copyright &copy; 2020 &mdash; Your Company" %}
+                        @_e('Copyright &copy; 2020 &mdash; Your Company')
                     </div>
                 </div>
             </div>
@@ -34,7 +28,7 @@
     <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.0/js/bootstrap.min.js"
         integrity="sha384-OgVRvuATP1z7JjHLkuOU7Xw704+h835Lr+6QL9UvYjZE3Ipu6Tp75j7Bh/kR0JKI"
         crossorigin="anonymous"></script>
-    <script src="{{ site.theme_uri }}/js/main.js"></script>
+    <script src="{!! $site['theme_uri'] !!}/js/main.js"></script>
 </body>
 
 </html>

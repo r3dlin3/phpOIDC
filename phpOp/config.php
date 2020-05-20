@@ -17,6 +17,9 @@
  */
 require_once(__DIR__ . '/libs/autoload.php');
 
+use eftec\bladeone\BladeOne;
+
+// Load .env
 $dotenv = Dotenv\Dotenv::createImmutable(__DIR__);
 $dotenv->load();
 
@@ -28,12 +31,13 @@ $op_server_name = getenv('OP_SERVER_NAME') ?: $_SERVER['SERVER_NAME'];
 
 
 // variables to construct OP_URL
-$protocol = $_SERVER['REQUEST_SCHEME'] .'://';
-$port='';
-if ( !($_SERVER['REQUEST_SCHEME'] === "http" && $_SERVER['SERVER_PORT'] == 80)
-        || !($_SERVER['REQUEST_SCHEME'] === "https" && $_SERVER['SERVER_PORT'] == 443))
-{
-    $port= ':'.$_SERVER['SERVER_PORT'];
+$protocol = $_SERVER['REQUEST_SCHEME'] . '://';
+$port = '';
+if (
+    !($_SERVER['REQUEST_SCHEME'] === "http" && $_SERVER['SERVER_PORT'] == 80)
+    || !($_SERVER['REQUEST_SCHEME'] === "https" && $_SERVER['SERVER_PORT'] == 443)
+) {
+    $port = ':' . $_SERVER['SERVER_PORT'];
 }
 $path = getenv('OP_URL') ? parse_url(getenv('OP_URL'))['path'] : dirname($_SERVER['SCRIPT_NAME']);
 
@@ -68,13 +72,12 @@ $config = [
         'registration_url' => getenv('REGISTRATION_URL') ?: OP_REGISTRATION_EP,
     ],
 
-    'twig' => [
-        'cache' => getenv('TWIG_CACHE') ?: (__DIR__ . '/cache'),
-        'auto_reload' => array_key_exists('TWIG_AUTO_RELOAD', $_ENV) ? (getenv('TWIG_AUTO_RELOAD') === 'true') : true,
+    'blade' => [
+        'cache' => getenv('BLADE_CACHE') ?: (__DIR__ . '/cache'),
     ],
 
     'OP' => [
-        'op_server_name'=> $op_server_name,
+        'op_server_name' => $op_server_name,
         'op_url' => $op_url,
         'enable_pkce' => getenv('ENABLE_PKCE') ?: false,
         'path' => $path,
@@ -96,9 +99,9 @@ $config = [
     ]
 ];
 
-///////////////
-// I18n
-///////////////
+/**
+ * I18n
+ */
 
 // create the accept factory
 $accept_factory = new Aura\Accept\AcceptFactory($_SERVER);
@@ -112,23 +115,12 @@ $language = $accept->negotiateLanguage($available_languages);
 $locale = $language->getValue();
 
 // Set language
-putenv('LANGUAGE=' . $locale);
-setlocale(LC_ALL, $locale);
+include __DIR__ . '/locales/' . $locale . '.php';
 
-define('DOMAIN', 'messages');
-// Specify the location of the translation tables
-bindtextdomain(DOMAIN, __DIR__ . '/locales');
-bind_textdomain_codeset(DOMAIN, 'UTF-8');
-// Choose domain
-textdomain(DOMAIN);
+$blade = new BladeOne($config['site']['views_path'], $config['blade']['cache'], BladeOne::MODE_AUTO);
+$blade->missingLog='./missingkey.txt'; // (optional) if a traduction is missing the it will be saved here.
 
-$loader = new \Twig\Loader\FilesystemLoader($config['site']['views_path']);
-$twig = new \Twig\Environment($loader, [
-    'cache' => $config['twig']['cache'],
-    'auto_reload' => $config['twig']['auto_reload']
-]);
-$twig->addGlobal('site', $config['site']);
-$twig->addExtension(new Twig_Extensions_Extension_I18n());
+$blade->share('site', $config['site']);
 
 $register_form = [
     [
@@ -139,22 +131,22 @@ $register_form = [
     ],
     [
         'name' => 'login',
-        'type' => 'computed',   
+        'type' => 'computed',
     ],
-    
+
     [
         'name' => 'given_name',
-        'type' => 'text',   
+        'type' => 'text',
         'attr' => "required"
     ],
     [
         'name' => 'family_name',
-        'type' => 'text',   
+        'type' => 'text',
         'attr' => "required"
     ],
     [
         'name' => 'password',
-        'type' => 'password',   
+        'type' => 'password',
         'attr' => "required data-eye"
     ],
 ];

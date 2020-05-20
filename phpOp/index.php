@@ -116,32 +116,32 @@ exit();
  */
 function loginform($display_name = '', $user_id = '', $client = null, $oplogin = false, $error = false)
 {
-    global $twig;
+    global $blade;
     $login_handler = $oplogin ? 'op' : '';
     $action_url = $_SERVER['SCRIPT_NAME'] . '/'.$login_handler.'login';
-    $template = $twig->load('login.twig');
-    $str = $template->render(['display_name' => $display_name, 
-                              'user_id' => $user_id,
-                              'client' => $client,
-                              'action_url' => $action_url,
-                              'error' => $error
-                              ]);
+    $str = $blade->run('login', [
+        'display_name' => $display_name, 
+        'user_id' => $user_id,
+        'client' => $client,
+        'action_url' => $action_url,
+        'error' => $error
+    ]);
     return $str;
 }
 
 
 function handle_register_form() {
-    global $twig;
+    global $blade;
     global $register_form;
 
     $action_url = $_SERVER['SCRIPT_NAME'] . '/register';
     $login_url = $_SERVER['SCRIPT_NAME'] . '/login';
     
-    $template = $twig->load('register.twig');
-    $str = $template->render(['form' => $register_form,
-                              'action_url' => $action_url,
-                              'login_url' => $login_url,
-                              ]);
+    $str = $blade->run('register', [
+        'form' => $register_form,
+        'action_url' => $action_url,
+        'login_url' => $login_url,
+    ]);
     return $str;
 }
 
@@ -152,7 +152,7 @@ function handle_register_form() {
  */
 function confirm_userinfo()
 {
-    global $twig;
+    global $blade;
     $req = $_SESSION['rpfA'];
     $scopes = explode(' ', $req['scope']);
     $response_types = explode(' ', $req['response_type']);
@@ -172,15 +172,15 @@ function confirm_userinfo()
     $account = db_get_account($_SESSION['username']);
     $action_url = $_SERVER['SCRIPT_NAME'] . '/confirm_userinfo';
 
-    $template = $twig->load('consent.twig');
-    $str = $template->render(['display_name' => "", 
-                              'user_id' => "",
-                              'claims_label' => $claims_label,
-                              'scopes' => $scopes,
-                              'account' => $account,
-                              'action_url' => $action_url,
-                              'client' => $client
-                              ]);
+    $str = $blade->run('consent', [
+        'display_name' => "", 
+        'user_id' => "",
+        'claims_label' => $claims_label,
+        'scopes' => $scopes,
+        'account' => $account,
+        'action_url' => $action_url,
+        'client' => $client
+    ]);
     return $str;
 }
 
@@ -1585,7 +1585,7 @@ function handle_default($file = null)
         echo file_get_contents(__DIR__ . $file);
         exit;
     }
-    global $twig;
+    global $blade;
     $error = $_REQUEST['error'];
     $desc = $_REQUEST['error_description'];
 
@@ -1593,10 +1593,10 @@ function handle_default($file = null)
         $error = '"' . $file . '" not found';
     }
 
-    $template = $twig->load('error.twig');
-    $str = $template->render(['error' => $error, 
-                              'desc' => $desc,
-                              ]);
+    $str = $blade->run("error",[
+        'error' => $error, 
+        'desc' => $desc,
+    ]);
     echo $str;
 }
 

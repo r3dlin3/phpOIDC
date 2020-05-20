@@ -1,24 +1,26 @@
-{% extends 'master.twig' %}
+@extends('master')
 {% from 'form.twig' import form_row %}
 
-{% block title %}Login{% endblock %}
+@section('title')
+Login
+@endsection
 
-{% block content %}
+@section('content')
 <div class="brand">
-    {% if client.policy_uri is not empty %}
+    @if (client.policy_uri is not empty %}
     <img src="{{ client.logo_uri }}" alt="{{ client.client_name }}">
-    {% else %}
+    @else
     <img src="img/logo.jpg" alt="logo">
-    {% endif %}
+    @endif
 </div>
 <div class="card fat">
     <div class="card-body">
         <h4 class="card-title">{{ client.client_name }} OP Login </h4>
-        {% if error %}
+        @if (error %}
         <div class="alert alert-danger" role="alert">
             Authentication error
         </div>
-        {% endif %}
+        @endif
 
         <form method="POST" class="my-login-validation" action="{{ action_url }}" novalidate="">
             {% for row in form %}
@@ -42,16 +44,16 @@
             </div>
         </form>
     </div>
-    {% if client.policy_uri is not empty or client.tos_uri is not empty %}
+    @if (client.policy_uri is not empty or client.tos_uri is not empty %}
     <div class="card-body">
-        {% if client.policy_uri is not empty %}
+        @if (client.policy_uri is not empty %}
         <a href="{{ client.policy_uri }}" class="card-link">Policy</a>
-        {% endif %}
-        {% if client.tos_uri is not empty %}
+        @endif
+        @if (client.tos_uri is not empty %}
         <a href="{{ client.tos_uri }}" class="card-link">Terms of use</a>
-        {% endif %}
-    {% endif %}
+        @endif
+    @endif
     </div>
     
 </div>
-{% endblock %}
+@endsection
