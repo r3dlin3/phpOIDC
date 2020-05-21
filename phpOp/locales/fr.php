@@ -119,6 +119,25 @@ BladeOne::$dictionary=array(
 
 "TitleError" => "Erreur",
 
-"Error" => "Erreur"
+"Error" => "Erreur",
 
+# register.blade.php
+"Already have an account?" => "Vous avez déjà un compte ?",
+"Register" => "S'inscrire",
+"TitleRegister" => "Enregistrement",
+
+"email" => "Adresse email",
+"given_name" => "Prénom",
+"family_name" => "Nom",
+"password" => "Mot de passe",
+
+"A valid e-mail address is required." => "Une adresse e-mail est requise.",
+'A complex password is required.' => 'Un mot de passe complexe est requis.',
+'A family name is required.' => 'Un nom de famille est requis.',
+'A given name is required.' => 'Un prénom est requis.',
+
+# register_success.blade.php
+'Authenticate yourself to continue.' => 'Authentifiez-vous pour continuer.',
+'TitleRegisterSuccess' => 'Compte créé',
+'You are now registered.' => 'Vous êtes maintenant enregistré.',
 );

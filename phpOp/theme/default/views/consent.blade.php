@@ -22,7 +22,6 @@
         </div>
 
         <div class="accordion mb-3" id="accordionScopes">
-
             @foreach ($scopes as $scope)
             <div class="card">
                 <div class="card-header py-1 pl-0" id="heading-{{ $scope }}">

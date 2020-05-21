@@ -32,6 +32,7 @@ class GetIDTokenCest
         
         // RP page with token info
         $I->see('UserInfo Response');
+        $I->see('alice@wonderland.com');
         $I->see('ID_Token Response');
 
         

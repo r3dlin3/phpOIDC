@@ -52,8 +52,11 @@ define('OP_TOKEN_EP', OP_INDEX_PAGE . '/token');
 define('OP_USERINFO_EP', OP_INDEX_PAGE . '/userinfo');
 define('OP_CHECKSESSION_EP', OP_INDEX_PAGE . '/checksession');
 define('OP_SESSIONINFO_EP', OP_INDEX_PAGE . '/sessioninfo');
-define('OP_REGISTRATION_EP', OP_INDEX_PAGE . '/register_form');
+define('OP_REGISTRATION_FORM_EP', OP_INDEX_PAGE . '/register_form');
+define('OP_REGISTRATION_EP', OP_INDEX_PAGE . '/register');
+define('OP_REGISTRATION_CONTINUE_EP', OP_INDEX_PAGE . '/register_continue');
 define('OP_PASSWORD_RESET_EP', OP_INDEX_PAGE . '/passreset_form');
+define('OP_LOGIN_EP', OP_INDEX_PAGE . '/login');
 
 /**
  * Global config
@@ -69,7 +72,7 @@ $config = [
         'enable_password_reset' =>  array_key_exists('ENABLE_PASSWORD_RESET', $_ENV) ? (getenv('ENABLE_PASSWORD_RESET') === 'true') : true,
         'password_reset_url' => getenv('PASSWORD_RESET_URL') ?: OP_PASSWORD_RESET_EP,
         'enable_registration' => array_key_exists('ENABLE_REGISTRATION', $_ENV) ? (getenv('ENABLE_REGISTRATION') === 'true') : true,
-        'registration_url' => getenv('REGISTRATION_URL') ?: OP_REGISTRATION_EP,
+        'registration_url' => getenv('REGISTRATION_URL') ?: OP_REGISTRATION_FORM_EP,
     ],
 
     'blade' => [
@@ -81,8 +84,9 @@ $config = [
         'op_url' => $op_url,
         'enable_pkce' => getenv('ENABLE_PKCE') ?: false,
         'path' => $path,
+        'sig_pkey' => getenv('OP_SIG_PKEY') ?:  __DIR__ . '/op_sig.key',
         'sig_pkey_passphrase' => getenv('OP_SIG_PKEY_PASSPHRASE') ?:  '',
-        'enc_pkey' => getenv('OP_ENC_PKEY') ?:  dirname($_SERVER['SCRIPT_FILENAME']) . '/op_enc.key',
+        'enc_pkey' => getenv('OP_ENC_PKEY') ?:  __DIR__ . '/op_enc.key',
         'enc_pkey_passphrase' => getenv('OP_ENC_PKEY_PASSPHRASE') ?:  '',
         'jwk_url' => getenv('OP_JWK_URL') ?:  $op_url . '/op.jwk',
         'sig_kid' => getenv('OP_SIG_KID') ?:  'PHPOP-00S',
@@ -122,31 +126,4 @@ $blade->missingLog='./missingkey.txt'; // (optional) if a traduction is missing 
 
 $blade->share('site', $config['site']);
 
-$register_form = [
-    [
-        'name' => 'email',
-        'type' => 'email',
-        'error_message' => 'A valid e-mail address is required',
-        'attr' => "required autofocus"
-    ],
-    [
-        'name' => 'login',
-        'type' => 'computed',
-    ],
-
-    [
-        'name' => 'given_name',
-        'type' => 'text',
-        'attr' => "required"
-    ],
-    [
-        'name' => 'family_name',
-        'type' => 'text',
-        'attr' => "required"
-    ],
-    [
-        'name' => 'password',
-        'type' => 'password',
-        'attr' => "required data-eye"
-    ],
-];
+$register_form = require_once(__DIR__ . '/register_form.php');

@@ -96,6 +96,19 @@ BladeOne::$dictionary=array(
 
 "TitleError" => "Error",
 
-"Error" => "Error"
+"Error" => "Error",
+
+# register.blade.php
+"Already have an account?" => "Already have an account?",
+"Register" => "Register",
+"TitleRegister" => "Register",
+
+"email" => "E-Mail address",
+"given_name" => "Given name",
+"family_name" => "Family name",
+"password" => "Password",
+
+# register_success.blade.php
+'TitleRegisterSuccess' => 'Registration successful',
 
 );

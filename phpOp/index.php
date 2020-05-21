@@ -93,13 +93,19 @@ switch($path_info) {
         break;
     case '/logout':  
         handle_logout();
-    break;
+        break;
     case '/auth': 
         handle_auth();
-    break;
+        break;
     case '/register_form': 
         handle_register_form();
-    break;
+        break;
+    case '/register': 
+        handle_register();
+        break;
+    case '/register_continue': 
+        handle_register_continue();
+        break;
     case (preg_match('/\/client.*/', $path_info) ? true : false) :
         handle_client_operations();
         break;
@@ -129,20 +135,156 @@ function loginform($display_name = '', $user_id = '', $client = null, $oplogin =
     return $str;
 }
 
+function handle_register_continue()
+{
+
+    echo loginform($_SESSION['user']['display_name'],
+                    $_SESSION['user']['username'],
+                    $_SESSION['client']);
+    exit();
+}
 
 function handle_register_form() {
     global $blade;
+    global $config;
     global $register_form;
 
-    $action_url = $_SERVER['SCRIPT_NAME'] . '/register';
-    $login_url = $_SERVER['SCRIPT_NAME'] . '/login';
+    if (!$config['site']['enable_registration']) {
+        $str = $blade->run('error', [
+            'error' => "Functionality is disabled",
+            'desc' => "Registration is disable",
+        ]);
+        echo $str;
+        return;
+    } 
     
     $str = $blade->run('register', [
         'form' => $register_form,
-        'action_url' => $action_url,
-        'login_url' => $login_url,
+        'action_url' => OP_REGISTRATION_EP,
+        'login_url' => OP_LOGIN_EP,
     ]);
-    return $str;
+    echo $str;
+}
+
+
+function get_value_from_form_by_property_name($form, $name)
+{
+    $row = array_filter($form, function ($k) use ($name) {
+        return $k['name'] == $name;
+    });
+    if ($row && count($row) == 1) {
+        $tmp = array_pop($row);
+        return $tmp['value'];
+    }
+    return null;
+}
+
+/**
+ * Validate form data used by the registration page
+ */
+function validate_register_data(&$form)
+{
+    $validaton_status = true;
+    
+    foreach ($form as &$item) {
+        $name = $item['name'];
+        $val = array_key_exists($name, $_POST) ? trim($_POST[$name]) : null;
+        $rules = array_key_exists('rules', $item) ? $item['rules'] : [];
+        if ($item['type'] === 'computed') {
+            if (array_key_exists('equalTo', $rules) 
+                && !empty($rules['equalTo'])) {
+                $equal_to_property_name = $rules['equalTo'];
+                $item['value'] = get_value_from_form_by_property_name($form, $equal_to_property_name);
+            } elseif (array_key_exists('join', $rules) 
+                    && !empty($rules['join'] && is_array($rules['join']))) {
+                $values = [];
+                foreach($rules['join'] as $propname) {
+                    // push value
+                    $values[] = get_value_from_form_by_property_name($form, $propname);
+                }
+                $item['value'] = join(' ', $values);
+            } 
+        } else {
+            $item['value'] = $val;
+            if ($item['type'] === 'email') {
+                if (!filter_var($val, FILTER_VALIDATE_EMAIL)) {
+                    $item['error_message'] = $item['message'];
+                }
+            }
+            if (array_key_exists('required', $rules) && $rules['required']) {
+                if (empty($val)) {
+                    $item['error_message'] = $item['message'];
+                }
+            }
+            if (array_key_exists('minlength', $rules)) {
+                if ( strlen($val) < $rules['minlength']) {
+                    $item['error_message'] = $item['message'];
+                }
+            }
+            if (array_key_exists('maxlength', $rules)) {
+                if ( strlen($val) > $rules['maxlength']) {
+                    $item['error_message'] = $item['message'];
+                }
+            }
+            if (array_key_exists('error_message', $item)) {
+                $validaton_status = false;
+            }
+        }
+    }
+    return $validaton_status;
+}
+/**
+ * Convert data to an associative array
+ * + convert password
+ * @return username
+ */
+function prepare_register_data($form) {
+    $values = [];
+    foreach($form as $property) {
+        if ($property['type'] === 'password') {
+            $values['crypted_password'] = create_hash($property['value']);
+        } else {
+            $values[$property['name']] = $property['value'];
+        }
+    }
+    return $values;
+}
+
+function handle_register() {
+    global $blade;
+    global $register_form;
+    global $config;
+
+    if (!$config['site']['enable_registration']) {
+        $str = $blade->run('error', [
+            'error' => "Functionality is disabled",
+            'desc' => "Registration is disable",
+        ]);
+        echo $str;
+        return;
+    }
+    if (!validate_register_data($register_form)) {
+        handle_register_form();
+        return;
+    }
+    $values = prepare_register_data($register_form);
+    if (db_create_account($values['login'], $values)) 
+    {
+        $_SESSION["user"] = [
+            "username" => $values['login'],
+            "display_name" => $values['name'],
+        ];
+        $str = $blade->run('register_success', [
+            'next_url' => OP_REGISTRATION_CONTINUE_EP,
+        ]);
+        echo $str;
+    } else {
+        $str = $blade->run('error', [
+            'error' => "Something went wrong",
+            'desc' => "Could not save your account",
+        ]);
+        echo $str;
+    }
 }
 
 /**
@@ -180,7 +322,7 @@ function confirm_userinfo()
         'account' => $account,
         'action_url' => $action_url,
         'client' => $client
-    ]);
+        ]);
     return $str;
 }
 
@@ -1511,7 +1653,8 @@ function handle_distributedinfo() {
 
 
 function handle_login() {
-    $username=preg_replace('/[^\w=_@]/','_',$_POST['username']);
+    // $username=preg_replace('/[^\w=_@]/','_',$_POST['username']);
+    $username=$_POST['username'];
     try {
         if(db_check_credential($username,$_POST['password'])){
             $_SESSION['login']=1;
@@ -1539,7 +1682,7 @@ function handle_login() {
             } else
                 send_response($username, true);
         } else { // Credential did not match so try again.
-            echo loginform($_REQUEST['username_display'], $username, $_SESSION['client'], false, true);
+            echo loginform($_REQUEST['display_name'], $username, $_SESSION['client'], false, true);
         }
     }
     catch(OidcException $e)
