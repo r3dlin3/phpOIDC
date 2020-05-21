@@ -15,7 +15,7 @@
             @_ef('Authenticate yourself to continue.')
         </p>
         <div class="text-center">
-            <a class="btn btn-primary btn-block mt-2" href="{!! $next_url !!}">@_e('Login')</a>
+            <a id="register_continue" class="btn btn-primary btn-block mt-2" href="{!! $next_url !!}">@_e('Login')</a>
         </div>
     </div>
 </div>

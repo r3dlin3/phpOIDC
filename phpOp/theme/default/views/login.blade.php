@@ -66,7 +66,7 @@
                 @_e("Don't have an account?")
             </div>
             <div class="text-center">
-                <a class="btn btn-outline-primary btn-block mt-2" href="{!! $site['registration_url'] !!}">@_e('Create an account')</a>
+                <a id="register" class="btn btn-outline-primary btn-block mt-2" href="{!! $site['registration_url'] !!}">@_e('Create an account')</a>
             </div>
             @endif
         </form>

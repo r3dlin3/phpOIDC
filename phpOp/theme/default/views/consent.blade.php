@@ -75,7 +75,7 @@
                     </button>
                 </div>
                 <div class="col">
-                    <button type="submit" class="btn btn-primary btn-block" tabindex="1" name="confirm" value="confirmed" autofocus>
+                    <button type="submit" class="btn btn-primary btn-block" tabindex="1" name="confirm" id="confirmed" value="confirmed" autofocus>
                         @_e('Accept')
                     </button>
                 </div>

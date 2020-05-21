@@ -31,7 +31,7 @@
                 @endswitch
             @endforeach
             <div class="form-group m-0">
-                <button type="submit" class="btn btn-primary btn-block">
+                <button type="submit" class="btn btn-primary btn-block" id="register">
                     @_e('Register')
                 </button>
             </div>

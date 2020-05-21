@@ -117,7 +117,8 @@ $accept = $accept_factory->newInstance();
 $available_languages = array('en', 'fr');
 $language = $accept->negotiateLanguage($available_languages);
 $locale = $language->getValue();
-
+if (!$locale)
+    $locale = 'en';
 // Set language
 include __DIR__ . '/locales/' . $locale . '.php';
 
