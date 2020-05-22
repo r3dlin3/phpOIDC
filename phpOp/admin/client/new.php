@@ -1,4 +1,7 @@
 <?php
+include_once(__DIR__ . '/../check_admin.php');
+check_admin();
+
 if (isset($_POST['submitted'])) {
     db_save_client($_POST['client_id'], $_POST);
     echo "Added row.<br />";

@@ -1,5 +1,7 @@
 <?php
 require_once __DIR__ . '/../../PasswordHash.php';
+include_once(__DIR__ . '/../check_admin.php');
+check_admin();
 
 if (isset($_GET['id']) ) {
 $id = (int) $_GET['id']; 

@@ -73,6 +73,7 @@ $config = [
         'password_reset_url' => getenv('PASSWORD_RESET_URL') ?: OP_PASSWORD_RESET_EP,
         'enable_registration' => array_key_exists('ENABLE_REGISTRATION', $_ENV) ? (getenv('ENABLE_REGISTRATION') === 'true') : true,
         'registration_url' => getenv('REGISTRATION_URL') ?: OP_REGISTRATION_FORM_EP,
+        'enable_admin' => array_key_exists('ENABLE_ADMIN', $_ENV) ? (getenv('ENABLE_ADMIN') === 'true') : true,
     ],
 
     'blade' => [

@@ -1,4 +1,7 @@
 <?php
+include_once(__DIR__ . '/../check_admin.php');
+check_admin();
+
 if (isset($_GET['id']) ) {
 $id = (int) $_GET['id']; 
 if (isset($_POST['submitted'])) { 

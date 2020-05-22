@@ -1,4 +1,7 @@
 <?php
+include_once(__DIR__ . '/../check_admin.php');
+check_admin();
+
 header('Content-Type: text/html; charset=utf8');
 include(__DIR__ . '/../../libdb2.php');
 ?>

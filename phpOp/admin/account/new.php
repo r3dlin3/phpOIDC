@@ -1,4 +1,7 @@
 <?php
+include_once(__DIR__ . '/../check_admin.php');
+check_admin();
+
 require_once __DIR__ . '/../../PasswordHash.php';
 
 if (isset($_POST['submitted'])) {

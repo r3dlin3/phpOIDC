@@ -1,4 +1,7 @@
 <?php
+include_once(__DIR__ . '/../check_admin.php');
+check_admin();
+
 echo "<div class='table1' style='width:600px;height:150px;'>";
 
 echo "<table border=1 >"; 
