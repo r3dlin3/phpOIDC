@@ -1,113 +1,378 @@
-phpOIDC Project
-===============
+= phpOIDC Project
+:toc: macro
+:toclevels: 3
 
-About phpOIDC
--------------
 
-This is an open source implementation of OpenID Connect in PHP by Nomura Research Institute, Ltd. 
-This project was partly funded by the PEOFIAMP project sponsored by the Ministry of internal affairs 
-and communication of Japan as a part of EU-Japan cooperation funding and is offered as the result of the project. 
+== About phpOIDC
 
-This implementation has been tested for interoperability at series of interop and has shown to be one of 
-the most compliant implementation. However, as the focus was on the interoperability, 
-less focus was given to the security issues around the implementation. Reviewers are kindly requested to submit any issues 
-to the "Issues" section of this repository. 
+This project is based on https://bitbucket.org/PEOFIAMP/phpoidc/src/default/[an open source implementation of OpenID Connect in PHP by Nomura Research Institute, Ltd]. 
 
-Also, please note the RP code here is not an RP that is usable for a regular RP work. 
-It is an OP debugger. We are using this to debug various OP implementations. 
-If you want to have some code to do regular RP processings, look for another implementation. 
+Even though the code is close to the code base, it still needs to be tested for interoperability, as the base project did not provide any tests.
 
-Licence
--------
-The project is offered under Apache license 2.0. 
+It provides:
 
-> Copyright 2013 Nomura Research Institute, Ltd.
-> 
-> Licensed under the Apache License, Version 2.0 (the "License");
-> you may not use this file except in compliance with the License.
-> You may obtain a copy of the License at
-> 
-> http://www.apache.org/licenses/LICENSE-2.0
-> 
-> Unless required by applicable law or agreed to in writing, 
-> software distributed under the License is distributed on 
-> an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, 
-> either express or implied.
-> See the License for the specific language governing permissions 
-> limitations under the License.
+- Fully interoperable OpenID Connect Provider
+- Web pages with themes (the default theme relies on https://github.com/nauvalazhar/my-login/[nauvalazhar's pages])
+- A relying provider, used for testing or demonstration
+- Docker images and docker compose ready to start (see <<5 minutes quickstart>>)
+- Registration page
+- Password reset page
+- Internationalization (currently English and French)
 
-Files
------
-There are two directories/folders: phpOp, and phpRp. They are the source code for OpenID Connect Provider and OpenID Connect Relying Party respecitively. 
+WARNING: This is implementation still lacks proper administration pages.
 
-There is a Debian package available as phpOidc_1.0-all.deb as well, which makes it easy for you to install and remove on a compatible platform. 
+toc::[] 
 
-Dependency/Requirements
------------------------
-* Apache Web Server with SSL
-* MySQL
+== Why start from  Nomura Research Institute implementation?
+
+There are few implementations of an OpenID Connect implementation in PHP. 
+It provided a lot of interoperability.
+However, https://bitbucket.org/PEOFIAMP/phpoidc/src/default/[the old implementation] lacked from:
+
+- Capability to customize the pages: HTML code was hardcoded in the PHP page
+- Lack of documentation: the documentation referred to a Debian package or few indications split among different files
+- No tests
+- Use of PEAR and composer
+- Old version of libraries
+- No Dockerfile
+
+== 5 minutes quickstart
+
+This tutorial walks you through a quick setup of phpOIDC, a MySQL instance and http://maildev.github.io/maildev/[MailDev] on Docker Compose.
+You need to have the latest Docker and Docker Compose version installed.
+
+We will use the Docker Compose configuration in this repository.
+
+To get the source code, you can:
+
+- if you have Git installed: `git clone https://github.com/r3dlin3/phpOIDC.git`
+- Otherwise: download the https://github.com/r3dlin3/phpOIDC/archive/master.zip[source code]. and extract it somewhere
+
+Change into the directory with the source code and run the following command to start the needed containers:
+
+----
+$ docker-compose -f quickstart.yml up --build
+Starting app
+Starting phpoidc_mysql_1
+Starting maildev
+[...]
+----
+
+Then execute the following command:
+
+  $ docker-compose -f .\quickstart.yml exec app libs/bin/doctrine orm:schema-tool:create
+
+You can access the homepage by going to http://localhost:8001.
+
+== Installation
+
+There are two folders: `phpOp` and `phpRp`.
+They are the source code for OpenID Connect Provider and OpenID Connect Relying Party espectively.
+
+Both can be installed on apache or NGINX. 
+
+=== Dependency/Requirements
+
+The installation of the following are not detailed and must be installed before hand:
+
+* Apache Web Server or NGINX. SSL is MANDATORY for production
+* MySQL (tested with MySQL 5 and 8)
 * PHP 7.2+
 * PHP Modules:
-  * Doctrine ORM 2.6.X
-  * PDO MySQL
-  * PHPSecLib
-  * cURL
+** PDO MySQL
+** cURL
 
-INSTALL
---------
-Refer to INSTALL document in each directory. 
+=== Database
 
-NOTE: There is an experimental .deb package available as well. 
-To use it to install, 
+Install MySQL and create a database and its user with a password. 
 
-* Install mysql and create a database and its user with a password. 
+NOTE: As the solution relies on Doctrine, it might work with other database but it has not already been tested.
+
+----
+$ sudo apt-get install mysql-server
+$ mysql -p
+mysql> create database `phpOidc`;
+mysql> grant all on phpOidc.* to phpOidc identified by 'new_password';
+mysql> quit;
+----
+
+The SQL script to import is provided in `phpOp/create_db.sql`.
+
+=== Web server
+
+==== Apache
+
+To enable "Dynamic Discovery", add the following configuration to Apache's web site configuration
+
+[source,apache]
+----
+Alias /.well-known/webfinger /var/www/html/phpOp/discovery.php
+Alias /.well-known/openid-configuration /var/www/html/phpOp/discovery.php
+Alias /phpOp/.well-known/openid-configuration /var/www/html/phpOp/discovery.php
+----
+
+The path `/var/www/html/` may be different depending on the location of the server's web document root directory.
+
+An example of the Apache configuration is provided in the folder link:apache[apache]
 
 
-```
-#!sh
+If you do not have to Apache configuration, you may use a `.htaccess` file with `mod_rewrite` 
+[source,apache]
+----
+<IfModule mod_rewrite.c>
+RewriteEngine on
+RewriteRule ^.well-known/webfinger.*$ /phpOp/discovery.php$1 [NC,L]
+RewriteRule ^.well-known/openid-configuration.*$ /phpOp/discovery.php$1 [NC,L]
+RewriteRule ^phpOp/.well-known/openid-configuration.*$ /phpOp/discovery.php$1 [NC,L]
+</IfModule>
+----
 
-    % sudo apt-get install mysql-server
-    % sudo apt-get install gdebi
-    % mysql -p
-    mysql> create database `phpOidc`;
-    mysql> grant all on phpOidc.* to phpOidc identified by 'new_password';
-    mysql> quit;
-    % sudo gdebi phpOidc_1.0-all.deb
-```
+An example of `.htaccess` is provided in link:apache/.htaccess[this repository].
 
-* Follow the instruction that appears at the end of the installation
-* (Configure apache for SSL if it were not previously.)
-* Restart apache. 
+==== NGINX
 
-Notes on using with nginx
---------------------------
-As of March 18, we are trying to add support for nginx.
+To enable "Dynamic Discovery", add the following configuration to NGINX configuration (e.g. `/etc/nginx/sites-enabled/default`):
+
+[source,nginx]
+----
+location ~ [^/]\.php(/|$) {
+  fastcgi_split_path_info ^(.+?\.php)(/.*)$;
+  if (!-f $document_root$fastcgi_script_name) {
+          return 404;
+  }
+  fastcgi_pass app:9000;
+  # With php-fpm locally:
+  # fastcgi_pass unix:/var/run/php5-fpm.sock;
+  fastcgi_index index.php;
+  include fastcgi_params;
+  fastcgi_param SCRIPT_FILENAME $document_root$fastcgi_script_name;
+  fastcgi_param PATH_INFO $fastcgi_path_info;
+}
+
+location ~ /\.well-known/[webfinger|openid\-configuration] {
+  alias /var/www/html/phpOp/discovery.php;
+  fastcgi_split_path_info ^(.+\.php)(/.+)$;
+  fastcgi_pass app:9000;
+  fastcgi_index index.php;
+  include fastcgi_params;
+  fastcgi_param SCRIPT_FILENAME $document_root$fastcgi_script_name;
+  fastcgi_param PATH_INFO $fastcgi_path_info;
+}
+----
+
+The path `/var/www/html` may be different depending on the location of the server's web document root directory.
+
+The `fastcgi_pass` directive should be correctly configured for sockets or tcp.
+
+An example of NGINX configuration is provided in link:nginx[this repository].
+
+=== Configuration
+
+==== OP
+
+Configuration of OP is done by leveraging https://github.com/vlucas/phpdotenv[PHP dotenv].
+
+Copy `phpOp/.env.example` as `phpOp/.env` and edit the file to set the configuration.
+
+The parameters are described below:
+
+[width="80%",cols="3m,10,3m",options="header", stripes=even]
+|===
+|Parameter |Description |Default Value
+
+| LOGFILE
+| Where logs are stored
+| app.log
+
+| LOGLEVEL
+| Log level. Possible values are DEBUG, INFO, NOTICE, WARNING, ERROR, CRITICAL, ALERT, EMERGENCY
+| DEBUG
+
+| THEME_NAME
+| Name of the theme
+| default
+
+| THEME_PATH
+| Root path to theme files
+| ./theme/${THEME_NAME}
+
+| THEME_URI
+| Part of the URL for the theme. It is used to load on the client side CSS, JavaScript, Images, etc.
+| relative to current script
+
+| VIEWS_PATH
+| Path to view files. Used by BladeOne.
+| ${THEME_PATH}/views
 
 
+| ENABLE_PASSWORD_RESET
+| Enable password reset. Must be 'true' or 'false'.
+| true
 
-Refresh cache
--------------
+| PASSWORD_RESET_URL
+| Password reset URL. Can be outside current URL
+| computed
+
+| ENABLE_REGISTRATION
+| Enable registration reset. Must be 'true' or 'false'.
+| true
+
+| REGISTRATION_URL
+| Registration URL. Can be outside current URL
+| computed
+
+| ENABLE_ADMIN
+| Enable admin interface. Beware that current implementation of admin is insecure as there is no access control. Must be 'true' or 'false'.
+| true
+
+| BLADE_CACHE 
+| Path to cache. Used by BladeOne. 
+| ./cache
+
+| OP_SERVER_NAME
+| Specifies the OP's server name/IP address.
+| By default, it uses what the client uses
+
+| SITE_NAME
+| Name of the OP (for end-user display)
+| ${OP_SERVER_NAME}
+
+| OP_URL
+| Base URL of the OP (without index.php)
+| computed based on request info
+
+| ENABLE_PKCE
+| Enable PKCE
+| false
+
+| OP_SIG_PKEY
+| path to the OP's private key for signing
+| Default= ./op_sig.key
+
+
+| OP_SIG_PKEY_PASSPHRASE
+| OP's pass phrase for the private key file 
+| ""
+
+| OP_ENC_PKEY
+| path to the OP's private key for encryption
+| "./op_enc.key"
+
+| OP_ENC_PKEY_PASSPHRASE
+| OP's pass phrase for the private key file
+| ""
+
+| OP_JWK_URL
+| URL to OP's public JWK
+| ${OP_URL} . '/op.jwk'
+
+| OP_SIG_KID
+| OP's Signature Kid
+| 'PHPOP-00S'
+
+| OP_ENC_KID
+| OP's Encryption Kid
+| 'PHPOP-00E'
+
+| DB_TYPE
+| Type of database
+|
+
+| DB_PORT
+| Port used by the database
+|
+
+|DB_DATABASE
+| Name of the database
+|
+
+|DB_USER
+| User used to connect to the database
+|
+
+|DB_PASSWORD
+| password to connect to the database
+|
+
+|DB_HOST
+| Hostname of the database server
+|
+|===
+
+==== RP
+
+The relies partly on <<OP,OP's configuration>> and on the file `phpRp/abconstants.php`.
+Edit this file to set the parameters/
+
+- `RP_PKEY`
+- `RP_PKEY_PASSPHRASE`
+- `RP_SIG_KID`
+- `RP_JWK_URL`
+- `RP_ENC_JWK_URL`
+
+=== OP and RP Signature and Encryption Keys
+
+the OP and RP samples come with demo keys. You may want to create new 2048 bit RSA keys.
+A new private key can be generated by using the ocmmand :
+
+  openssl genrsa -out filename 2048
+
+A JWK can be generated by using the command
+
+  php phpOp/makejwk.php path_to_key_filename kid ''
+
+== Development
+
+=== With Docker
+
+As for the <<5 minutes quickstart>>, you can run the following commands to spin off an instance
+
+  docker-compose  -f quickstart.yml up --build
+  docker-compose -f .\quickstart.yml exec app libs/bin/doctrine orm:schema-tool:create
+
+In dev, the container is running a ubuntu-based image using `root`, so you can install anything.
+For instance:
+
+----
+$ docker-compose -f .\quickstart.yml exec app bash
+# apt update && apt install vim -y
+----
+
+XDEBUG is actived automatically thanks to the environment variable `XDEBUG_CONFIG` set in the Docker Compose file.
+
+With Visual Studio Code, add the following configuration
+[source,json]
+----
+{
+  "name": "Listen for XDebug in Docker",
+  "type": "php",
+  "request": "launch",
+  "port": 9002,
+  "pathMappings": {
+    "/var/www/html": "${workspaceFolder}"
+  }
+}
+----
+
+=== Pages
+
+Pages are rendered using the template engine https://github.com/EFTEC/BladeOne/[BladeOne], a lightweight standalone implemation of Laravel's template engine: https://laravel.com/docs/7.x/blade[Blade].
+
+It is possible to clear cache if needed but running the following PowerShell script
 
 [source,powershell]
 ----
+cd phpOp
 Get-ChildItem .\cache\*.bladec | Remove-Item 
 ----
 
+=== Tests
 
+Acceptance tests and API tests relies on https://codeception.com/[CODECEPTION_].
+You can execute them by running the following command inside `phpOp`:
 
-https://github.com/nauvalazhar/my-login/blob/master/LICENSE
-
-
-Tests
------
-
+[source,powershell]
+----
+cd phpOp
 .\libs\bin\codecept.bat run
-
-
-
-
-
-docker-compose  -f quickstart.yml up --build
-docker-compose -f .\quickstart.yml exec app libs/bin/doctrine orm:schema-tool:create
-
-apt-get update && apt-get install vim -y
+----
