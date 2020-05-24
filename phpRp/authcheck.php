@@ -22,10 +22,11 @@ include_once('../phpOp/libdb2.php');
 
 header('Content-Type: text/html; charset=utf-8');
 
-$session_path = session_save_path() . RP_PATH;
-if(!file_exists($session_path))
-    mkdir($session_path);
-session_save_path($session_path);
+// $session_path = session_save_path() . RP_PATH;
+// if(!file_exists($session_path))
+//     mkdir($session_path);
+// session_save_path($session_path);
+session_set_cookie_params(0, RP_PATH);
 session_start();
 
 

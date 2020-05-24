@@ -37,11 +37,7 @@ $g_forms = '';
 $g_headers = array();
 $g_heads = array();
 
-
-$session_path = session_save_path() . RP_PATH;
-if(!file_exists($session_path))
-    mkdir($session_path);
-session_save_path($session_path);
+session_set_cookie_params(0, RP_PATH);
 session_start();
 
 
@@ -2548,7 +2544,7 @@ function get_checkboxes_html($name, $options) {
         if(!$display)
             $display = $option;
         $option_name = $name . '_' . $option;
-        if(array_key_exists($option_name, $_SESSION)) {
+        if($_SESSION && array_key_exists($option_name, $_SESSION)) {
             if($_SESSION[$option_name] == 'on')
                 $checked = 'checked';
             else
@@ -2881,8 +2877,13 @@ function curl_fetch_url($url, $headers = NULL, $c_options = NULL, $is_post = fal
     $req_out = curl_getinfo($ch, CURLINFO_HEADER_OUT);
     $response_headers = $g_headers[$ch];
     unset($g_headers[$ch]);
+    if (curl_errno($ch)) { 
+        log_error("curl_fetch_url ==> %s", curl_error($ch));
+    } else {
+
+        log_debug("curl_fetch_url ==> %s\n%s\n%s\n%s", $status_code,$req_out, $response_headers, $data_responseText);
+    }
     curl_close($ch);
-    log_debug("curl_fetch_url ==> %s\n%s\n%s", $req_out, $response_headers, $data_responseText);
     return array($status_code, $data_content_type, $req_out, $response_headers, $data_responseText);
 }
 

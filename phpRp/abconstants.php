@@ -15,34 +15,45 @@
  * limitations under the License.
  */
 
-
-define("LOGFILE", __DIR__ . '/app.log');
-define("LOGLEVEL", 'DEBUG');
-
 /*
 * Specifies the OP's server name/IP address. By default, it uses what the client uses
 */
 
 
-if (!defined('RP_SERVER_NAME'))
-    define('RP_SERVER_NAME', $_SERVER['SERVER_NAME']);
+if (!defined('RP_SERVER_NAME')) {
+    if ($_SERVER['SERVER_NAME'])
+        define('RP_SERVER_NAME', $_SERVER['SERVER_NAME']);
+    else {
+        $pieces = explode(":", $_SERVER['HTTP_HOST']);
+        define('RP_SERVER_NAME', $pieces[0]);
+    }
+}
 
 /*
 * Specifies the RP's protocol 
 */
-define("RP_PROTOCOL", 'http://');
+define("RP_PROTOCOL", $_SERVER['REQUEST_SCHEME'] . '://');
 
 /*
 * Specifies the RP's protocol port 
 * Should use ':port_num' format e.g. :80
 */
-define("RP_PORT", ':8080');
+$port = '';
+if (
+    !($_SERVER['REQUEST_SCHEME'] === "http" && $_SERVER['SERVER_PORT'] == 80)
+    || !($_SERVER['REQUEST_SCHEME'] === "https" && $_SERVER['SERVER_PORT'] == 443)
+) {
+    $port = ':' . $_SERVER['SERVER_PORT'];
+}
+define("RP_PORT", $port);
 
 /*
 * Specifies the RP's PATH
 * 
 */
-define("RP_PATH", '/' . basename(dirname($_SERVER['SCRIPT_FILENAME'])));
+// strip the document_root from the script filename and extract the folder
+$path = dirname(str_replace($_SERVER['DOCUMENT_ROOT'],'',$_SERVER['SCRIPT_FILENAME']));
+define("RP_PATH", $path);
 
 /*
 * Specifies the RP's URL

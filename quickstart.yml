@@ -1,0 +1,60 @@
+version: '3'
+services:
+
+  #PHP+Apache Service
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: phpoidc:latest
+    container_name: app
+    restart: unless-stopped
+    tty: true
+    working_dir: /var/www/html/phpOp
+    volumes:
+      - ./apache/sites-available:/etc/apache2/sites-enabled
+      - ./:/var/www/html
+    environment:
+      XDEBUG_CONFIG: remote_host=host.docker.internal remote_port=9002 remote_enable=1
+    networks:
+      - app-network
+    depends_on:
+      - mysql
+    ports:
+      - "8001:8001"
+
+  #MySQL Service
+  mysql:
+    image: mysql:latest
+    restart: unless-stopped
+    command: --default-authentication-plugin=mysql_native_password
+    tty: true
+    # ports:
+    #   - "3306:3306"
+    environment:
+      MYSQL_DATABASE: phpoidc
+      MYSQL_USER: phpoidc
+      MYSQL_PASSWORD: phpoidc
+      MYSQL_ROOT_PASSWORD: your_mysql_root_password
+    networks:
+      - app-network
+  # MailDev 
+  maildev:
+    image: maildev/maildev
+    container_name: maildev
+    restart: unless-stopped
+    tty: true
+    ports:
+      - "1080:80"
+    environment:
+      MYSQL_DATABASE: phpoidc
+      MYSQL_USER: phpoidc
+      MYSQL_PASSWORD: phpoidc
+      MYSQL_ROOT_PASSWORD: your_mysql_root_password
+    networks:
+      - app-network
+
+#Docker Networks
+networks:
+  app-network:
+    driver: bridge

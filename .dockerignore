@@ -1,0 +1,6 @@
+phpRp/libs/*
+phpRp/app.log
+phpOp/libs/*
+phpOp/cache/*.bladec
+phpOp/missingkey.txt
+phpOp/app.log

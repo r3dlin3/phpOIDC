@@ -27,7 +27,21 @@ $dotenv->load();
 $theme_name = getenv('THEME_NAME') ?: 'default';
 $theme_path =  getenv('THEME_PATH') ?: (__DIR__ . '/theme/' . $theme_name);
 
-$op_server_name = getenv('OP_SERVER_NAME') ?: $_SERVER['SERVER_NAME'];
+// $op_server_name can be set by:
+// - Env var (OP_SERVER_NAME)
+// - the server name (coming from $_SERVER['SERVER_NAME'])
+// - from the request itself ($_SERVER['HTTP_HOST']). Not secured. But this is a configuration
+// for testing purpose. It is recommended to be set the OP_URL environment variable.
+if (getenv('OP_SERVER_NAME')) {
+    $op_server_name = getenv('OP_SERVER_NAME');
+} else {
+    if ($_SERVER['SERVER_NAME'])
+    $op_server_name = $_SERVER['SERVER_NAME'];
+    else {
+        $pieces = explode(":", $_SERVER['HTTP_HOST']);
+        $op_server_name = $pieces[0];
+    }
+}
 
 
 // variables to construct OP_URL
@@ -39,9 +53,10 @@ if (
 ) {
     $port = ':' . $_SERVER['SERVER_PORT'];
 }
-$path = getenv('OP_URL') ? parse_url(getenv('OP_URL'))['path'] : dirname($_SERVER['SCRIPT_NAME']);
-
-$op_url = getenv('OP_URL') ?: ($protocol . $_SERVER['SERVER_NAME'] . $port . $path);
+$path = getenv('OP_URL') ? parse_url(getenv('OP_URL'))['path'] : 
+            dirname(str_replace($_SERVER['DOCUMENT_ROOT'], '', $_SERVER['SCRIPT_FILENAME'])); // strip the document_root from the script filename and extract the folder
+define("OP_PATH", $path);
+$op_url = getenv('OP_URL') ?: ($protocol . $op_server_name . $port . $path);
 
 /**
  * OP endpoints and metadata
@@ -124,7 +139,7 @@ if (!$locale)
 include __DIR__ . '/locales/' . $locale . '.php';
 
 $blade = new BladeOne($config['site']['views_path'], $config['blade']['cache'], BladeOne::MODE_AUTO);
-$blade->missingLog='./missingkey.txt'; // (optional) if a traduction is missing the it will be saved here.
+#$blade->missingLog='./missingkey.txt'; // (optional) if a traduction is missing the it will be saved here.
 
 $blade->share('site', $config['site']);
 

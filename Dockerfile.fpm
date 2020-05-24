@@ -1,0 +1,68 @@
+FROM php:7.4-fpm
+
+
+# Set working directory
+WORKDIR /var/www/html
+
+
+# Install dependencies and clear cache
+RUN apt-get update \
+    && apt-get install -y \
+        unzip \
+        zip \
+# https://github.com/docker-library/php/issues/61
+        zlib1g-dev \ 
+        libzip-dev \ 
+        git \
+# libonig-dev required for mbstring cf. https://github.com/docker-library/php/issues/880
+        libonig-dev \
+    && apt-get clean \
+    && rm -rf /var/lib/apt/lists/*
+# Install extensions
+RUN docker-php-ext-install pdo_mysql mbstring zip
+
+# Install composer
+RUN curl -sS https://getcomposer.org/installer | php -- --install-dir=/usr/local/bin --filename=composer
+
+# Add user for application
+RUN groupadd -g 1000 www
+RUN useradd -u 1000 -ms /bin/bash -g www www
+
+
+# Copy composer.lock and composer.json
+COPY ./phpRp/composer.lock ./phpRp/composer.json /var/www/html/phpRp/
+# --no-dev?
+RUN cd /var/www/html/phpRp/ \
+    && composer install --prefer-dist --no-scripts --no-dev --no-autoloader
+# Copy composer.lock and composer.json
+COPY ./phpOp/composer.lock ./phpOp/composer.json /var/www/html/phpOp/
+# --no-dev?
+# scripts required for doctrine
+RUN cd /var/www/html/phpOp/ \
+    && composer install --prefer-dist --no-dev --no-autoloader \
+    && rm -rf ~/.composer
+
+
+# Copy existing application directory contents
+
+#### /!\ unsecure /!\ ###
+COPY . /var/www/html
+COPY ./phpOp/.env.example /var/www/html/phpOp/.env
+
+# Copy existing application directory permissions
+#### secure ###
+#COPY --chown=www:www . /var/www/html
+
+# Grant access to cache
+RUN chown www-data:www-data /var/www/html/phpOp/cache
+
+
+# Finish composer
+RUN cd /var/www/html/phpRp/ && composer dump-autoload --no-scripts --no-dev --optimize
+RUN cd /var/www/html/phpOp/ && composer dump-autoload --no-scripts --no-dev --optimize
+
+# Change current user to www
+#### /!\ unsecure if commented /!\ ###
+#USER www
+
+VOLUME [ "/var/www/html" ]

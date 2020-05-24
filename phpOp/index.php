@@ -37,7 +37,7 @@ header('Content-Type: text/html; charset=utf8');
 // if(!file_exists($session_path))
 //     mkdir($session_path);
 // session_save_path($session_path);
-
+session_set_cookie_params(0, OP_PATH);
 $path_info = array_key_exists('PATH_INFO', $_SERVER) ? $_SERVER['PATH_INFO'] : NULL;
 switch($path_info) {
     case '/token':

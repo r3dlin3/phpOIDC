@@ -1,4 +1,5 @@
 libs/*
-cache/**/*
+cache/*.bladec
 .env
 missingkey.txt
+app.log

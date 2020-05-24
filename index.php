@@ -1,19 +1,11 @@
-<?php
-include(__DIR__ . '/check_admin.php');
-check_admin();
-?>
-
 <!DOCTYPE html>
 <html lang="en">
-
 <head>
     <meta charset="utf-8">
-    <meta name="author" content="Kodinger">
     <meta name="viewport" content="width=device-width,initial-scale=1">
-    <title>Admin</title>
+    <title>Home</title>
     <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.0/css/bootstrap.min.css" integrity="sha384-9aIt2nRpC12Uk9gS9baDl411NQApFmC26EwAOH8WgZl5MYYxFfc+NcPb1dKGj7Sk" crossorigin="anonymous">
 </head>
-
 <body class="my-login-page">
     <section class="h-100">
         <div class="container h-100">
@@ -21,8 +13,8 @@ check_admin();
                 <div class="card-wrapper w-50 mt-5 pt-5">
                     <div class="card">
                         <div class="card-body">
-                            <a href="client" class="btn btn-primary btn-block">Clients</a>
-                            <a href="account" class="btn btn-primary btn-block mt-4">Accounts</a>
+                            <a href="phpRp" class="btn btn-primary btn-block">Go to test Relying Party</a>
+                            <a href=".well-known/openid-configuration" class="btn btn-primary btn-block mt-4">Obtaining OpenID Provider Configuration Information</a>
                         </div>
                     </div>
                     <div class="footer">
@@ -35,5 +27,4 @@ check_admin();
     <script src="https://code.jquery.com/jquery-3.5.1.slim.min.js" integrity="sha384-DfXdz2htPH0lsSSs5nCTpuj/zy4C+OGpamoFVy38MVBnE+IbbVYUew+OrCXaRkfj" crossorigin="anonymous"></script>
     <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.0/js/bootstrap.min.js" integrity="sha384-OgVRvuATP1z7JjHLkuOU7Xw704+h835Lr+6QL9UvYjZE3Ipu6Tp75j7Bh/kR0JKI" crossorigin="anonymous"></script>
 </body>
-
 </html>

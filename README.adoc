@@ -104,31 +104,10 @@ Tests
 .\libs\bin\codecept.bat run
 
 
-I18N
-----
-
-1. clear cache
-
-2. Generate cache
-  php ./tools/generate_cache.php
-
-3. Generate POT (Portable Object Template):
-  
-  xgettext --from-code=UTF-8  -o ./locales/messages -n --language=PHP ./cache/*/*.php
-
-4. Create POs if not already exist
-
-  msginit --locale=fr --output-file=./locales/fr/LC_MESSAGES/messages.po --input=./locales/messages.pot
-  msginit --locale=en --output-file=./locales/en/LC_MESSAGES/messages.po --input=./locales/messages.pot
-
-5. Merge POs if already exist
-
-  msgmerge -U ./locales/fr/LC_MESSAGES/messages.po ./locales/messages.pot
-  msgmerge -U ./locales/en/LC_MESSAGES/messages.po ./locales/messages.pot
-
-6. Generate MOs
-
-  msgfmt -c -o ./locales/fr/LC_MESSAGES/messages.mo ./locales/fr/LC_MESSAGES/messages.po
-  msgfmt -c -o ./locales/en/LC_MESSAGES/messages.mo ./locales/en/LC_MESSAGES/messages.po
 
 
+
+docker-compose  -f quickstart.yml up --build
+docker-compose -f .\quickstart.yml exec app libs/bin/doctrine orm:schema-tool:create
+
+apt-get update && apt-get install vim -y
