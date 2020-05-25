@@ -10,10 +10,10 @@ services:
     container_name: app
     restart: unless-stopped
     tty: true
-    working_dir: /var/www/html/phpOp
+    working_dir: /var/www/phpOp
     volumes:
       - ./apache/sites-available:/etc/apache2/sites-enabled
-      - ./:/var/www/html
+      - ./:/var/www/
     environment:
       XDEBUG_CONFIG: remote_host=host.docker.internal remote_port=9002 remote_enable=1
     networks:

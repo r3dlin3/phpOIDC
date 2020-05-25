@@ -25,7 +25,7 @@ $dotenv->load();
 
 
 $theme_name = getenv('THEME_NAME') ?: 'default';
-$theme_path =  getenv('THEME_PATH') ?: (__DIR__ . '/theme/' . $theme_name);
+// $theme_path =  getenv('THEME_PATH') ?: (__DIR__ . '/theme/' . $theme_name);
 
 // $op_server_name can be set by:
 // - Env var (OP_SERVER_NAME)
@@ -54,7 +54,7 @@ if (
     $port = ':' . $_SERVER['SERVER_PORT'];
 }
 $path = getenv('OP_URL') ? parse_url(getenv('OP_URL'))['path'] : 
-            dirname(str_replace($_SERVER['DOCUMENT_ROOT'], '', $_SERVER['SCRIPT_FILENAME'])); // strip the document_root from the script filename and extract the folder
+getenv('OP_URL') ?: '/phpOp';
 define("OP_PATH", $path);
 $op_url = getenv('OP_URL') ?: ($protocol . $op_server_name . $port . $path);
 
@@ -79,9 +79,9 @@ define('OP_LOGIN_EP', OP_INDEX_PAGE . '/login');
 $config = [
     'site' => [
         'theme_name' => $theme_name,
-        'theme_path' => $theme_path,
+        // 'theme_path' => $theme_path,
         'theme_uri' => getenv('THEME_URI') ?: (dirname($_SERVER['SCRIPT_NAME']) . '/theme/' . $theme_name),
-        'views_path' => getenv('VIEWS_PATH') ?: $theme_path . '/views',
+        'views_path' => getenv('VIEWS_PATH') ?:  __DIR__ . '/views/' . $theme_name,
         'name' => getenv('SITE_NAME') ?: $op_server_name,
         "url" => $op_url,
         'enable_password_reset' =>  array_key_exists('ENABLE_PASSWORD_RESET', $_ENV) ? (getenv('ENABLE_PASSWORD_RESET') === 'true') : true,
@@ -100,9 +100,9 @@ $config = [
         'op_url' => $op_url,
         'enable_pkce' => getenv('ENABLE_PKCE') ?: false,
         'path' => $path,
-        'sig_pkey' => getenv('OP_SIG_PKEY') ?:  __DIR__ . '/op_sig.key',
+        'sig_pkey' => getenv('OP_SIG_PKEY') ?:  __DIR__ . '/op/op_sig.key',
         'sig_pkey_passphrase' => getenv('OP_SIG_PKEY_PASSPHRASE') ?:  '',
-        'enc_pkey' => getenv('OP_ENC_PKEY') ?:  __DIR__ . '/op_enc.key',
+        'enc_pkey' => getenv('OP_ENC_PKEY') ?:  __DIR__ . '/op/op_enc.key',
         'enc_pkey_passphrase' => getenv('OP_ENC_PKEY_PASSPHRASE') ?:  '',
         'jwk_url' => getenv('OP_JWK_URL') ?:  $op_url . '/op.jwk',
         'sig_kid' => getenv('OP_SIG_KID') ?:  'PHPOP-00S',

@@ -16,10 +16,10 @@
  * limitations under the License.
  */
 
-include_once("config.php");
-include_once("libjsoncrypto.php");
-require_once('libdb2.php');
-include_once('logging.php');
+include_once("../config.php");
+include_once("../libjsoncrypto.php");
+require_once('../libdb2.php');
+include_once('../logging.php');
 
 error_reporting(E_ERROR | E_WARNING | E_PARSE);
 logw_debug("Request: %s\nInput: %s", count($_REQUEST) ? print_r($_REQUEST, true) : '[ ]', file_get_contents('php://input'));

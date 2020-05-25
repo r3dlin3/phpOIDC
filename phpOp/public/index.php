@@ -15,12 +15,12 @@
  * limitations under the License.
  */
 
-include_once("config.php");
-include_once("libjsoncrypto.php");
-include_once('libdb2.php');
-include_once('logging.php');
-include_once('OidcException.php');
-include_once('apache_header.php');
+include_once("../config.php");
+include_once("../libjsoncrypto.php");
+include_once('../libdb2.php');
+include_once('../logging.php');
+include_once('../OidcException.php');
+include_once('../apache_header.php');
 
 error_reporting(E_ERROR | E_WARNING | E_PARSE);
 

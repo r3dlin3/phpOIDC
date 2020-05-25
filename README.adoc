@@ -11,13 +11,21 @@ Even though the code is close to the code base, it still needs to be tested for 
 
 It provides:
 
-- Fully interoperable OpenID Connect Provider
-- Web pages with themes (the default theme relies on https://github.com/nauvalazhar/my-login/[nauvalazhar's pages])
-- A relying provider, used for testing or demonstration
-- Docker images and docker compose ready to start (see <<5 minutes quickstart>>)
-- Registration page
-- Password reset page
-- Internationalization (currently English and French)
+* Fully interoperable OpenID Connect Provider. It implements the following specifications :
+
+** OpenID Connect Core 1.0
+** OpenID Connnect Discovery 1.0
+** OpenID Connect Registration 1.0
+** OpenID Connect Dynamic Registration 1.0
+** OpenID Connect Session Management 1.0
+
+* End-user authentication, authorization, and provides identity and basic profile information to Relying Parties
+* Web pages with themes (the default theme relies on https://github.com/nauvalazhar/my-login/[nauvalazhar's pages])
+* A relying provider, used for testing or demonstration
+* Docker images and docker compose ready to start (see <<5 minutes quickstart>>)
+* Registration page to create a local account
+* Password reset page
+* Internationalization (currently English and French)
 
 WARNING: This is implementation still lacks proper administration pages.
 
@@ -29,12 +37,12 @@ There are few implementations of an OpenID Connect implementation in PHP.
 It provided a lot of interoperability.
 However, https://bitbucket.org/PEOFIAMP/phpoidc/src/default/[the old implementation] lacked from:
 
-- Capability to customize the pages: HTML code was hardcoded in the PHP page
-- Lack of documentation: the documentation referred to a Debian package or few indications split among different files
-- No tests
-- Use of PEAR and composer
-- Old version of libraries
-- No Dockerfile
+* Capability to customize the pages: HTML code was hardcoded in the PHP page
+* Lack of documentation: the documentation referred to a Debian package or few indications split among different files
+* No tests
+* Use of PEAR and composer
+* Old version of libraries
+* No Dockerfile
 
 == 5 minutes quickstart
 
@@ -45,8 +53,8 @@ We will use the Docker Compose configuration in this repository.
 
 To get the source code, you can:
 
-- if you have Git installed: `git clone https://github.com/r3dlin3/phpOIDC.git`
-- Otherwise: download the https://github.com/r3dlin3/phpOIDC/archive/master.zip[source code]. and extract it somewhere
+* if you have Git installed: `git clone https://github.com/r3dlin3/phpOIDC.git`
+* Otherwise: download the https://github.com/r3dlin3/phpOIDC/archive/master.zip[source code]. and extract it somewhere
 
 Change into the directory with the source code and run the following command to start the needed containers:
 
@@ -304,11 +312,11 @@ The parameters are described below:
 The relies partly on <<OP,OP's configuration>> and on the file `phpRp/abconstants.php`.
 Edit this file to set the parameters/
 
-- `RP_PKEY`
-- `RP_PKEY_PASSPHRASE`
-- `RP_SIG_KID`
-- `RP_JWK_URL`
-- `RP_ENC_JWK_URL`
+* `RP_PKEY`
+* `RP_PKEY_PASSPHRASE`
+* `RP_SIG_KID`
+* `RP_JWK_URL`
+* `RP_ENC_JWK_URL`
 
 === OP and RP Signature and Encryption Keys
 

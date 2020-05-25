@@ -2,7 +2,7 @@ FROM php:7.4-apache
 
 
 # Set working directory
-WORKDIR /var/www/html
+WORKDIR /var/www/
 EXPOSE 8001
 
 # Install dependencies and clear cache
@@ -46,13 +46,13 @@ COPY apache/conf-available/z-app.conf /etc/apache2/conf-available/z-app.conf
 RUN a2enmod rewrite remoteip && a2enconf z-app
 
 # Copy composer.lock and composer.json
-COPY ./phpRp/composer.lock ./phpRp/composer.json /var/www/html/phpRp/
-RUN cd /var/www/html/phpRp/ \
+COPY ./phpRp/composer.lock ./phpRp/composer.json /var/www/phpRp/
+RUN cd /var/www/phpRp/ \
     && composer install --prefer-dist --no-scripts --no-dev --no-autoloader
 
-COPY ./phpOp/composer.lock ./phpOp/composer.json /var/www/html/phpOp/
+COPY ./phpOp/composer.lock ./phpOp/composer.json /var/www/phpOp/
 # scripts required for doctrine
-RUN cd /var/www/html/phpOp/ \
+RUN cd /var/www/phpOp/ \
     && composer install --prefer-dist --no-dev --no-autoloader \
     && rm -rf ~/.composer
 
@@ -60,20 +60,20 @@ RUN cd /var/www/html/phpOp/ \
 # Copy existing application directory contents
 
 #### /!\ unsecure /!\ ###
-COPY . /var/www/html
-COPY ./phpOp/.env.example /var/www/html/phpOp/.env
+COPY . /var/www/
+COPY ./phpOp/.env.example /var/www/phpOp/.env
 
 # Copy existing application directory permissions
 #### secure ###
 #COPY --chown=www:www . /var/www/html
 
 # Grant access to cache
-RUN chown www-data:www-data /var/www/html/phpOp/cache
+RUN chown www-data:www-data /var/www/phpOp/cache
 
 
 # Finish composer
-RUN cd /var/www/html/phpRp/ && composer dump-autoload --no-scripts --no-dev --optimize
-RUN cd /var/www/html/phpOp/ && composer dump-autoload --no-scripts --no-dev --optimize
+RUN cd /var/www/phpRp/ && composer dump-autoload --no-scripts --no-dev --optimize
+RUN cd /var/www/phpOp/ && composer dump-autoload --no-scripts --no-dev --optimize
 
 # Change current user to www
 #### /!\ unsecure if commented /!\ ###

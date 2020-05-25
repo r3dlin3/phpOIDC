@@ -51,9 +51,7 @@ define("RP_PORT", $port);
 * Specifies the RP's PATH
 * 
 */
-// strip the document_root from the script filename and extract the folder
-$path = dirname(str_replace($_SERVER['DOCUMENT_ROOT'],'',$_SERVER['SCRIPT_FILENAME']));
-define("RP_PATH", $path);
+define("RP_PATH", '/phpRp');
 
 /*
 * Specifies the RP's URL
