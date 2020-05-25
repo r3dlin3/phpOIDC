@@ -25,7 +25,6 @@ $dotenv->load();
 
 
 $theme_name = getenv('THEME_NAME') ?: 'default';
-// $theme_path =  getenv('THEME_PATH') ?: (__DIR__ . '/theme/' . $theme_name);
 
 // $op_server_name can be set by:
 // - Env var (OP_SERVER_NAME)
@@ -42,7 +41,6 @@ if (getenv('OP_SERVER_NAME')) {
         $op_server_name = $pieces[0];
     }
 }
-
 
 // variables to construct OP_URL
 $protocol = $_SERVER['REQUEST_SCHEME'] . '://';
@@ -79,7 +77,6 @@ define('OP_LOGIN_EP', OP_INDEX_PAGE . '/login');
 $config = [
     'site' => [
         'theme_name' => $theme_name,
-        // 'theme_path' => $theme_path,
         'theme_uri' => getenv('THEME_URI') ?: (dirname($_SERVER['SCRIPT_NAME']) . '/theme/' . $theme_name),
         'views_path' => getenv('VIEWS_PATH') ?:  __DIR__ . '/views/' . $theme_name,
         'name' => getenv('SITE_NAME') ?: $op_server_name,

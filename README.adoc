@@ -200,10 +200,6 @@ The parameters are described below:
 | Name of the theme
 | default
 
-| THEME_PATH
-| Root path to theme files
-| ./theme/${THEME_NAME}
-
 | THEME_URI
 | Part of the URL for the theme. It is used to load on the client-side CSS, JavaScript, Images, etc.
 | relative to current script
