@@ -29,7 +29,7 @@ function db_check_credential($username, $password): bool
     $em = $qb->getEntityManager();
     $account = db_get_account($username);
 
-    if ($account && $account) {
+    if ($account) {
 
         if (strstr($account->getCryptedPassword(), ':') !== false) {
             return validate_password($password, $account->getCryptedPassword());
@@ -273,6 +273,11 @@ function db_get_account($username): ?Account
 function db_get_account_by_id($id): ?Account
 {
     return db_get_object('Account', 'id', $id);
+}
+
+function db_get_account_by_email($email): ?Account
+{
+    return db_get_object('Account', 'email', $email);
 }
 
 function db_save_account($username, $account_values)

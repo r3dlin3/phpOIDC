@@ -29,10 +29,7 @@ RUN docker-php-ext-install -j$(nproc) pdo_mysql mbstring zip \
 EXPOSE 9000
 RUN pecl install xdebug-2.9.1 \
     &&  docker-php-ext-enable xdebug \
-    && echo "xdebug.remote_enable=1" >> /usr/local/etc/php/php.ini \
-    && echo 'xdebug.remote_port=9000' >> /usr/local/etc/php/php.ini \
-    && echo 'xdebug.remote_connect_back=1' >> /usr/local/etc/php/php.ini \
-    && echo 'xdebug.remote_autostart = 1' >> /usr/local/etc/php/php.ini
+    && echo "zend_extension=$(find /usr/local/lib/php/extensions/ -name xdebug.so)" > /usr/local/etc/php/conf.d/xdebug.ini;
 
 # Install composer
 RUN curl -sS https://getcomposer.org/installer | php -- --install-dir=/usr/local/bin --filename=composer

@@ -111,4 +111,16 @@ BladeOne::$dictionary=array(
 # register_success.blade.php
 'TitleRegisterSuccess' => 'Registration successful',
 
+# forgotpassword.blade.php
+'TitleForgotPassword' => 'Forgot password',
+# reset.blade.php
+'TitleForgotPassword' => 'Reset password',
+
+# forgotpassword_success.blade.php
+'TitlePasswordResetMailSentSuccess' => 'Mail sent',
+
+'TitleForgotPassword' => 'Forgot password',
+'TitlePasswordReset' => 'Password reset',
+'TitlePasswordResetMailSentSuccess' => 'Password reset mail sent success',
+'TitlePasswordResetSuccess' => 'Password reset with success',
 );

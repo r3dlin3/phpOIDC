@@ -68,7 +68,10 @@ define('OP_SESSIONINFO_EP', OP_INDEX_PAGE . '/sessioninfo');
 define('OP_REGISTRATION_FORM_EP', OP_INDEX_PAGE . '/register_form');
 define('OP_REGISTRATION_EP', OP_INDEX_PAGE . '/register');
 define('OP_REGISTRATION_CONTINUE_EP', OP_INDEX_PAGE . '/register_continue');
-define('OP_PASSWORD_RESET_EP', OP_INDEX_PAGE . '/passreset_form');
+define('OP_PASSWORD_RESET_EP', OP_INDEX_PAGE . '/forgotpassword_form');
+define('OP_PASSWORD_RESET_CONTINUE_EP', OP_INDEX_PAGE . '/forgotpassword');
+define('OP_PASSWORD_RESET_CODE_EP', OP_INDEX_PAGE . '/passwordreset/');
+define('OP_PASSWORD_RESET_CODE_CONTINUE_EP', OP_INDEX_PAGE . '/passwordreset');
 define('OP_LOGIN_EP', OP_INDEX_PAGE . '/login');
 
 /**
@@ -113,7 +116,25 @@ $config = [
         'host' => getenv('DB_HOST') ?: 'localhost',
         'port' => getenv('DB_HOST') ?: '3306',
         'database' => getenv('DB_DATABASE') ?: 'phpoidc'
+    ],
+
+    'mail' => [
+        'transport' => getenv('MAIL_TRANSPORT') ?: 'mail',
+        'host' => getenv('MAIL_HOST') ?: null,
+        'auth' => array_key_exists('MAIL_AUTH', $_ENV) ? (getenv('MAIL_HOST') === 'true') : true,
+        'user' => getenv('MAIL_USER') ?: null,
+        'password' => getenv('MAIL_PASSWORD') ?: null,
+        'port' => getenv('MAIL_PORT') ?: null,
+        'encryption' => getenv('MAIL_ENCRYPTION') ?: '',
+        'smtp' => getenv('MAIL_SMTP') ?: null,
+        'from' => getenv('MAIL_FROM') ?: null,
+        'reply_to' => getenv('MAIL_REPLY_TO') ?: null,
+        'auto_tls' => array_key_exists('MAIL_SMTP_AUTO_TLS', $_ENV) ? (getenv('MAIL_HOST') === 'true') : false,
+
+         
+
     ]
+
 ];
 
 /**
@@ -136,7 +157,7 @@ if (!$locale)
 include __DIR__ . '/locales/' . $locale . '.php';
 
 $blade = new BladeOne($config['site']['views_path'], $config['blade']['cache'], BladeOne::MODE_AUTO);
-#$blade->missingLog='./missingkey.txt'; // (optional) if a traduction is missing the it will be saved here.
+$blade->missingLog='./missingkey.txt'; // (optional) if a traduction is missing the it will be saved here.
 
 $blade->share('site', $config['site']);
 

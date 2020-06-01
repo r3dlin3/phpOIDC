@@ -106,8 +106,11 @@ Class Account extends BaseEntity implements JsonSerializable, ArrayAccess {
     /** @ORM\Column(type="string",length=255, nullable=true) **/
     private $address;
 
-    /** @ORM\Column(type="string",length=255, nullable=true) **/
-    private $updated_at;
+    /** @ORM\Column(type="string",length=80, nullable=true) **/
+    private $reset_password_code;
+
+    /** @ORM\Column(type="datetime", nullable=true) **/
+    private $reset_password_code_timeout;
 
 
     /**
@@ -155,7 +158,9 @@ Class Account extends BaseEntity implements JsonSerializable, ArrayAccess {
         'phone_number',
         'phone_number_verified',
         'address',
-        'updated_at'
+        'updated_at',
+        'reset_password_code',
+        'reset_password_code_timeout'
     );
 
     /**
@@ -683,6 +688,37 @@ Class Account extends BaseEntity implements JsonSerializable, ArrayAccess {
         $this->updated_at = $updated_at;
     }
 
+    /**
+     * @return mixed
+     */
+    public function getResetPasswordCode()
+    {
+        return $this->reset_password_code;
+    }
+
+    /**
+     * @param mixed $reset_password_code
+     */
+    public function setResetPasswordCode($reset_password_code)
+    {
+        $this->reset_password_code = $reset_password_code;
+    }
+
+    /**
+     * @return \Datetime
+     */
+    public function getResetPasswordCodeTimeout()
+    {
+        return $this->reset_password_code_timeout;
+    }
+
+    /**
+     * @param mixed $reset_password_code_timeout
+     */
+    public function setResetPasswordCodeTimeout($reset_password_code_timeout)
+    {
+        $this->reset_password_code_timeout = $reset_password_code_timeout;
+    }
     /**
      * @return mixed
      */

@@ -140,4 +140,26 @@ BladeOne::$dictionary=array(
 'Authenticate yourself to continue.' => 'Authentifiez-vous pour continuer.',
 'TitleRegisterSuccess' => 'Compte créé',
 'You are now registered.' => 'Vous êtes maintenant enregistré.',
+#Error
+'Functionality is disabled' => 'Fonctionnalité désactivée',
+"Registration is disabled." => "L'enregistrement est désactivé.",
+"Password reset is disabled." => "La réinitialisation de mot de passe est désactivée.",
+
+# forgotpassword.blade.php
+
+'Back to <a href="%s">Login</a>' => 'Retour à la page <a href="%s">d\'authentification</a>',
+'By clicking "Reset Password" we will send a password reset link' => 'Après avoir cliqué sur "Réinitialiser le mot de passe", vous recevrez un e-mail.',
+'E-mail address is invalid' => 'Adresse e-mail invalide',
+'E-mail sent.' => 'E-mail envoyé.',
+'Forgot Password' => 'Mot de pass oublié',
+'Make sure your password is strong and easy to remember' => 'Assurez-vous que le mot de passe est suffisamment fort et facile à se souvenir.',
+'New Password' => 'Nouveau mot de passe',
+'Password reset for %s' => 'Réinitialisation du mot de passe pour %s',
+'Password saved.' => 'Mot de passe sauvegardé.',
+'Reset Password' => 'Réinitialiser le mot de passe',
+'TitleForgotPassword' => 'Mot de passe oublié',
+'TitlePasswordReset' => 'Réinitialisation du mot de passe',
+'TitlePasswordResetMailSentSuccess' => 'E-mail envoyé',
+'TitlePasswordResetSuccess' => 'Mot de passe réinitialisé avec succès',
+'You will receive an e-mail to reset your password. Check your mails, especially in the spam folder.' => 'Vous allez recevoir un e-mail pour réinitialiser votre mot de passe. Vérifier vos mails, notamment dans les e-mails indésirables.',
 );
