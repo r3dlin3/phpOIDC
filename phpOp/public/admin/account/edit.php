@@ -1,5 +1,5 @@
 <?php
-require_once __DIR__ . '/../../PasswordHash.php';
+require_once __DIR__ . '/../../../PasswordHash.php';
 include_once(__DIR__ . '/../check_admin.php');
 check_admin();
 

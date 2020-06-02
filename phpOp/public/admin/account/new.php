@@ -2,13 +2,13 @@
 include_once(__DIR__ . '/../check_admin.php');
 check_admin();
 
-require_once __DIR__ . '/../../PasswordHash.php';
+require_once __DIR__ . '/../../../PasswordHash.php';
 
 if (isset($_POST['submitted'])) {
 
     $_POST['crypted_password'] = create_hash($_POST['crypted_password']);
 
-    db_create_account($_POST['login'], $_POST);
+    db_create_account_with_values($_POST['login'], $_POST);
     echo "Added row.<br />";
     echo "<a href='index.php?action=list'>Back To Listing</a>";
 } 
