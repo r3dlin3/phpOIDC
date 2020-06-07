@@ -196,7 +196,7 @@
                         "value": "[parameters('administratorPassword')]"
                     },
                     "firewallRules": {
-                        "value": "[reference('firewallRulesDeployment').outputs.outputArray.value]"
+                        "value": "[reference('firewallRulesDeployment').outputs.firewallRules.value]"
                     },
                     "allowAzureIps": {
                         "value": "Disabled"

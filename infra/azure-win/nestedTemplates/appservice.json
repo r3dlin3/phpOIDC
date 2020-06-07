@@ -108,8 +108,9 @@
                         "[parameters('siteName')]"
                     ],
                     "properties": {
+                        "netFrameworkVersion": "v4.0",
                         "use32BitWorkerProcess": false,
-                        "phpVersion": "7.3",
+                        "phpVersion": "7.4",
                         "httpsOnly": true,
                         "webSocketsEnabled": false,
                         "requestTracingEnabled": true,
@@ -157,6 +158,10 @@
         }
     ],
     "outputs": {
+        "defaultHostName": {
+            "type": "array",
+            "value": "[reference(parameters('siteName'), '2018-02-01').defaultHostName]"
+        },
         "possibleOutboundIps": {
             "type": "array",
             "value": "[split(reference(parameters('siteName'), '2018-02-01').possibleOutboundIpAddresses, ',')]"
