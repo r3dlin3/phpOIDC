@@ -8,6 +8,7 @@ use Doctrine\ORM\Mapping as ORM;
 /**
  * @ORM\Entity
  * @ORM\Table(name="client")
+ * @ORM\HasLifecycleCallbacks
  **/
 class Client extends BaseEntity implements JsonSerializable, ArrayAccess
 {

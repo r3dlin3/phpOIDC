@@ -7,7 +7,8 @@ use Doctrine\ORM\Mapping as ORM;
 /**
  * @ORM\Entity
  * @ORM\Table(name="request_file", uniqueConstraints={@ORM\UniqueConstraint(name="index_request_files_on_fileid", columns={"fileid"})})
- * */
+ * @ORM\HasLifecycleCallbacks
+ **/
 Class RequestFile extends BaseEntity implements JsonSerializable, ArrayAccess
 {
     /** @ORM\Id

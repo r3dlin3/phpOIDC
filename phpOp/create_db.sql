@@ -57,6 +57,7 @@ CREATE TABLE `account` (
   `phone_number_verified` tinyint(1) DEFAULT '0',
   `address` varchar(255) DEFAULT NULL,
   `updated_at` int(11) DEFAULT NULL,
+  `created_at` int(11) DEFAULT NOT NULL DEFAULT NOW(),
   `reset_password_code` varchar(80) DEFAULT NULL,
   `reset_password_code_timeout` datetime DEFAULT NULL,
   PRIMARY KEY (`id`, `login`)
@@ -109,6 +110,8 @@ CREATE TABLE `client` (
   `request_uris` text DEFAULT NULL,
   `grant_types` varchar(255) DEFAULT NULL,
   `response_types` varchar(255) DEFAULT NULL,
+  `updated_at` int(11) DEFAULT NULL,
+  `created_at` int(11) DEFAULT NOT NULL DEFAULT NOW(),
   PRIMARY KEY (`id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8;
 

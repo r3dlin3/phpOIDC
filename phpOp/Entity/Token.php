@@ -9,6 +9,7 @@ use Doctrine\ORM\Mapping as ORM;
 /**
  * @ORM\Entity
  * @ORM\Table(name="token", indexes={@ORM\Index(name="account_id_idx", columns={"account_id"})})
+ * @ORM\HasLifecycleCallbacks
  **/
 class Token extends BaseEntity implements JsonSerializable, ArrayAccess
 {

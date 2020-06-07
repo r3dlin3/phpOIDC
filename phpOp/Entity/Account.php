@@ -8,8 +8,9 @@ use Doctrine\ORM\Mapping as ORM;
 /**
  * @ORM\Entity
  * @ORM\Table(name="account")
+ * @ORM\HasLifecycleCallbacks
  **/
-Class Account extends BaseEntity implements JsonSerializable, ArrayAccess {
+Class Account extends BaseEntity implements JsonSerializable, ArrayAccess, Iterator {
 
     /** @ORM\Id
      *  @ORM\Column(type="integer")
@@ -117,6 +118,13 @@ Class Account extends BaseEntity implements JsonSerializable, ArrayAccess {
      * @ORM\OneToMany(targetEntity="Token", mappedBy="account")
      */
     private $tokens;
+
+    /**
+     * The user's raw attributes.
+     * Not mapped
+     * @var array
+     */
+    public $user;
 
     /**
      * @ORM\ManyToMany(targetEntity="Client", inversedBy="accounts")
@@ -775,6 +783,147 @@ Class Account extends BaseEntity implements JsonSerializable, ArrayAccess {
     {
         $client->addAccount($this);
         $this->trustedclients[] = $client;
+    }
+
+    /**
+     * Map the given array onto the user's properties.
+     *
+     * @param  array  $attributes
+     * @return $this
+     */
+    public function map(array $attributes)
+    {
+        foreach ($attributes as $key => $value) {
+            $this->{$key} = $value;
+        }
+
+        return $this;
+    }
+
+        /**
+     * Get the raw user array.
+     *
+     * @return array
+     */
+    public function getRaw()
+    {
+        return $this->user;
+    }
+
+    /**
+     * Set the raw user array from the provider.
+     *
+     * @param  array  $user
+     * @return $this
+     */
+    public function setRaw(array $user)
+    {
+        $this->user = $user;
+
+        return $this;
+    }
+
+
+        /**
+     * The user's access token.
+     *
+     * @var string
+     */
+    public $token;
+
+    /**
+     * The refresh token that can be exchanged for a new access token.
+     *
+     * @var string
+     */
+    public $refreshToken;
+
+    /**
+     * The number of seconds the access token is valid for.
+     *
+     * @var int
+     */
+    public $expiresIn;
+
+    /**
+     * Set the token on the user.
+     *
+     * @param  string  $token
+     * @return $this
+     */
+    public function setToken($token)
+    {
+        $this->token = $token;
+
+        return $this;
+    }
+
+    /**
+     * Set the refresh token required to obtain a new access token.
+     *
+     * @param  string  $refreshToken
+     * @return $this
+     */
+    public function setRefreshToken($refreshToken)
+    {
+        $this->refreshToken = $refreshToken;
+
+        return $this;
+    }
+
+    /**
+     * Set the number of seconds the access token is valid for.
+     *
+     * @param  int  $expiresIn
+     * @return $this
+     */
+    public function setExpiresIn($expiresIn)
+    {
+        $this->expiresIn = $expiresIn;
+
+        return $this;
+    }
+
+    ////////////////////////////
+    // Iterator implementation
+    ////////////////////////////
+    private $iterator = 0;
+    private $offsetMethodMap = array();
+    private $offsetMethods = array();
+
+    public function rewind()
+    {
+        $this->iterator = 0;
+    }
+
+    public function current()
+    {
+        $key = $this->key();
+        return isset($key) ? $this->offsetGet($key) : false;
+    }
+
+    public function key()
+    {
+        if ($this->iterator >= count(self::$tableFields))
+            return null;
+        $key = self::$tableFields[$this->iterator];
+        return $key;
+    }
+
+    public function next()
+    {
+        $this->iterator++;
+        return $this->current();
+    }
+
+    public function valid()
+    {
+        return $this->current() !== false;
+    }
+    
+    public function count()
+    {
+        return count($this->offsetMethods);
     }
 
 }

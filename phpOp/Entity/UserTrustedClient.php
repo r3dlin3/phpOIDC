@@ -3,7 +3,9 @@ require_once "BaseEntity.php";
 
 use Doctrine\ORM\Mapping as ORM;
 
-
+/**
+ * @ORM\HasLifecycleCallbacks
+ */
 class UserTrustedClient extends BaseEntity
 {
 

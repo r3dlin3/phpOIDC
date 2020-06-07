@@ -7,6 +7,7 @@ use Doctrine\ORM\Mapping as ORM;
 /**
  * @ORM\Entity
  * @ORM\Table(name="provider")
+ * @ORM\HasLifecycleCallbacks
  **/
 class Provider extends BaseEntity implements JsonSerializable, ArrayAccess
 {
