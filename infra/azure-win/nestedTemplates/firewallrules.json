@@ -16,7 +16,6 @@
             }
         }
     },
-
     "variables": {
         "outputArray": {
             "copy": [
@@ -32,6 +31,7 @@
             ]
         }
     },
+    "resources": [],
     "outputs": {
         "firewallRules": {
             "value": "[variables('outputArray').items]",
