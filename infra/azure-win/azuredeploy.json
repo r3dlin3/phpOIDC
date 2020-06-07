@@ -182,7 +182,7 @@
             "properties": {
                 "mode": "Incremental",
                 "templateLink": {
-                    "uri": "[concat(parameters('_artifactsLocation'), '/nestedTemplates/mysql.json', parameters('_artifactsLocationSasToken'))]",
+                    "uri": "[uri(parameters('_artifactsLocation'), concat('nestedTemplates/mysql.json', parameters('_artifactsLocationSasToken')))]",
                     "contentVersion": "1.0.0.0"
                 },
                 "parameters": {
@@ -226,7 +226,7 @@
             "properties": {
                 "mode": "Incremental",
                 "templateLink": {
-                    "uri": "[concat(parameters('_artifactsLocation'), '/nestedTemplates/appsettings.json', parameters('_artifactsLocationSasToken'))]",
+                    "uri": "[uri(parameters('_artifactsLocation'), concat('nestedTemplates/appsettings.json', parameters('_artifactsLocationSasToken')))]",
                     "contentVersion": "1.0.0.0"
                 },
                 "parameters": {
