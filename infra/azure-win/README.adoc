@@ -26,7 +26,7 @@ For instance, here are things that should be fixed for production:
 * Azure Database for MySQL: Its firewall is set based on the App Service IP
 
 You can click on the button to visualize the deployed resources:
-image:https://raw.githubusercontent.com/Azure/azure-quickstart-templates/master/1-CONTRIBUTION-GUIDE/images/visualizebutton.svg?sanitize=true[title="Visualize", link="http://armviz.io/#/?load=https%3A%2F%2Fraw.githubusercontent.com%2FAzure%2Fazure-quickstart-templates%2Fmaster%2Fazmgmt-demo%2Fazuredeploy.json]
+image:https://raw.githubusercontent.com/Azure/azure-quickstart-templates/master/1-CONTRIBUTION-GUIDE/images/visualizebutton.svg?sanitize=true[title="Visualize", link="http://armviz.io/#/?load=https%3A%2F%2Fraw.githubusercontent.com%2Fr3dlin3%2FphpOIDC%2Fmaster%2Finfra%2Fazure-win%2Fazuredeploy.json"]
 
 == How to deploy
 
@@ -97,7 +97,7 @@ In any case, the following tables describes the parameters:
 
 === One-button click
 
-image:https://raw.githubusercontent.com/Azure/azure-quickstart-templates/master/1-CONTRIBUTION-GUIDE/images/deploytoazure.svg?sanitize=true[title="Deploy To Azure", link="https://portal.azure.com/#create/Microsoft.Template/uri/https%3A%2F%2Fraw.githubusercontent.com%2FAzure%2Fazure-quickstart-templates%2Fmaster%2Fazmgmt-demo%2Fazuredeploy.json"]
+image:https://raw.githubusercontent.com/Azure/azure-quickstart-templates/master/1-CONTRIBUTION-GUIDE/images/deploytoazure.svg?sanitize=true[title="Deploy To Azure", link="https://portal.azure.com/#create/Microsoft.Template/uri/https%3A%2F%2Fraw.githubusercontent.com%2Fr3dlin3%2FphpOIDC%2Fmaster%2Finfra%2Fazure-win%2Fazuredeploy.json"]
 
 === PowerShell
 
