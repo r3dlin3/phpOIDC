@@ -159,7 +159,7 @@
     ],
     "outputs": {
         "defaultHostName": {
-            "type": "array",
+            "type": "string",
             "value": "[reference(parameters('siteName'), '2018-02-01').defaultHostName]"
         },
         "possibleOutboundIps": {

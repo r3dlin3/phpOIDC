@@ -216,8 +216,39 @@
                     "tagValues": "[parameters('tags')]"
                 }
             }
+        },
+        {
+            "name": "configDeployment",
+            "type": "Microsoft.Resources/deployments",
+            "apiVersion": "2019-10-01",
+            "dependsOn": [
+                "mysqlNestedDeployment"
+            ],
+            "properties": {
+                "mode": "Incremental",
+                "templateLink": {
+                    "uri": "[concat(parameters('_artifactsLocation'), '/nestedTemplates/appsettings.json', parameters('_artifactsLocationSasToken'))]",
+                    "contentVersion": "1.0.0.0"
+                },
+                "parameters": {
+                    "siteName": {
+                        "value": "[parameters('siteName')]"
+                    },
+                    "mysqlServerName": {
+                        "value": "[reference('mysqlNestedDeployment').outputs.databaseServerFQDN.value]"
+                    },
+                    "administratorLogin": {
+                        "value": "[parameters('administratorLogin')]"
+                    },
+                    "administratorPassword": {
+                        "value": "[parameters('administratorPassword')]"
+                    },
+                    "databaseForMySqlName": {
+                        "value": "[parameters('databaseForMySqlName')]"
+                    }
+                }
+            }
         }
-
     ],
     "outputs": {
     }
