@@ -99,8 +99,6 @@
                 "serverFarmId": "[parameters('appServicePlanName')]",
                 "httpsOnly": true,
                 "siteConfig": {
-                    "appSettings": [
-                    ],
                     "metadata": [
                         {
                             "name": "CURRENT_STACK",
@@ -143,8 +141,19 @@
                     }
                 },
                 {
+                    "name": "metadata",
                     "type": "config",
+                    "apiVersion": "2018-02-01",
+                    "dependsOn": [
+                        "[resourceId('Microsoft.Web/sites', parameters('siteName'))]"
+                    ],
+                    "properties": {
+                        "CURRENT_STACK": "php"
+                    }
+                },
+                {
                     "name": "appsettings",
+                    "type": "config",
                     "apiVersion": "2018-02-01",
                     "dependsOn": [
                         "[resourceId('Microsoft.Web/sites', parameters('siteName'))]"
@@ -162,9 +171,9 @@
                     ]
                 },
                 {
+                    "name": "web",
                     "type": "sourcecontrols",
                     "apiVersion": "2018-02-01",
-                    "name": "web",
                     "location": "[parameters('location')]",
                     "dependsOn": [
                         "[resourceId('Microsoft.Web/sites', parameters('siteName'))]"
