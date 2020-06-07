@@ -14,6 +14,7 @@ Here are some points worth noting:
 The purpose of these templates is to give you a kick-start, instantiating all of the required resources to run phpOIDC in Azure. *It should be used for testing only*.
 For instance, here are things that should be fixed for production:
 
+* *The used keys are for demo*
 * SSL is not enforced by MySQL and not used by the PHP Code
 * PHP Code is using administrator's credentials, not a dedicated account
 ====

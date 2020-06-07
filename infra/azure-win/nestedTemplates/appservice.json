@@ -129,6 +129,12 @@
                                 "preloadEnabled": false,
                                 "virtualDirectories": null
                             }
+                        ],
+                        "metadata": [
+                            {
+                                "name": "CURRENT_STACK",
+                                "value": "php"
+                            }
                         ]
                     }
                 },
