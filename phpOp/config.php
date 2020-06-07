@@ -19,9 +19,12 @@ require_once(__DIR__ . '/libs/autoload.php');
 
 use eftec\bladeone\BladeOne;
 
+
 // Load .env
-$dotenv = Dotenv\Dotenv::createImmutable(__DIR__);
-$dotenv->load();
+if (file_exists(__DIR__ . '/.env')) {
+    $dotenv = Dotenv\Dotenv::createImmutable(__DIR__);
+    $dotenv->load();
+}
 
 
 $theme_name = getenv('THEME_NAME') ?: 'default';
