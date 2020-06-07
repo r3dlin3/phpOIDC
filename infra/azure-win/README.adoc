@@ -106,6 +106,7 @@ $administratorPassword=Read-Host -AsSecureString
 # Hardcoded
 $administratorPassword=ConvertTo-SecureString 'MySuperSecretP@ssw0rd!' –asplaintext –force 
 $databaseForMySqlName=""
+$databaseSkuName=""
 $templateuri = "https://raw.githubusercontent.com/r3dlin3/phpOIDC/master/infra/azure-win/azuredeploy.json"
 
 New-AzResourceGroupDeployment -ResourceGroupName $rg `
@@ -118,6 +119,7 @@ New-AzResourceGroupDeployment -ResourceGroupName $rg `
                               -administratorLogin $administratorLogin `
                               -administratorPassword $administratorPassword `
                               -databaseForMySqlName $databaseForMySqlName `
+                              -databaseSkuName $databaseSkuName `
                               -Verbose
 ----
 

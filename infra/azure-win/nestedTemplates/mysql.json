@@ -42,8 +42,8 @@
         "databaseForMySqlName": {
             "type": "string",
             "metadata": {
-                 "description": "Name of the Azure Database for MySQL"
-             }
+                "description": "Name of the Azure Database for MySQL"
+            }
         },
         "databaseSizeMB": {
             "type": "int",
@@ -134,7 +134,8 @@
         },
         "tagValues": {
             "type": "object",
-            "defaultValue": {}
+            "defaultValue": {
+            }
         }
     },
     "variables": {
@@ -150,6 +151,7 @@
                 "size": "[parameters('databaseSizeMB')]"
             },
             "properties": {
+                "createMode": "Default",
                 "version": "[parameters('mysqlVersion')]",
                 "administratorLogin": "[parameters('administratorLogin')]",
                 "administratorLoginPassword": "[parameters('administratorPassword')]",
@@ -160,7 +162,8 @@
                     "geoRedundantBackup": "[parameters('geoRedundantBackup')]"
                 },
                 "sslEnforcement": "[parameters('sslEnforcement')]"
-            }
+            },
+            "tags": "[parameters('tagValues')]"
         },
         {
             "name": "[concat(parameters('mysqlServerName'),'/',parameters('firewallrules')[copyIndex()].name)]",
@@ -209,12 +212,12 @@
         }
     ],
     "outputs": {
-        "databaseServerFQDN" : {
-            "type" : "string",
+        "databaseServerFQDN": {
+            "type": "string",
             "value": "[reference(parameters('mysqlServerName')).fullyQualifiedDomainName]"
         },
-        "databaseName" : {
-            "type" : "string",
+        "databaseName": {
+            "type": "string",
             "value": "[parameters('databaseForMySqlName')]"
         }
     }
