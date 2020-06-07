@@ -1,0 +1,21 @@
+{
+  "$schema": "http://schema.management.azure.com/schemas/2015-01-01/deploymentParameters.json#",
+  "contentVersion": "1.0.0.0",
+  "parameters": {
+    "siteName": {
+      "value": "appservice"
+    },
+    "appServicePlanName": {
+      "value": ""
+    },
+    "skuName": {
+      "value": "F1"
+    },
+    "capacity": {
+      "value": 1
+    },
+    "tags": {
+      "value": {}
+    }
+  }
+}
