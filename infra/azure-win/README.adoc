@@ -1,4 +1,7 @@
 = Deployment of phpOIDC to an Azure App Service (Windows) 
+:icons: font
+
+
 
 Note: The purpose of these templates is to give you a kick-start, instantiating all of the required resources to run phpOIDC in Azure. *It should be used for testing only*.
 
@@ -98,23 +101,23 @@ $skuName=""
 $capacity=""
 $mysqlServerName=""
 $administratorLogin=""
-#To prompt
+# To prompt to get the password
 $administratorPassword=Read-Host -AsSecureString
-# 
+# Hardcoded
 $administratorPassword=ConvertTo-SecureString 'MySuperSecretP@ssw0rd!' –asplaintext –force 
 $databaseForMySqlName=""
 $templateuri = "https://raw.githubusercontent.com/r3dlin3/phpOIDC/master/infra/azure-win/azuredeploy.json"
 
 New-AzResourceGroupDeployment -ResourceGroupName $rg `
                               -TemplateUri $templateUri `
-                              -siteName $siteName
-                              -appServicePlanName $appServicePlanName
-                              -skuName $skuName
-                              -capacity $capacity
-                              -mysqlServerName $mysqlServerName
-                              -administratorLogin $administratorLogin
-                              -administratorPassword $administratorPassword
-                              -databaseForMySqlName $databaseForMySqlName
+                              -siteName $siteName `
+                              -appServicePlanName $appServicePlanName `
+                              -skuName $skuName `
+                              -capacity $capacity `
+                              -mysqlServerName $mysqlServerName `
+                              -administratorLogin $administratorLogin `
+                              -administratorPassword $administratorPassword `
+                              -databaseForMySqlName $databaseForMySqlName `
                               -Verbose
 ----
 
