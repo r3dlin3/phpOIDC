@@ -169,8 +169,6 @@
             ],
             "copy": {
                 "name": "firewallRulesCopy",
-                "mode": "Serial",
-                "batchSize": 1,
                 "count": "[length(parameters('firewallrules'))]"
             },
             "properties": {
