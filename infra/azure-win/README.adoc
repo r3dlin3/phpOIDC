@@ -1,9 +1,22 @@
 = Deployment of phpOIDC to an Azure App Service (Windows) 
 :icons: font
 
+CAUTION: These templates only deploy the OpenID Connect Provider *without* the testing OpenID Connect Relying Party
 
+Here are some points worth noting:
 
-Note: The purpose of these templates is to give you a kick-start, instantiating all of the required resources to run phpOIDC in Azure. *It should be used for testing only*.
+* MySQL Server firewall is set to prevent access from Azure and only accept connection coming from the App Service
+* HTTPS is enforced
+* Latest version of PHP is used (7.4)
+
+[WARNING]
+====
+The purpose of these templates is to give you a kick-start, instantiating all of the required resources to run phpOIDC in Azure. *It should be used for testing only*.
+For instance, here are things that should be fixed for production:
+
+* SSL is not enforced by MySQL and not used by the PHP Code
+* PHP Code is using administrator's credentials, not a dedicated account
+====
 
 
 == What is being deployed
@@ -123,5 +136,18 @@ New-AzResourceGroupDeployment -ResourceGroupName $rg `
                               -Verbose
 ----
 
-
 == Post-installation
+
+The database schema must be initialized. 
+There are several ways to create the schema.
+
+One way is to:
+
+1. Go to the Azure Portal, on the App Service
+2. Go to the blade "Console"
+3. Type the following commands:
+----
+cd phpOp
+libs\bin\doctrine orm:schema-tool:create
+----
+image::assets/azure-app-service-console.png[Console]

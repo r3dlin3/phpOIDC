@@ -43,17 +43,21 @@ if (getenv('OP_SERVER_NAME')) {
 }
 
 // variables to construct OP_URL
-$protocol = $_SERVER['REQUEST_SCHEME'] . '://';
+$scheme = isset($_SERVER['REQUEST_SCHEME']) ? $_SERVER['REQUEST_SCHEME'] : 
+    (isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] === 'on' ? "https" : "http");
+
+$protocol = $scheme . '://';
 $port = '';
 if (
-    !($_SERVER['REQUEST_SCHEME'] === "http" && $_SERVER['SERVER_PORT'] == 80)
-    || !($_SERVER['REQUEST_SCHEME'] === "https" && $_SERVER['SERVER_PORT'] == 443)
+    !($scheme === "http" && $_SERVER['SERVER_PORT'] == 80)
+    && !($scheme === "https" && $_SERVER['SERVER_PORT'] == 443)
 ) {
     $port = ':' . $_SERVER['SERVER_PORT'];
 }
-$path = getenv('OP_URL') ? parse_url(getenv('OP_URL'))['path'] : (getenv('OP_URL') ?: '/phpOp');
-define("OP_PATH", $path);
+$path = getenv('OP_URL') ? parse_url(getenv('OP_URL'))['path'] : (array_key_exists('OP_PATH', $_ENV) ? getenv('OP_PATH') : '/phpOp');
+define("OP_PATH", rtrim($path, '/'));
 $op_url = getenv('OP_URL') ?: ($protocol . $op_server_name . $port . $path);
+$op_url = rtrim($op_url, "/");
 
 /**
  * OP endpoints and metadata
@@ -81,7 +85,7 @@ define('OP_SOCIALITE_REDIRECT_EP', OP_INDEX_PAGE . '/socialitecb/');
 $config = [
     'site' => [
         'theme_name' => $theme_name,
-        'theme_uri' => getenv('THEME_URI') ?: (dirname($_SERVER['SCRIPT_NAME']) . '/theme/' . $theme_name),
+        'theme_uri' => getenv('THEME_URI') ?: (OP_PATH . '/theme/' . $theme_name),
         'views_path' => getenv('VIEWS_PATH') ?:  __DIR__ . '/views/' . $theme_name,
         'name' => getenv('SITE_NAME') ?: $op_server_name,
         "url" => $op_url,

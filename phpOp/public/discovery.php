@@ -177,7 +177,7 @@ function handle_webfinger_discovery()
             exit;
         }
         $host = $parts['host'];
-        $port = $parts['port'] ? ':' . $parts['port'] : '';
+        $port = isset($parts['port']) ? ':' . $parts['port'] : '';
         $issuer = $parts['scheme'] . '://' . $host . $port;
         if (isset($parts['path'])) {
             if ($parts['path'] == '/')
