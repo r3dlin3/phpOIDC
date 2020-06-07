@@ -212,8 +212,7 @@
                     },
                     "mysqlVersion": {
                         "value": "8.0"
-                    },
-                    "tagValues": "[parameters('tags')]"
+                    }
                 }
             }
         },

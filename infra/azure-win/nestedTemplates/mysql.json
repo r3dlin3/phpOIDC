@@ -131,11 +131,6 @@
             "metadata": {
                 "description": "The region to deploy the resources into"
             }
-        },
-        "tagValues": {
-            "type": "object",
-            "defaultValue": {
-            }
         }
     },
     "variables": {
@@ -162,8 +157,7 @@
                     "geoRedundantBackup": "[parameters('geoRedundantBackup')]"
                 },
                 "sslEnforcement": "[parameters('sslEnforcement')]"
-            },
-            "tags": "[parameters('tagValues')]"
+            }
         },
         {
             "name": "[concat(parameters('mysqlServerName'),'/',parameters('firewallrules')[copyIndex()].name)]",
