@@ -16,7 +16,9 @@ echo "</tr>";
 
 $result = db_get_accounts();
 foreach($result as $row) {
-    foreach($row AS $key => $value) { $row[$key] = stripslashes($value); }
+    foreach($row AS $key => $value) {
+        $row[$key] = is_string($value) ? stripslashes($value) : $value; 
+    }
     echo "<tr>";
     echo "<td valign='top'>" . nl2br( $row['id']) . "</td>";
     echo "<td valign='top'>" . nl2br( $row['name']) . "</td>";

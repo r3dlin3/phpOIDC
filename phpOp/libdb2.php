@@ -280,22 +280,18 @@ function db_get_account_by_email($email): ?Account
     return db_get_object('Account', 'email', $email);
 }
 
-function db_save_account($username, $account_values)
+/**
+ * Save an account object without any check
+ * param Account $account
+ */
+function db_save_account($account)
 {
-    if (!is_array($account_values) || !$username)
+    if (!is_object($account) || !isset($account['id']))
         return false;
-    $qb = DbEntity::getInstance()->getEntityManager()->createQueryBuilder();
-    $em = $qb->getEntityManager();
-    $account = db_get_account($username);
-    if ($account) {
-        foreach ($account_values as $key => $val) {
-            $account[$key] = $val;
-        }
-        $account->setLogin($username);
-        $em->flush();
-        return true;
-    }
-    return false;
+    $em = DbEntity::getInstance()->getEntityManager();
+    $em->persist($account);
+    $em->flush();
+    return $account;
 }
 
 function db_save_account_by_id($id, $account_values)
@@ -315,17 +311,30 @@ function db_save_account_by_id($id, $account_values)
     return false;
 }
 
-function db_create_account($username, $account_values)
+/**
+ * Will create an Account based on the array of key/values
+ * Will check the existence of the account based on the login
+ */
+function db_create_account_with_values($username, $account_values)
 {
     if (!is_array($account_values) || !$username)
         return false;
-    $qb = DbEntity::getInstance()->getEntityManager()->createQueryBuilder();
-    $em = $qb->getEntityManager();
     $account = db_get_account($username);
     if (!$account) {
         return db_save_object('Account', 'login', $username, $account_values);
     }
     return false;
+}
+
+/**
+ * Will create an Account based on the object
+ */
+function db_create_account($account)
+{
+    $em= DbEntity::getInstance()->getEntityManager();
+    $em->persist($account);
+    $em->flush();
+    return $account;
 }
 
 

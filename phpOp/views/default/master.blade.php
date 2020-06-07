@@ -12,7 +12,7 @@
 <body class="my-login-page">
     <section class="h-100">
         <div class="container h-100">
-            <div class="row justify-content-md-center h-100">
+            <div class="row justify-content-center h-100">
                 <div class="card-wrapper">
                     @yield('content')
                     <div class="footer">

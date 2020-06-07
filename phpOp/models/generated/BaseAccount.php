@@ -329,6 +329,15 @@ abstract class BaseAccount extends Doctrine_Record
              'notnull' => false,
              'autoincrement' => false,
              ));
+          $this->hasColumn('created_at', 'integer', 4, array(
+               'type' => 'integer',
+               'length' => 4,
+               'fixed' => false,
+               'unsigned' => false,
+               'primary' => false,
+               'notnull' => false,
+               'autoincrement' => false,
+               ));
     }
 
     public function setUp()

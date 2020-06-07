@@ -5,9 +5,22 @@ use eftec\bladeone\BladeOne;
 BladeOne::$dictionary=array(
 "TitleLogin" =>
 "Authentification",
+'or' => 'ou',
 
 "%s OP Login" =>
 "%s OP Login",
+
+
+'bitbucket' => 'Bitbucket',
+'facebook' => 'Facebook',
+'github' => 'GitHub',
+'gitlab' => 'Gitlab',
+'google' => 'Google',
+'linkedin' => 'LinkedIn',
+'twitter' => 'Twitter',
+
+'Sign in with %s' => 'Continuer avec %s',
+
 
 "Authentication error" =>
 "Erreur d’authentification",

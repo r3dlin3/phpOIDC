@@ -467,7 +467,7 @@ final class CDatabaseTest extends  TestCase
 
     public function test_db_save_account(): void
     {
-        db_save_account('john', array(
+        db_save_account_by_id('john', array(
             'name' => 'Jane Doe',
             'given_name' => 'Jane',
             'family_name' => 'Doe',

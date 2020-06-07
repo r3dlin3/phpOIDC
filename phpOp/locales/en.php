@@ -7,6 +7,15 @@ BladeOne::$dictionary=array(
 
 "%s OP Login" => "%s OP Login",
 
+'bitbucket' => 'Bitbucket',
+'facebook' => 'Facebook',
+'github' => 'GitHub',
+'gitlab' => 'Gitlab',
+'google' => 'Google',
+'linkedin' => 'LinkedIn',
+'twitter' => 'Twitter',
+
+
 "Authentication error" => "Authentication error",
 
 "E-Mail Address" => "E-Mail Address",

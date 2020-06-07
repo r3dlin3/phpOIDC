@@ -1,4 +1,5 @@
-html,body {
+html,
+body {
 	height: 100%;
 }
 
@@ -13,7 +14,7 @@ body.my-login-page {
 	overflow: hidden;
 	border-radius: 50%;
 	margin: 40px auto;
-	box-shadow: 0 4px 8px rgba(0,0,0,.05);
+	box-shadow: 0 4px 8px rgba(0, 0, 0, 0.05);
 	position: relative;
 	z-index: 1;
 }
@@ -28,7 +29,7 @@ body.my-login-page {
 
 .my-login-page .card {
 	border-color: transparent;
-	box-shadow: 0 4px 8px rgba(0,0,0,.05);
+	box-shadow: 0 4px 8px rgba(0, 0, 0, 0.05);
 }
 
 .my-login-page .card.fat {
@@ -78,7 +79,9 @@ body.my-login-page {
 	color: #212529;
 }
 
-[data-toggle="collapse"] .bi::before, .bi-eye::before, .bi-eye-slash::before {  
+[data-toggle="collapse"] .bi::before,
+.bi-eye::before,
+.bi-eye-slash::before {
 	display: inline-block;
 	content: "";
 	background-image: url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'><path fill-rule='evenodd' d='M7.646 4.646a.5.5 0 01.708 0l6 6a.5.5 0 01-.708.708L8 5.707l-5.646 5.647a.5.5 0 01-.708-.708l6-6z' clip-rule='evenodd'/></svg>");
@@ -97,7 +100,7 @@ body.my-login-page {
 	box-shadow: none;
 }
 
-#accordionScopes .card .card-header{
+#accordionScopes .card .card-header {
 	background-color: transparent;
 	border-style: none;
 }
@@ -108,4 +111,133 @@ body.my-login-page {
 
 .bi-eye-slash::before {
 	background-image: url("data:image/svg+xml,<svg class='bi bi-eye-slash' style='fill:%23495057' width='1em' height='1em' viewBox='0 0 16 16' fill='currentColor' xmlns='http://www.w3.org/2000/svg'><path d='M13.359 11.238C15.06 9.72 16 8 16 8s-3-5.5-8-5.5a7.028 7.028 0 00-2.79.588l.77.771A5.944 5.944 0 018 3.5c2.12 0 3.879 1.168 5.168 2.457A13.134 13.134 0 0114.828 8c-.058.087-.122.183-.195.288-.335.48-.83 1.12-1.465 1.755-.165.165-.337.328-.517.486l.708.709z'/><path d='M11.297 9.176a3.5 3.5 0 00-4.474-4.474l.823.823a2.5 2.5 0 012.829 2.829l.822.822zm-2.943 1.299l.822.822a3.5 3.5 0 01-4.474-4.474l.823.823a2.5 2.5 0 002.829 2.829z'/><path d='M3.35 5.47c-.18.16-.353.322-.518.487A13.134 13.134 0 001.172 8l.195.288c.335.48.83 1.12 1.465 1.755C4.121 11.332 5.881 12.5 8 12.5c.716 0 1.39-.133 2.02-.36l.77.772A7.029 7.029 0 018 13.5C3 13.5 0 8 0 8s.939-1.721 2.641-3.238l.708.709z'/> <path fill-rule='evenodd' d='M13.646 14.354l-12-12 .708-.708 12 12-.708.708z' clip-rule='evenodd'/></svg>");
+}
+
+.my-login-page .login-or {
+	position: relative;
+	font-size: 1.5em;
+	color: #aaa;
+	margin-bottom: 0.5em;
+	padding-top: 0.5em;
+	padding-bottom: 0.5em;
+}
+
+.my-login-page .hr-or {
+	background-color: #cdcdcd;
+	height: 1px;
+	margin-top: 0px !important;
+	margin-bottom: 0px !important;
+}
+
+.my-login-page .span-or {
+	display: block;
+	position: absolute;
+	left: 50%;
+	top: -0.4em;
+	margin-left: -1.5em;
+	background-color: white;
+	width: 3em;
+	text-align: center;
+}
+
+.social-btns {
+	font-size: 22px;
+	list-style: none;
+	padding-left: 0;
+}
+
+.social-btns li {
+	margin-bottom: 5px;
+}
+
+.social-btns li i {
+	font-size: 22px;
+}
+.social-btns .btn {
+	min-width: 260px;
+	/*color: #fff;*/
+	transition: all 0.3s ease-in-out;
+	-webkit-transition: all 0.3s ease-in-out;
+	-moz-transition: all 0.3s ease-in-out;
+	-o-transition: all 0.3s ease-in-out;
+	-ms-transition: all 0.3s ease-in-out;
+}
+.social-btns .btn:hover {
+	color: #fff;
+	/* background-color: #f0f0f0; */
+}
+.social-btns .btn img {
+	width: 32px;
+	height: 32px;
+	margin-right: 16px;
+	border-style: none;
+	vertical-align: middle;
+}
+
+.social-btns .btn-bitbucket {
+	/* background: #0052cc; */
+	border-color: #0052cc;
+}
+
+.social-btns .btn-bitbucket:hover {
+	background: #0047b3;
+	border-color: #0047b3;
+}
+
+.social-btns .btn-facebook {
+	/* background-color: #38519f; */
+	border-color: #293b75;
+}
+
+.social-btns .btn-facebook:hover {
+	background-color: #293b75;
+	border-color: #293b75;
+}
+
+.social-btns .btn-github {
+	/* background-color:#444; */
+	border-color: rgba(0, 0, 0, 0.2);
+}
+
+.social-btns .btn-github:hover {
+	background-color:#444;
+	border-color: rgba(0, 0, 0, 0.2);
+}
+
+.social-btns .btn-gitlab {
+	/* background-color: #fa7035; */
+	border-color: #fa7035;
+}
+
+.social-btns .btn-gitlab:hover {
+	background-color: #e65328;
+}
+
+.social-btns .btn-linkedin {
+	/* background-color: #00629e; */
+	border-color: #044a75;
+}
+
+.social-btns .btn-linkedin:hover {
+	background-color: #00629e;
+	border-color: #044a75;
+}
+
+.social-btns .btn-google {
+	border-color: #a01b03;
+}
+
+.social-btns .btn-google:hover {
+	background-color: #a01b03;
+	border-color: #a01b03;
+}
+
+.social-btns .btn-twitter {
+	border-color: #048cce;
+	/* background-color: #00a8fa; */
+}
+
+.social-btns .btn-twitter:hover {
+	background-color: #048cce;
+	border-color: #048cce;
 }

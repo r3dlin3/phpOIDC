@@ -25,6 +25,7 @@ include_once('../apache_header.php');
 include_once('../Mailer.php');
 
 error_reporting(E_ERROR | E_WARNING | E_PARSE);
+//error_reporting(E_ALL);
 
 define("DEBUG", 0);
 
@@ -117,6 +118,12 @@ switch ($path_info) {
     case (preg_match('/\/passwordreset\/(.*)\/(.*)/', $path_info, $matches) ? true : false):
         handle_passwordreset_code($matches[1], $matches[2]);
         break;
+    case (preg_match('/\/socialite\/(.*)/', $path_info, $matches) ? true : false):
+        handle_socialite($matches[1]);
+        break;
+    case (preg_match('/\/socialitecb\/(.*)\/+/', $path_info, $matches) ? true : false):
+        handle_socialite_callback($matches[1]);
+        break;
     case '/passwordreset':
         handle_passwordreset();
         break;
@@ -131,27 +138,108 @@ exit();
 
 
 /**
+ * Will display an error screen if a functionality is not enabled
+ */
+function check_functionality($flag, $display_name = null)
+{
+    global $blade;
+    global $config;
+
+    if (empty($display_name)) {
+        // Compute display_name if empty
+        // ex: 'enable_password_reset' => 'Password reset'
+        $display_name = str_replace('_','',ucwords(str_replace('enable_','', $flag)));
+    }
+
+    if (!$config['site'][$flag]) {
+        $str = $blade->run('error', [
+            'error' => "Functionality is disabled",
+            'desc' => "$display_name is disabled.",
+        ]);
+        echo $str;
+        exit;
+    }
+}
+
+function handle_socialite_callback($provider)
+{
+    try  {
+        check_functionality('enable_social_login');
+        global $config;
+        $provider = Laravel\Socialite\SocialiteManager::driver($provider, $config['socialite']);
+        $authenticated_user = $provider->user();
+
+        $account = db_get_account($authenticated_user->getLogin());
+        if($account) {
+            // account already exists
+            $need_update = false;
+            foreach($authenticated_user as $key=>$val) {
+                if (isset($val) && $account[$key] !== $val) {
+                    $account[$key] = $val;
+                    $need_update = true;
+                }
+            }
+            if ($need_update) {
+                db_save_account($account);
+            }
+        } else {
+            $account = db_create_account($authenticated_user);
+        }
+    } catch (Exception $e) {
+        log_error("handle_socialite_callback exception : %s", $e->getTraceAsString());
+        $error_page = array_key_exists('redirect_uri', $_SESSION['rpfA']) ? $_SESSION['rpfA']['redirect_uri'] : OP_INDEX_PAGE;
+        $state = array_key_exists('state', $_SESSION['rpfA']) ? $_SESSION['rpfA']['state'] : NULL;
+        $response_mode =  get_response_mode($_SESSION['rpfA']);
+        send_error($error_page, 'invalid_request', $e->getMessage(), NULL, $state, $response_mode);
+    }
+
+    after_authentication($account->getLogin(), 'on');
+}
+
+/**
+ * Will send an authentication request to the provider
+ * @param string provider Provider name (google, linkedin, etc.)
+ */
+function handle_socialite($provider) 
+{
+    check_functionality('enable_social_login');
+
+    global $config;
+    $provider = Laravel\Socialite\SocialiteManager::driver($provider, $config['socialite']);
+    $url = $provider->redirect();
+    log_debug('Redirect to %s', $url);
+    header("Location: $url");
+    exit;
+}
+
+
+/**
  * Show Login form.
  * @return String HTML Login form.
  */
 function loginform($display_name = '', $user_id = '', $client = null, $oplogin = false, $error = false)
 {
     global $blade;
+    global $config;
     $login_handler = $oplogin ? 'op' : '';
+
+    $socialite = $config['site']['enable_social_login'] ? array_map(function ($a) { return $a['enable']; }, $config['socialite']) : [];
+
     $action_url = $_SERVER['SCRIPT_NAME'] . '/' . $login_handler . 'login';
     $str = $blade->run('login', [
         'display_name' => $display_name,
         'user_id' => $user_id,
         'client' => $client,
         'action_url' => $action_url,
-        'error' => $error
+        'error' => $error,
+        'enable_social_login' => $config['site']['enable_social_login'],
+        'socialite' => $socialite
     ]);
     return $str;
 }
 
 function handle_register_continue()
 {
-
     echo loginform(
         $_SESSION['user']['display_name'],
         $_SESSION['user']['username'],
@@ -188,7 +276,7 @@ function handle_forgotpassword_form($error = false)
     global $blade;
     global $config;
 
-    check_enable_password_reset();
+    check_functionality('enable_password_reset');
 
     $str = $blade->run('forgotpassword', [
         'action_url' => OP_PASSWORD_RESET_CONTINUE_EP,
@@ -251,29 +339,12 @@ function check_reset_password_code($resetCode, $resetCodeTimeout, $input)
     return $result;
 }
 
-/**
- * Will display an error screen if password reset is not enabled
- */
-function check_enable_password_reset()
-{
-    global $blade;
-    global $config;
-    if (!$config['site']['enable_password_reset']) {
-        $str = $blade->run('error', [
-            'error' => "Functionality is disabled",
-            'desc' => "Password reset is disabled.",
-        ]);
-        echo $str;
-        exit;
-    }
-}
-
 function handle_passwordreset()
 {
     global $blade;
     global $config;
 
-    check_enable_password_reset();
+    check_functionality('enable_password_reset');
     if (
         !array_key_exists('user', $_SESSION)
         || !array_key_exists('id', $_SESSION['user'])
@@ -317,7 +388,7 @@ function handle_passwordreset_code($code, $email)
 {
     global $blade;
     global $config;
-    check_enable_password_reset();
+    check_functionality('enable_password_reset');
 
     $email = base64_decode($email);
 
@@ -364,7 +435,7 @@ function handle_forgotpassword()
     global $blade;
     global $config;
 
-    check_enable_password_reset();
+    check_functionality('enable_password_reset');
     $email = urldecode(trim($_POST['email']));
 
     if (!$email || !filter_var($email, FILTER_VALIDATE_EMAIL)) {
@@ -513,7 +584,7 @@ function handle_register()
         return;
     }
     $values = prepare_register_data($register_form);
-    if (db_create_account($values['login'], $values)) {
+    if (db_create_account_with_values($values['login'], $values)) {
         $_SESSION["user"] = [
             "username" => $values['login'],
             "display_name" => $values['name'],
@@ -549,7 +620,6 @@ function confirm_userinfo()
         unset($scopes[$key]);
     }
 
-    $claims_label = get_default_claims();
     $client = $_SESSION['client'];
 
     $requested_claims = get_all_requested_claims($req, $req['scope']);
@@ -561,7 +631,6 @@ function confirm_userinfo()
     $str = $blade->run('consent', [
         'display_name' => "",
         'user_id' => "",
-        'claims_label' => $claims_label,
         'scopes' => $scopes,
         'account' => $account,
         'action_url' => $action_url,
@@ -589,7 +658,6 @@ function create_token_info($uname, $attribute_list = NULL, $get = NULL, $req = N
     $arr['r'] = $req;
     return $arr;
 }
-
 
 /**
  * Obtain the content of the URL.
@@ -635,11 +703,9 @@ function clean_session($persist = 0)
     return true;
 }
 
-
 function send_error($url, $error, $description = NULL, $error_uri = NULL, $state = NULL, $response_mode = 'query', $http_error_code = '400')
 {
-    log_error('@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@');
-    log_info("url:%s error:%s desc:%s uri:%s state:%s code:%d", $url, $error, $description, $error_uri, $state, $http_error_code);
+    log_error("url:%s error:%s desc:%s uri:%s state:%s code:%d", $url, $error, $description, $error_uri, $state, $http_error_code);
     if ($url) {
         $params = array('error' => $error);
         if ($state) $params['state'] = $state;
@@ -687,7 +753,6 @@ function send_error($url, $error, $description = NULL, $error_uri = NULL, $state
         exit;
     }
 }
-
 
 function send_bearer_error($http_error_code, $error, $description = NULL)
 {
@@ -958,7 +1023,7 @@ function handle_auth()
             if ($client['require_auth_time'] && (array_key_exists('claims', $_REQUEST) && array_key_exists('id_token', $_REQUEST['claims']) &&  !$_REQUEST['claims']['id_token']
                 || !array_key_exists('auth_time', $_REQUEST['claims']['id_token'])))
                 $_REQUEST['claims']['id_token']['auth_time'] = array('essential' => true);
-            if (!$_REQUEST['claims']['id_token'] || !array_key_exists('acr', $_REQUEST['claims']['id_token'])) {
+            if (!isset($_REQUEST['claims']) || !$_REQUEST['claims']['id_token'] || !array_key_exists('acr', $_REQUEST['claims']['id_token'])) {
                 if (array_key_exists('acr_values', $_REQUEST))
                     $_REQUEST['claims']['id_token']['acr'] = array('essential' => true, 'values' => explode(' ', $_REQUEST['acr_values']));
                 elseif ($client['default_acr_values'])
@@ -1164,10 +1229,8 @@ function is_client_authenticated()
     return false;
 }
 
-
 function handle_token()
 {
-
     global $config;
     log_info('****** handle_token');
     try {
@@ -1219,8 +1282,8 @@ function handle_token()
                 if (!db_find_token($token_name))
                     break;
             }
-            $issue_at = strftime('%G-%m-%d %T');
-            $expiration_at = strftime('%G-%m-%d %T', time() + (30 * 60));
+            $issue_at = new \DateTime();
+            $expiration_at = new \Datetime('+30 hour');
             $fields = array(
                 'client' => $auth_code['client'],
                 'issued_at' => $issue_at,
@@ -1235,9 +1298,8 @@ function handle_token()
 
             $response_types = explode(' ', $request_info['g']['response_type']);
             $scopes = explode(' ', $request_info['g']['scope']);
-            $prompts = explode(' ', $request_info['g']['prompt']);
+            $prompts = isset($request_info['g']['prompt']) ? explode(' ', $request_info['g']['prompt']) : [];
             if (in_array('openid', $scopes)) {
-
                 $client_secret = null;
                 $nonce = null;
                 $c_hash = null;
@@ -1369,9 +1431,9 @@ function handle_token()
                 'token_type' => 'Bearer',
                 'expires_in' => 3600
             );
-            if ($refresh_token)
+            if (isset($refresh_token))
                 $token_response['refresh_token'] = $refresh_token;
-            if ($id_token)
+            if (isset($id_token))
                 $token_response['id_token'] = $id_token;
             log_debug('token response = %s',  print_r($token_response, true));
             db_delete_entity($auth_code);
@@ -1476,7 +1538,6 @@ function get_default_claims()
         "updated_at" => "Updated At"
     );
 }
-
 
 function get_requested_claims($request, $subkeys)
 {
@@ -1690,7 +1751,6 @@ function handle_userinfo()
     }
 }
 
-
 function get_bearer_token()
 {
     $headers = array();
@@ -1715,7 +1775,6 @@ function get_bearer_token()
     }
     return null;
 }
-
 
 function handle_distributedinfo()
 {
@@ -1873,43 +1932,51 @@ function handle_distributedinfo()
     }
 }
 
+/**
+ * Mark the user as authenticated and either return the consent form 
+ * or send the authentication response
+ * @param string $username Username of the authenticated user
+ */
+function after_authentication($username, $persist = false) {
+    $_SESSION['login'] = 1;
+    $_SESSION['username'] = $username;
+    $_SESSION['persist'] = $persist;
+    $_SESSION['auth_time'] = time();
+    $_SESSION['ops'] = bin2hex(random_bytes(16));
+    setcookie('ops', $_SESSION['ops'], 0, '/');
+    log_debug("Auth_time = %s", $_SESSION['auth_time']);
+    log_debug("session id = %s", session_id());
+    log_debug("prompt = %s", @$_SESSION['rpfA']['prompt']);
+    $prompt = isset($_SESSION['rpfA']['prompt']) ? explode(' ', $_SESSION['rpfA']['prompt']) : array();
+    $num_prompts = count($prompt);
+    if ($num_prompts > 1 && in_array('none', $prompt)) {
+        throw new OidcException('interaction_required', "conflicting prompt parameters {$_SESSION['rpfA']['prompt']}");
+    }
+    if (in_array('none', $prompt))
+        $showUI = false;
+    else
+        $showUI = true;
+    if (in_array('consent', $prompt) || !db_get_user_trusted_client($username, $_SESSION['rpfA']['client_id'])) {
+        if (!$showUI)
+            throw new OidcException('interaction_required', "Unable to show consent page, prompt set to none");
+        echo confirm_userinfo();
+    } else
+        send_response($username, true);
+}
 
-
-
+/**
+ * Validate credentials for local authentication
+ */
 function handle_login()
 {
     // $username=preg_replace('/[^\w=_@]/','_',$_POST['username']);
     $username = $_POST['username'];
     try {
         if ($username) {
-
             if (db_check_credential($username, $_POST['password'])) {
-                $_SESSION['login'] = 1;
-                $_SESSION['username'] = $username;
-                $_SESSION['persist'] = $_POST['persist'];
-                $_SESSION['auth_time'] = time();
-                $_SESSION['ops'] = bin2hex(random_bytes(16));
-                setcookie('ops', $_SESSION['ops'], 0, '/');
-                log_debug("Auth_time = %s", $_SESSION['auth_time']);
-                log_debug("session id = %s", session_id());
-                log_debug("prompt = %s", $_SESSION['rpfA']['prompt']);
-                $prompt = isset($_SESSION['rpfA']['prompt']) ? explode(' ', $_SESSION['rpfA']['prompt']) : array();
-                $num_prompts = count($prompt);
-                if ($num_prompts > 1 && in_array('none', $prompt)) {
-                    throw new OidcException('interaction_required', "conflicting prompt parameters {$_SESSION['rpfA']['prompt']}");
-                }
-                if (in_array('none', $prompt))
-                    $showUI = false;
-                else
-                    $showUI = true;
-                if (in_array('consent', $prompt) || !db_get_user_trusted_client($username, $_SESSION['rpfA']['client_id'])) {
-                    if (!$showUI)
-                        throw new OidcException('interaction_required', "Unable to show consent page, prompt set to none");
-                    echo confirm_userinfo();
-                } else
-                    send_response($username, true);
+                after_authentication($username, $_POST['persist']);
             } else { // Credential did not match so try again.
-                echo loginform($_REQUEST['display_name'], $username, $_SESSION['client'], false, true);
+                echo loginform(@$_REQUEST['display_name'], $username, $_SESSION['client'], false, true);
             }
         } else {
             echo loginform($_SESSION["user"]['display_name'], $_SESSION["user"]['username'], $_SESSION['client'], false, false);
@@ -1919,11 +1986,10 @@ function handle_login()
     }
 }
 
-
 function handle_confirm_userinfo()
 {
-    $rpfA = $_SESSION['rpfA'];
-    $client_id = $rpfA['client_id'];
+    $rpfA = @$_SESSION['rpfA'];
+    $client_id = @$rpfA['client_id'];
     $authorized = false;
     if ($_REQUEST['confirm'] == 'confirmed') {
         $authorized = true;
@@ -1940,7 +2006,6 @@ function handle_confirm_userinfo()
 
     send_response($_SESSION['username'], $authorized);
 }
-
 
 function handle_file($file)
 {
@@ -1969,7 +2034,6 @@ function handle_default($file = null)
     ]);
     echo $str;
 }
-
 
 function check_redirect_uris($uris)
 {
@@ -2073,7 +2137,7 @@ function handle_client_registration()
         if (isset($data['post_logout_redirect_uris']) && !check_redirect_uris($data['post_logout_redirect_uris'])) {
             throw new OidcException('invalid_client_metadata', 'post_logout_redirect_uris is invalid');
         }
-        if ($data['sector_identifier_uri']) {
+        if (array_key_exists('sector_identifier_uri', $data)) {
             $sectorUris = get_url($data['sector_identifier_uri']);
             if (!$sectorUris)
                 throw new OidcException('invalid_client_metadata', 'blank sector_identifier_uri contents');
@@ -2206,7 +2270,6 @@ function unwrap_userid($userid)
     return NULL;
 }
 
-
 function handle_end_session()
 {
     $id_token = isset($_REQUEST['id_token']) ? $_REQUEST['id_token'] : '';
@@ -2223,7 +2286,6 @@ function handle_logout()
     setcookie('ops', "", time() - 3600, '/');
     session_destroy();
 }
-
 
 function make_id_token($username, $issuer, $aud, $claims = array(), $nonce = NULL, $code_hash = NULL, $token_hash = NULL, $auth_time = NULL, $ops = NULL, $acr = NULL)
 {
@@ -2252,7 +2314,6 @@ function make_id_token($username, $issuer, $aud, $claims = array(), $nonce = NUL
     }
     return $id_token_obj;
 }
-
 
 function get_account_claims($db_user, $requested_claims)
 {
@@ -2283,7 +2344,7 @@ function get_account_claims($db_user, $requested_claims)
                 break;
 
             case 'picture':
-                $claims[$mapped_key] = sprintf("%s/profiles/%s", $config['OP']['op_url'], $db_user[$key]);
+                $claims[$mapped_key] = $db_user[$key];
                 break;
 
             default:
@@ -2294,7 +2355,6 @@ function get_account_claims($db_user, $requested_claims)
     log_debug('returning = %s', print_r($claims, true));
     return $claims;
 }
-
 
 function get_response_mode($req)
 {
@@ -2337,7 +2397,6 @@ EOF;
     return $html;
 }
 
-
 function send_auth_response($url, $params, $response_mode)
 {
     log_debug('URL = %s params = %s mode = %s', $url, print_r($params, true), $response_mode);
@@ -2360,15 +2419,15 @@ function send_response($username, $authorize = false)
     $GET = $_SESSION['get'];
     $rpfA = $_SESSION['rpfA'];
     $rpep = $GET['redirect_uri'];
-    $state = isset($GET['state']) ? $GET['state'] : NULL;
+    $state = isset($GET['state']) ? $GET['state'] : null;
     $error_page = isset($GET['redirect_uri']) ? $GET['redirect_uri'] : OP_INDEX_PAGE;
     $response_mode = get_response_mode($GET);
 
     try {
         $client_id = $GET['client_id'];
-        $response_types = explode(' ', $GET['response_type']);
-        $scopes = explode(' ', $GET['scope']);
-        $prompts = explode(' ', $GET['prompt']);
+        $response_types = isset($GET['response_type']) ? explode(' ', $GET['response_type']) : [];
+        $scopes = isset($GET['scope']) ? explode(' ', $GET['scope']) : [];
+        $prompts = isset($GET['prompt']) ? explode(' ', $GET['prompt']) : [];
 
         $is_code_flow = in_array('code', $response_types);
         $is_token_flow = in_array('token', $response_types);
@@ -2376,8 +2435,8 @@ function send_response($username, $authorize = false)
 
         $offline_access = $is_code_flow && !$is_token_flow && in_array('consent', $prompts) && in_array('offline_access', $scopes);
 
-        $issue_at = strftime('%G-%m-%d %T');
-        $expiration_at = strftime('%G-%m-%d %T', time() + (2 * 60));
+        $issue_at = new \DateTime();
+        $expiration_at = new \DateTime('+2 hour');
         $response_params = array();
 
         if (!$authorize)
@@ -2406,8 +2465,6 @@ function send_response($username, $authorize = false)
             $code_info = create_token_info($username, $confirmed_attribute_list, $GET, $rpfA);
             $token = $code_info['name'];
             unset($code_info['name']);
-            $issue_at = strftime('%G-%m-%d %T');
-            $expiration_at = strftime('%G-%m-%d %T', time() + (2 * 60));
             $fields = array(
                 'client' => $GET['client_id'],
                 'issued_at' => $issue_at,
@@ -2507,7 +2564,7 @@ function send_response($username, $authorize = false)
                 $hash_length = (int) ((int) $bit_length / 2) / 8;
                 if ($code)
                     $c_hash = base64url_encode(substr(hash($hash_alg, $code, true), 0, $hash_length));
-                if ($token)
+                if (isset($token))
                     $at_hash = base64url_encode(substr(hash($hash_alg, $token, true), 0, $hash_length));
             }
             $requested_id_token_claims = get_id_token_claims($rpfA);

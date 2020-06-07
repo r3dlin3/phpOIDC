@@ -55,7 +55,7 @@ $row = db_get_account_by_id($id);
 <tr><td>Phone Number:</td><td><input type='text' name='phone_number' value='<?= stripslashes($row['phone_number']) ?>' /> </td></tr>
 <tr><td>Phone Number Verified:</td><td><input type='text' name='phone_number_verified' value='<?= stripslashes($row['phone_number_verified']) ?>' /> </td></tr>
 <tr><td>Address:</td><td><input type='text' name='address' value='<?= stripslashes($row['address']) ?>' />
-<tr><td>Updated At:</td><td><input type='text' name='updated_at' value='<?= stripslashes($row['updated_at']) ?>' /> </td></tr>
+<tr><td>Updated At:</td><td><input type='text' name='updated_at' value='<?= $row['updated_at']->format(DateTimeInterface::ISO8601) ?>' /> </td></tr>
 
 
 

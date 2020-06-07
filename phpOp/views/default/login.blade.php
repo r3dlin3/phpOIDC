@@ -15,6 +15,31 @@
 <div class="card fat">
     <div class="card-body">
         <h4 class="card-title">@_ef('%s OP Login', $client['client_name'])</h4>
+        @if ($enable_social_login)
+        <div class="container">
+            <div class="row">
+                <ul class="social-btns mx-auto">
+                @foreach ($socialite as $provider=>$enable)
+                    @if($enable)
+                    <li><a class="btn btn-{!! $provider !!}" href="{!! OP_SOCIALITE_EP !!}{!! $provider !!}">
+                        <span class="align-middle">
+                            <img alt="@_e($provider)" title="@_ef('Sign in with %s', $this->_e($provider))" class="float-left" src="{!! OP_PATH !!}/img/socialite/{!! $provider !!}.png">    
+                            @_ef('Sign in with %s', $this->_e($provider))
+                        </a></li>
+                    </span>
+                    @endif
+                @endforeach
+                </ul>
+            </div>
+        </div>
+		<div class="row login-or">
+			<div class="w-100">
+				<hr class="hr-or">
+				<span class="span-or">@_e('or')</span>
+			</div>
+		</div>
+        @endif
+
         @if ($error)
         <div class="alert alert-danger" role="alert">
             @_e('Authentication error')

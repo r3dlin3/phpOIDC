@@ -51,8 +51,7 @@ if (
 ) {
     $port = ':' . $_SERVER['SERVER_PORT'];
 }
-$path = getenv('OP_URL') ? parse_url(getenv('OP_URL'))['path'] : 
-getenv('OP_URL') ?: '/phpOp';
+$path = getenv('OP_URL') ? parse_url(getenv('OP_URL'))['path'] : (getenv('OP_URL') ?: '/phpOp');
 define("OP_PATH", $path);
 $op_url = getenv('OP_URL') ?: ($protocol . $op_server_name . $port . $path);
 
@@ -73,6 +72,8 @@ define('OP_PASSWORD_RESET_CONTINUE_EP', OP_INDEX_PAGE . '/forgotpassword');
 define('OP_PASSWORD_RESET_CODE_EP', OP_INDEX_PAGE . '/passwordreset/');
 define('OP_PASSWORD_RESET_CODE_CONTINUE_EP', OP_INDEX_PAGE . '/passwordreset');
 define('OP_LOGIN_EP', OP_INDEX_PAGE . '/login');
+define('OP_SOCIALITE_EP', OP_INDEX_PAGE . '/socialite/');
+define('OP_SOCIALITE_REDIRECT_EP', OP_INDEX_PAGE . '/socialitecb/');
 
 /**
  * Global config
@@ -130,12 +131,62 @@ $config = [
         'from' => getenv('MAIL_FROM') ?: null,
         'reply_to' => getenv('MAIL_REPLY_TO') ?: null,
         'auto_tls' => array_key_exists('MAIL_SMTP_AUTO_TLS', $_ENV) ? (getenv('MAIL_HOST') === 'true') : false,
-
-         
+    ],
+    'socialite' => [
+        'bitbucket' => [
+            'client_id' => getenv('BITBUCKET_CLIENT_ID') ?: null,
+            'client_secret' => getenv('BITBUCKET_CLIENT_SECRET') ?: null,
+            'redirect' => getenv('BITBUCKET_REDIRECT_URL') ?: OP_SOCIALITE_REDIRECT_EP.'bitbucket/',
+        ],
+        'facebook' => [
+            'client_id' => getenv('FACEBOOK_CLIENT_ID') ?: null,
+            'client_secret' => getenv('FACEBOOK_CLIENT_SECRET') ?: null,
+            'redirect' => getenv('FACEBOOK_REDIRECT_URL') ?: OP_SOCIALITE_REDIRECT_EP.'facebook/',
+        ],
+        'github' => [
+            'client_id' => getenv('GITHUB_CLIENT_ID') ?: null,
+            'client_secret' => getenv('GITHUB_CLIENT_SECRET') ?: null,
+            'redirect' => getenv('GITHUB_REDIRECT_URL') ?: OP_SOCIALITE_REDIRECT_EP.'github/',
+        ],
+        'gitlab' => [
+            'client_id' => getenv('GITLAB_CLIENT_ID') ?: null,
+            'client_secret' => getenv('GITLAB_CLIENT_SECRET') ?: null,
+            'redirect' => getenv('GITLAB_REDIRECT_URL') ?: OP_SOCIALITE_REDIRECT_EP.'gitlab/',
+        ],
+        'linkedin' => [
+            'client_id' => getenv('LINKEDIN_CLIENT_ID') ?: null,
+            'client_secret' => getenv('LINKEDIN_CLIENT_SECRET') ?: null,
+            'redirect' => getenv('LINKEDIN_REDIRECT_URL') ?: OP_SOCIALITE_REDIRECT_EP.'linkedin/',
+        ],
+        'twitter' => [
+            'client_id' => getenv('TWITTER_CLIENT_ID') ?: null,
+            'client_secret' => getenv('TWITTER_CLIENT_SECRET') ?: null,
+            'redirect' => getenv('TWITTER_REDIRECT_URL') ?: OP_SOCIALITE_REDIRECT_EP.'twitter/',
+        ],
+        'google' => [
+            'client_id' => getenv('GOOGLE_CLIENT_ID') ?: null,
+            'client_secret' => getenv('GOOGLE_CLIENT_SECRET') ?: null,
+            'redirect' => getenv('GOOGLE_REDIRECT_URL') ?: OP_SOCIALITE_REDIRECT_EP.'google/',
+        ]
 
     ]
-
 ];
+
+$is_socialite_enabled = false;
+foreach ($config['socialite'] as &$provider_config) {
+    if (
+        isset($provider_config['client_id'])
+        && isset($provider_config['client_secret'])
+    ) {
+        $is_socialite_enabled = true;
+        $provider_config['enable'] = true;
+    } else {
+        $provider_config['enable'] = false;
+    }
+}
+
+$config['site']['enable_social_login']
+    = array_key_exists('ENABLE_SOCIAL_LOGIN', $_ENV) ? (getenv('ENABLE_SOCIAL_LOGIN') === 'true') : $is_socialite_enabled;
 
 /**
  * I18n
