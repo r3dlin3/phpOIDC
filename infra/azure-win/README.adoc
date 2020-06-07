@@ -1,0 +1,122 @@
+= Deployment of phpOIDC to an Azure App Service (Windows) 
+
+Note: The purpose of these templates is to give you a kick-start, instantiating all of the required resources to run phpOIDC in Azure. *It should be used for testing only*.
+
+
+== What is being deployed
+
+* Azure App Service: The App service will be configured to use PHP
+* App Service plan: In these templates, a Windows App Service is used
+* Azure Database for MySQL: Its firewall is set based on the App Service IP
+
+You can click on the button to visualize the deployed resources:
+image:https://raw.githubusercontent.com/Azure/azure-quickstart-templates/master/1-CONTRIBUTION-GUIDE/images/visualizebutton.svg?sanitize=true[title="Visualize", link="http://armviz.io/#/?load=https%3A%2F%2Fraw.githubusercontent.com%2FAzure%2Fazure-quickstart-templates%2Fmaster%2Fazmgmt-demo%2Fazuredeploy.json]
+
+== How to deploy
+
+NOTE: The templates used https://docs.microsoft.com/en-us/azure/azure-resource-manager/templates/linked-templates[nested templates].
+
+It is possible to use the portal (cf. <<One-button click>>), by using <<Powershell>> or Azure CLI.
+
+In any case, the following tables describes the parameters:
+
+[cols="3", options="header"]
+|===
+|Parameter Name
+|Component
+|Description
+
+|siteName
+|App Service
+|Name of azure web app. The application will be accessible from https://<siteName>.azurewebsites.net
+
+|appServicePlanName
+|App Service Plan
+|Name of hosting plan
+
+|skuName
+|App Service Plan
+|Sku for the App service plan
+
+|capacity
+|App Service Plan
+|Current number of instances assigned to the resource
+
+|mysqlServerName
+|MySQL
+|Server Name for Azure database for MySQL
+
+|administratorLogin
+|MySQL
+|Database administrator login name
+
+|administratorPassword
+|MySQL
+|Database administrator password
+
+|databaseForMySqlName
+|MySQL
+|Name of the Azure Database for MySQL
+
+|databaseSkuName
+|MySQL
+|Azure database for MySQL sku name
+
+|_artifactsLocation
+|General
+|The base URI where artifacts required by this template are located.
+
+|_artifactsLocationSasToken
+|General
+|The sasToken required to access _artifactsLocation.
+
+|tags
+|MySQL
+|tags to apply to resources
+
+|location
+|MySQL
+|The region to deploy the resources into
+|===
+
+=== One-button click
+
+image:https://raw.githubusercontent.com/Azure/azure-quickstart-templates/master/1-CONTRIBUTION-GUIDE/images/deploytoazure.svg?sanitize=true[title="Deploy To Azure", link="https://portal.azure.com/#create/Microsoft.Template/uri/https%3A%2F%2Fraw.githubusercontent.com%2FAzure%2Fazure-quickstart-templates%2Fmaster%2Fazmgmt-demo%2Fazuredeploy.json"]
+
+=== PowerShell
+
+[source, powershell]
+----
+# Create a resource group if not already exists
+$rg = "" # Specify a name for the resource group
+New-AzResourceGroup -Name $rg -Location FranceCentral
+
+# Define parameters for template deployment - remember to change the values!
+$siteName=""
+$appServicePlanName=""
+$skuName=""
+$capacity=""
+$mysqlServerName=""
+$administratorLogin=""
+#To prompt
+$administratorPassword=Read-Host -AsSecureString
+# 
+$administratorPassword=ConvertTo-SecureString 'MySuperSecretP@ssw0rd!' –asplaintext –force 
+$databaseForMySqlName=""
+$templateuri = "https://raw.githubusercontent.com/r3dlin3/phpOIDC/master/infra/azure-win/azuredeploy.json"
+
+New-AzResourceGroupDeployment -ResourceGroupName $rg `
+                              -TemplateUri $templateUri `
+                              -siteName $siteName
+                              -appServicePlanName $appServicePlanName
+                              -skuName $skuName
+                              -capacity $capacity
+                              -mysqlServerName $mysqlServerName
+                              -administratorLogin $administratorLogin
+                              -administratorPassword $administratorPassword
+                              -databaseForMySqlName $databaseForMySqlName
+                              -Verbose
+----
+
+
+== Post-installation

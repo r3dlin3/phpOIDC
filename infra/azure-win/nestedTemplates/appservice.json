@@ -1,5 +1,5 @@
 {
-    "$schema": "https://schema.management.azure.com/schemas/2015-01-01/deploymentTemplate.json#",
+    "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
     "contentVersion": "1.0.0.0",
     "parameters": {
         "siteName": {
@@ -39,6 +39,20 @@
             "defaultValue": 1,
             "metadata": {
                 "description": "Current number of instances assigned to the resource."
+            }
+        },
+        "repoURL": {
+            "type": "string",
+            "defaultValue": "https://github.com/r3dlin3/phpOIDC.git",
+            "metadata": {
+                "description": "The URL for the GitHub repository that contains the project to deploy."
+            }
+        },
+        "branch": {
+            "type": "string",
+            "defaultValue": "master",
+            "metadata": {
+                "description": "The branch of the GitHub repository to use."
             }
         },
         "tags": {
@@ -87,16 +101,16 @@
             },
             "resources": [
                 {
-                    "apiVersion": "2015-08-01",
                     "name": "web",
                     "type": "config",
+                    "apiVersion": "2015-08-01",
                     "dependsOn": [
-                        "[resourceId('Microsoft.Web/Sites', parameters('siteName'))]"
+                        "[parameters('siteName')]"
                     ],
                     "properties": {
                         "use32BitWorkerProcess": false,
-                        "phpVersion": "off",
-                        "netFrameworkVersion": "v4.7",
+                        "phpVersion": "7.3",
+                        "httpsOnly": true,
                         "webSocketsEnabled": false,
                         "requestTracingEnabled": true,
                         "detailedErrorLoggingEnabled": true,
@@ -105,21 +119,47 @@
                         "remoteDebuggingEnabled": false,
                         "ftpsState": "Disabled",
                         "defaultDocuments": [
+                            "index.php"
+                        ],
+                        "virtualApplications": [
+                            {
+                                "virtualPath": "/",
+                                "physicalPath": "site\\wwwroot\\phpOp\\public",
+                                "preloadEnabled": false,
+                                "virtualDirectories": null
+                            }
                         ]
                     }
                 },
                 {
-                    "apiVersion": "2014-11-01",
-                    "name": "appsettings",
-                    "type": "config",
+                    "name": "ComposerExtension",
+                    "type": "siteextensions",
+                    "apiVersion": "2015-08-01",
                     "dependsOn": [
-                        "[resourceId('Microsoft.Web/Sites', parameters('siteName'))]"
+                        "[parameters('siteName')]"
+                    ]
+                },
+                {
+                    "type": "sourcecontrols",
+                    "apiVersion": "2018-02-01",
+                    "name": "web",
+                    "location": "[parameters('location')]",
+                    "dependsOn": [
+                        "ComposerExtension"
                     ],
                     "properties": {
-                        "foo": "bar"
+                        "repoUrl": "[parameters('repoURL')]",
+                        "branch": "[parameters('branch')]",
+                        "isManualIntegration": true
                     }
                 }
             ]
         }
-    ]
+    ],
+    "outputs": {
+        "possibleOutboundIps": {
+            "type": "array",
+            "value": "[split(reference(parameters('siteName'), '2018-02-01').possibleOutboundIpAddresses, ',')]"
+        }
+    }
 }

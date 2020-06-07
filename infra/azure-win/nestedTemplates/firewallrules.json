@@ -1,0 +1,41 @@
+{
+    "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+    "contentVersion": "1.0.0.0",
+    "parameters": {
+        "inputArray": {
+            "type": "array",
+            "metadata": {
+                "description": "string array of ip addresses"
+            }
+        },
+        "ruleNamePrefix": {
+            "type": "string",
+            "maxLength": 26,
+            "metadata": {
+                "description": "prefix to use in the name of the rule"
+            }
+        }
+    },
+
+    "variables": {
+        "outputArray": {
+            "copy": [
+                {
+                    "name": "items",
+                    "count": "[length(parameters('inputArray'))]",
+                    "input": {
+                        "startIpAddress": "[parameters('inputArray')[copyIndex('items')]]",
+                        "endIpAddress": "[parameters('inputArray')[copyIndex('items')]]",
+                        "name": "[concat(parameters('ruleNamePrefix'), copyIndex('items'))]"
+                    }
+                }
+            ]
+        }
+    },
+    "outputs": {
+        "firewallRules": {
+            "value": "[variables('outputArray').items]",
+            "type": "array"
+        }
+    }
+}

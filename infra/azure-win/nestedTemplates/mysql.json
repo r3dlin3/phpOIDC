@@ -15,7 +15,7 @@
                 "description": "Database administrator login name"
             }
         },
-        "administratorLoginPassword": {
+        "administratorPassword": {
             "type": "securestring",
             "minLength": 8,
             "metadata": {
@@ -152,7 +152,7 @@
             "properties": {
                 "version": "[parameters('mysqlVersion')]",
                 "administratorLogin": "[parameters('administratorLogin')]",
-                "administratorLoginPassword": "[parameters('administratorLoginPassword')]",
+                "administratorLoginPassword": "[parameters('administratorPassword')]",
                 "storageProfile": {
                     "storageMB": "[parameters('databaseSizeMB')]",
                     "storageAutogrow": "[parameters('storageAutogrow')]",
@@ -163,7 +163,7 @@
             }
         },
         {
-            "name": "[concat(parameters('mysqlServerName'),'/',parameters('firewallrules')[copyIndex()].Name)]",
+            "name": "[concat(parameters('mysqlServerName'),'/',parameters('firewallrules')[copyIndex()].name)]",
             "type": "Microsoft.DBforMySQL/servers/firewallRules",
             "apiVersion": "2017-12-01",
             "location": "[parameters('location')]",
@@ -177,8 +177,8 @@
                 "count": "[length(parameters('firewallrules'))]"
             },
             "properties": {
-                "StartIpAddress": "[parameters('firewallrules')[copyIndex()].StartIpAddress]",
-                "EndIpAddress": "[parameters('firewallrules')[copyIndex()].EndIpAddress]"
+                "StartIpAddress": "[parameters('firewallrules')[copyIndex()].startIpAddress]",
+                "EndIpAddress": "[parameters('firewallrules')[copyIndex()].endIpAddress]"
             }
         },
         {
