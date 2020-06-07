@@ -145,6 +145,7 @@
                     "name": "web",
                     "location": "[parameters('location')]",
                     "dependsOn": [
+                        "[parameters('siteName')]",
                         "ComposerExtension"
                     ],
                     "properties": {
