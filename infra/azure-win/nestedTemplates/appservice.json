@@ -140,7 +140,7 @@
                         "[resourceId('Microsoft.Web/sites', parameters('siteName'))]"
                     ],
                     "properties": {
-                        "COMPOSER_ARGS": "--prefer-dist --no-dev --optimize-autoloader --no-progress -d \"D:\\home\\site\\wwwroot\\phpOp"
+                        "COMPOSER_ARGS": "--prefer-dist --no-dev --optimize-autoloader --no-progress -d \"D:\\home\\site\\wwwroot\\phpOp\""
                     }
                 },
                 {
