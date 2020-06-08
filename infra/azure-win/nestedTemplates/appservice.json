@@ -98,50 +98,49 @@
             "properties": {
                 "name": "[parameters('siteName')]",
                 "serverFarmId": "[parameters('appServicePlanName')]",
-                "httpsOnly": true
+                "httpsOnly": true,
+                "siteConfig": {
+                    "use32BitWorkerProcess": false,
+                    "netFrameworkVersion": null,
+                    "phpVersion": "7.4",
+                    "httpsOnly": true,
+                    "webSocketsEnabled": false,
+                    "requestTracingEnabled": true,
+                    "detailedErrorLoggingEnabled": true,
+                    "httpLoggingEnabled": true,
+                    "logsDirectorySizeLimit": 40,
+                    "remoteDebuggingEnabled": false,
+                    "ftpsState": "Disabled",
+                    "defaultDocuments": [
+                        "index.php"
+                    ],
+                    "virtualApplications": [
+                        {
+                            "virtualPath": "/",
+                            "physicalPath": "site\\wwwroot\\phpOp\\public",
+                            "preloadEnabled": false,
+                            "virtualDirectories": null
+                        }
+                    ],
+                    "appSettings": [
+                        {
+                            "name": "COMPOSER_ARGS",
+                            "value": "--prefer-dist --no-dev --optimize-autoloader --no-progress -d \"D:\\home\\site\\wwwroot\\phpOp\""
+                        },
+                        {
+                            "name": "SCM_POST_DEPLOYMENT_ACTIONS_PATH",
+                            "value": "infra\\azure-win\\postdeployment"
+                        }
+                    ],
+                    "metadata": [
+                        {
+                            "name": "CURRENT_STACK",
+                            "value": "php"
+                        }
+                    ]
+                }
             },
             "resources": [
-                {
-                    "name": "web",
-                    "type": "config",
-                    "apiVersion": "[variables('apiVersion')]",
-                    "dependsOn": [
-                        "[parameters('siteName')]"
-                    ],
-                    "properties": {
-                        "use32BitWorkerProcess": false,
-                        "phpVersion": "7.4",
-                        "httpsOnly": true,
-                        "webSocketsEnabled": false,
-                        "requestTracingEnabled": true,
-                        "detailedErrorLoggingEnabled": true,
-                        "httpLoggingEnabled": true,
-                        "logsDirectorySizeLimit": 40,
-                        "remoteDebuggingEnabled": false,
-                        "ftpsState": "Disabled",
-                        "defaultDocuments": [
-                            "index.php"
-                        ],
-                        "virtualApplications": [
-                            {
-                                "virtualPath": "/",
-                                "physicalPath": "site\\wwwroot\\phpOp\\public",
-                                "preloadEnabled": false,
-                                "virtualDirectories": null
-                            }
-                        ],
-                        "appSettings": [
-                            {
-                                "name": "COMPOSER_ARGS",
-                                "value": "--prefer-dist --no-dev --optimize-autoloader --no-progress -d \"D:\\home\\site\\wwwroot\\phpOp\""
-                            },
-                            {
-                                "name": "SCM_POST_DEPLOYMENT_ACTIONS_PATH",
-                                "value": "infra\\azure-win\\postdeployment"
-                            }
-                        ]
-                    }
-                },
                 {
                     "name": "web",
                     "type": "sourcecontrols",
