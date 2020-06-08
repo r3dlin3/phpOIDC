@@ -6,7 +6,7 @@
 
 @section('content')
 <div class="brand">
-    <img src="{!! $site['theme_uri'] !!}/img/logo.jpg" alt="logo">
+    <img src="{!! $site['theme_uri'] !!}/img/logo.png" alt="logo">
 </div>
 <div class="card fat">
     <div class="card-body">
