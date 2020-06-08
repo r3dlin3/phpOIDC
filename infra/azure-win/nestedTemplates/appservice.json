@@ -137,7 +137,7 @@
                             },
                             {
                                 "name": "SCM_POST_DEPLOYMENT_ACTIONS_PATH",
-                                "value": "infra\\azure-win\\deploy.cmd"
+                                "value": "infra\\azure-win\\postdeployment"
                             }
                         ],
                         "metadata": [
