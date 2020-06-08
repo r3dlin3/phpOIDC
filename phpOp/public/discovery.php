@@ -46,7 +46,6 @@ function handle_openid_config()
         'check_session_iframe' => $op_url . '/opframe.php',
         'end_session_endpoint' => $endpoint_base . '/endsession',
         'jwks_uri' =>  $config['OP']['jwk_url'],
-        'registration_endpoint' => $endpoint_base . '/registration',
         'scopes_supported' => array('openid', 'profile', 'email', 'address', 'phone', 'offline_access'),
         'response_types_supported' => array('code', 'code token', 'code id_token', 'token', 'id_token token', 'code id_token token', 'id_token'),
         'grant_types_supported' => array('authorization_code', 'implicit'),
@@ -85,6 +84,9 @@ function handle_openid_config()
         'request_uri_parameter_supported' => true
     );
 
+    if ($config['site']['enable_dynamic_client_registration']) {
+        $discovery['registration_endpoint'] = $endpoint_base . '/registration';
+    }
     header('Content-Type: application/json');
     echo pretty_json(json_encode($discovery));
 }

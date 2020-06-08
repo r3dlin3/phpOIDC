@@ -2052,6 +2052,11 @@ function check_redirect_uris($uris)
 
 function handle_client_registration()
 {
+    global $config;
+    if (!$config['site']['enable_dynamic_client_registration']) {
+        send_error(null,'invalid_request', 'Dynamic client registration disabled');
+    }
+
     try {
         global $signing_alg_values_supported, $encryption_alg_values_supported, $encryption_enc_values_supported;
         $tmp_headers = apache_request_headers();
@@ -2193,6 +2198,10 @@ function handle_client_registration()
 
 function handle_client_operations()
 {
+    global $config;
+    if (!$config['site']['enable_dynamic_client_registration']) {
+        send_error(null,'invalid_request', 'Dynamic client registration disabled');
+    }
     try {
         $token = $_REQUEST['access_token'];
         if (!$token) {

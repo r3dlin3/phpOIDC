@@ -234,7 +234,12 @@ The parameters are described below:
 | Enable admin interface. Beware that current implementation of admin is insecure as there is no access control. Must be `true` or `false`.
 | true
 
-| BLADE_CACHE 
+| ENABLE_DYNAMIC_CLIENT_REGISTRATION
+| Enable dynamic client registration as per defined in the https://openid.net/specs/openid-connect-registration-1_0.html[specification].
+Must be `true` or `false`.
+| true
+
+| BLADE_CACHE
 | Path to cache. Used by BladeOne. 
 | ./cache
 
