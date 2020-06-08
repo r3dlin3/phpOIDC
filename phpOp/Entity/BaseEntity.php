@@ -75,4 +75,18 @@ abstract class BaseEntity
     {
         return $this->created_at;
     }
+
+    /**
+     * @param mixed $updated_at
+     */
+    public function setUpdatedAt($updated_at)
+    {
+        if (empty($updated_at)) {
+
+            $this->updated_at = null;
+        } else {
+            $this->updated_at = $updated_at;
+
+        }
+    }
 }

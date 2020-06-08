@@ -689,14 +689,6 @@ Class Account extends BaseEntity implements JsonSerializable, ArrayAccess, Itera
     }
 
     /**
-     * @param mixed $updated_at
-     */
-    public function setUpdatedAt($updated_at)
-    {
-        $this->updated_at = $updated_at;
-    }
-
-    /**
      * @return mixed
      */
     public function getResetPasswordCode()
