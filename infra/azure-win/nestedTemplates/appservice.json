@@ -69,7 +69,8 @@
         }
     },
     "variables": {
-        "apiVersion": "2019-08-01"
+        "apiVersion": "2019-08-01",
+        "use32BitWorkerProcess": "[or(equals(parameters('skuName'),'F1'), equals(parameters('skuName'),'D1'))]"
     },
     "resources": [
         {
@@ -100,7 +101,7 @@
                 "serverFarmId": "[parameters('appServicePlanName')]",
                 "httpsOnly": true,
                 "siteConfig": {
-                    "use32BitWorkerProcess": false,
+                    "use32BitWorkerProcess": "[variables('use32BitWorkerProcess')]",
                     "netFrameworkVersion": null,
                     "phpVersion": "7.4",
                     "httpsOnly": true,
