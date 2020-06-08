@@ -57,6 +57,9 @@ echo Handling PHP Web Site deployment.
 echo %DEPLOYMENT_SOURCE%
 echo %DEPLOYMENT_TARGET%
 
+echo PHP Version
+php -v
+
 :: 1. Composer.phar
 cd %DEPLOYMENT_SOURCE%
 
