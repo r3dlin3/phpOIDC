@@ -1,2 +1,0 @@
-[config]
-command = infra\azure-win\deploy.cmd

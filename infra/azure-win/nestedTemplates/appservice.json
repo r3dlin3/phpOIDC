@@ -134,6 +134,10 @@
                             {
                                 "name": "COMPOSER_ARGS",
                                 "value": "--prefer-dist --no-dev --optimize-autoloader --no-progress -d \"D:\\home\\site\\wwwroot\\phpOp\""
+                            },
+                            {
+                                "name": "SCM_POST_DEPLOYMENT_ACTIONS_PATH",
+                                "value": "infra\\azure-win\\deploy.cmd"
                             }
                         ],
                         "metadata": [
