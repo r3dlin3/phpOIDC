@@ -15,9 +15,9 @@
  * limitations under the License.
  */
 
-require_once("config.php");
-require_once("libjsoncrypto.php");
-require_once('libdb2.php');
+require_once("../config.php");
+require_once("../libjsoncrypto.php");
+require_once('../libdb2.php');
 
 error_reporting(E_ERROR | E_WARNING | E_PARSE);
 
