@@ -9,7 +9,7 @@
     @if (!empty($client['logo_uri']))
     <img src="{!! $client['logo_uri'] !!}" alt="{{ $client['client_name'] }}">
     @else
-    <img src="{!! $site['theme_uri'] !!}/img/logo.png" alt="logo">
+    <img src="{!! $site['url'] !!}/img/logo.png" alt="logo">
     @endif
 </div>
 <div class="card fat">
@@ -104,7 +104,7 @@
         @if (!empty($client['tos_uri']))
         <a href="{!! $client['tos_uri'] !!}" class="card-link">@_e('Terms of use')</a>
         @endif
-    @endif
     </div>
+    @endif
 </div>
 @endsection
