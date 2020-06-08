@@ -69,10 +69,11 @@
         }
     },
     "variables": {
+        "apiVersion": "2019-08-01"
     },
     "resources": [
         {
-            "apiVersion": "2015-08-01",
+            "apiVersion": "[variables('apiVersion')]",
             "name": "[parameters('appServicePlanName')]",
             "kind": "app",
             "type": "Microsoft.Web/serverfarms",
@@ -87,7 +88,7 @@
             "tags": "[parameters('tags')]"
         },
         {
-            "apiVersion": "2015-08-01",
+            "apiVersion": "[variables('apiVersion')]",
             "name": "[parameters('siteName')]",
             "type": "Microsoft.Web/sites",
             "location": "[parameters('location')]",
@@ -103,12 +104,11 @@
                 {
                     "name": "web",
                     "type": "config",
-                    "apiVersion": "2018-02-01",
+                    "apiVersion": "[variables('apiVersion')]",
                     "dependsOn": [
                         "[parameters('siteName')]"
                     ],
                     "properties": {
-                        "netFrameworkVersion": "v4.0",
                         "use32BitWorkerProcess": false,
                         "phpVersion": "7.4",
                         "httpsOnly": true,
@@ -139,19 +139,13 @@
                                 "name": "SCM_POST_DEPLOYMENT_ACTIONS_PATH",
                                 "value": "infra\\azure-win\\postdeployment"
                             }
-                        ],
-                        "metadata": [
-                            {
-                                "name": "CURRENT_STACK",
-                                "value": "php"
-                            }
                         ]
                     }
                 },
                 {
                     "name": "web",
                     "type": "sourcecontrols",
-                    "apiVersion": "2018-02-01",
+                    "apiVersion": "[variables('apiVersion')]",
                     "location": "[parameters('location')]",
                     "dependsOn": [
                         "[resourceId('Microsoft.Web/sites', parameters('siteName'))]"
@@ -168,11 +162,11 @@
     "outputs": {
         "defaultHostName": {
             "type": "string",
-            "value": "[reference(parameters('siteName'), '2018-02-01').defaultHostName]"
+            "value": "[reference(parameters('siteName'), '[variables('apiVersion')]').defaultHostName]"
         },
         "possibleOutboundIps": {
             "type": "array",
-            "value": "[split(reference(parameters('siteName'), '2018-02-01').possibleOutboundIpAddresses, ',')]"
+            "value": "[split(reference(parameters('siteName'), '[variables('apiVersion')]').possibleOutboundIpAddresses, ',')]"
         }
     }
 }
