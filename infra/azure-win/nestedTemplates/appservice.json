@@ -162,11 +162,11 @@
     "outputs": {
         "defaultHostName": {
             "type": "string",
-            "value": "[reference(parameters('siteName'), '[variables('apiVersion')]').defaultHostName]"
+            "value": "[reference(parameters('siteName'), variables('apiVersion')).defaultHostName]"
         },
         "possibleOutboundIps": {
             "type": "array",
-            "value": "[split(reference(parameters('siteName'), '[variables('apiVersion')]').possibleOutboundIpAddresses, ',')]"
+            "value": "[split(reference(parameters('siteName'), variables('apiVersion')).possibleOutboundIpAddresses, ',')]"
         }
     }
 }
