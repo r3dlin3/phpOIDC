@@ -35,7 +35,9 @@ NOTE: The templates used https://docs.microsoft.com/en-us/azure/azure-resource-m
 
 It is possible to use the portal (cf. <<One-button click>>), by using <<Powershell>> or Azure CLI.
 
-In any case, the following tables describes the parameters:
+In any case, the following tables describes the parameters.
+
+After deployment of the resources, there is an additional step described in the paragraph <<Post-deployment>>.
 
 [cols="3", options="header"]
 |===
@@ -88,17 +90,41 @@ In any case, the following tables describes the parameters:
 |The sasToken required to access _artifactsLocation.
 
 |tags
-|MySQL
+|General
 |tags to apply to resources
 
 |location
-|MySQL
+|General
 |The region to deploy the resources into
 |===
 
 === One-button click
 
-image:https://raw.githubusercontent.com/Azure/azure-quickstart-templates/master/1-CONTRIBUTION-GUIDE/images/deploytoazure.svg?sanitize=true[title="Deploy To Azure", link="https://portal.azure.com/#create/Microsoft.Template/uri/https%3A%2F%2Fraw.githubusercontent.com%2Fr3dlin3%2FphpOIDC%2Fmaster%2Finfra%2Fazure-win%2Fazuredeploy.json"]
+. Click on the button below:
+
+image::https://raw.githubusercontent.com/Azure/azure-quickstart-templates/master/1-CONTRIBUTION-GUIDE/images/deploytoazure.svg?sanitize=true["Deploy To Azure", link="https://portal.azure.com/#create/Microsoft.Template/uri/https%3A%2F%2Fraw.githubusercontent.com%2Fr3dlin3%2FphpOIDC%2Fmaster%2Finfra%2Fazure-win%2Fazuredeploy.json"]
+
+[start=2]
+. Fill the form with the parameters as described in the table above. 
+You can use an existing resource group or create one on the fly.
+Keep in mind that certain name must be globally unique, like the app service name or the name of the MySQL server.
+
+image::assets/portal-form.png[Portal form]
+
+[start=3]
+. Check "I agree to the terms and conditions stated above" and click on the button "Purchase".
+
+image::assets/portal-purchase.png[purchase]
+
+[start=4]
+. If there is no validation error, the deployment starts.
+
+image::assets/portal-inprogress.png[purchase]
+
+[start=5]
+. Finally, after a while, the resources are deployed.
+
+image::assets/portal-success.png[purchase]
 
 === PowerShell
 
@@ -137,15 +163,15 @@ New-AzResourceGroupDeployment -ResourceGroupName $rg `
                               -Verbose
 ----
 
-== Post-installation
+== Post-deployment
 
 The database schema must be initialized. 
 There are several ways to create the schema.
 
 One way is to:
 
-1. Go to the Azure Portal, on the App Service
-2. Go to the blade "Console"
+1. Go to the Azure Portal, on the App Service.
+2. Go to the blade "Console".
 3. Type the following commands:
 ----
 cd phpOp

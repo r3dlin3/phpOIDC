@@ -72,6 +72,11 @@ Then execute the following command:
 
 You can access the homepage by going to http://localhost:8001.
 
+== Azure
+
+It is possible to quickly deploy phpOIDC OpenID Connect Provider in Azure.
+Follow this link:infra/azure-win/README.adoc[doc].
+
 == Installation
 
 There are two folders: `phpOp` and `phpRp`.
