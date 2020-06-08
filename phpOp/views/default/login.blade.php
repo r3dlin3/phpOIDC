@@ -6,10 +6,10 @@
 
 @section('content')
 <div class="brand">
-    @if (!empty($client['policy_uri']))
+    @if (!empty($client['logo_uri']))
     <img src="{!! $client['logo_uri'] !!}" alt="{{ $client['client_name'] }}">
     @else
-    <img src="img/logo.jpg" alt="logo">
+    <img src="{!! $site['theme_uri'] !!}/img/logo.png" alt="logo">
     @endif
 </div>
 <div class="card fat">

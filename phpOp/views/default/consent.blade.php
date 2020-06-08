@@ -12,7 +12,7 @@
     <div class="card-body">
         <h4 class="card-title">@_ef('%s Authorization OP', $site['name'])</h4>
         <div class="media">
-            @if (!empty($client['policy_uri']))
+            @if (!empty($client['logo_uri']))
             <img src="{!! $client['logo_uri'] !!}" class="mr-3" alt="{{ $client['client_name'] }}">
             @endif
             <div class="media-body">
