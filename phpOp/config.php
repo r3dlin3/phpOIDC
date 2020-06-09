@@ -65,6 +65,7 @@ $op_url = rtrim($op_url, "/");
 /**
  * OP endpoints and metadata
  */
+define('OP_URL', $op_url);
 define('OP_INDEX_PAGE', $op_url . '/index.php');
 define('OP_AUTH_EP', OP_INDEX_PAGE . '/auth');
 define('OP_TOKEN_EP', OP_INDEX_PAGE . '/token');
@@ -123,19 +124,18 @@ $config = [
         'user' => getenv('DB_USER') ?: 'root',
         'password' => getenv('DB_PASSWORD') ?: '',
         'host' => getenv('DB_HOST') ?: 'localhost',
-        'port' => getenv('DB_HOST') ?: '3306',
+        'port' => getenv('DB_PORT') ?: '3306',
         'database' => getenv('DB_DATABASE') ?: 'phpoidc'
     ],
 
     'mail' => [
         'transport' => getenv('MAIL_TRANSPORT') ?: 'mail',
         'host' => getenv('MAIL_HOST') ?: null,
-        'auth' => array_key_exists('MAIL_AUTH', $_ENV) ? (getenv('MAIL_HOST') === 'true') : true,
+        'auth' => array_key_exists('MAIL_AUTH', $_ENV) ? (getenv('MAIL_AUTH') === 'true') : false,
         'user' => getenv('MAIL_USER') ?: null,
         'password' => getenv('MAIL_PASSWORD') ?: null,
         'port' => getenv('MAIL_PORT') ?: null,
         'encryption' => getenv('MAIL_ENCRYPTION') ?: '',
-        'smtp' => getenv('MAIL_SMTP') ?: null,
         'from' => getenv('MAIL_FROM') ?: null,
         'reply_to' => getenv('MAIL_REPLY_TO') ?: null,
         'auto_tls' => array_key_exists('MAIL_SMTP_AUTO_TLS', $_ENV) ? (getenv('MAIL_HOST') === 'true') : false,
