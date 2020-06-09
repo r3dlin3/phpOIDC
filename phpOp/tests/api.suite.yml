@@ -2,7 +2,7 @@ actor: ApiTester
 modules:
     enabled:
         - REST:
-            url: http://phpoidc:8080/
+            url: http://localhost:8001/
             depends: PhpBrowser
             part: Json
         - \Helper\Api

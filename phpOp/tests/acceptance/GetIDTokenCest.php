@@ -11,7 +11,7 @@ class GetIDTokenCest
     public function authenticate(AcceptanceTester $I)
     {
         $I->amOnPage('/');
-        $I->selectOption('provider', 'http://phpoidc:8080/phpOp');
+        $I->selectOption('provider', 'http://localhost:8001/phpOp');
         $I->selectOption('response_type', 'code');
         $I->checkOption('scope_openid');
         $I->checkOption('scope_profile');
@@ -49,7 +49,7 @@ class GetIDTokenCest
     public function register(AcceptanceTester $I)
     {
         $I->amOnPage('/');
-        $I->selectOption('provider', 'http://phpoidc:8080/phpOp');
+        $I->selectOption('provider', 'http://localhost:8001/phpOp');
         $I->selectOption('response_type', 'code token');
         $I->checkOption('scope_openid');
         $I->checkOption('scope_profile');

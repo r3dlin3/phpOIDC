@@ -8,6 +8,6 @@ actor: AcceptanceTester
 modules:
     enabled:
         - PhpBrowser:
-            url: http://phpoidc:8001/phpRp
+            url: http://localhost:8001/phpRp
         - \Helper\Acceptance
     step_decorators: ~        
