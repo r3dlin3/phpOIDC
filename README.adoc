@@ -290,27 +290,116 @@ Must be `true` or `false`.
 
 | DB_TYPE
 | Type of database
-|
+| mysql
 
 | DB_PORT
 | Port used by the database
-|
+| 3306
 
-|DB_DATABASE
+| DB_DATABASE
 | Name of the database
-|
+| phpoidc
 
-|DB_USER
+| DB_USER
 | User used to connect to the database
-|
+| root
 
-|DB_PASSWORD
+| DB_PASSWORD
 | password to connect to the database
+| ''
+
+| DB_HOST
+| Hostname of the database server
+| localhost
+
+| MAIL_TRANSPORT
+| Using `mail` function or smtp to send mails
+| mail
+
+| MAIL_HOST
+| Hostname of the SMTP server to send through
 |
 
-|DB_HOST
-| Hostname of the database server
+| MAIL_PORT
+| Port used by SMTP.
 |
+
+| MAIL_AUTH
+| Enable SMTP authentication
+| false
+
+| MAIL_ENCRYPTION
+| Enable encryption: 'ssl' , 'tls' accepted
+| ''
+
+| MAIL_USER
+| User for SMTP authentication
+|
+
+| MAIL_PASSWORD
+| Password for SMTP authentication
+|
+
+| MAIL_FROM
+| Enable encryption: 'ssl' , 'tls' accepted
+| ''
+
+| MAIL_REPLY_TO
+| Set the reply-to e-mail
+|
+
+| MAIL_SMTP_AUTO_TLS
+| Boolean to enable TLS encryption automatically if a server supports it, even if `SMTPSecure` is not set to 'tls'.
+| false
+
+| FACEBOOK_CLIENT_ID
+| Client ID for Facebook
+|
+
+| FACEBOOK_CLIENT_SECRET
+| Client secret for Facebook
+|
+
+| FACEBOOK_REDIRECT_URL
+| URL use for the callback for Facebook
+| Computed by default based on OP_URL
+
+| GOOGLE_CLIENT_ID
+| Client ID for Google
+|
+
+| GOOGLE_CLIENT_SECRET
+| Client secret for Google
+|
+
+| GOOGLE_REDIRECT_URL
+| URL use for the callback for Google
+| Computed by default based on OP_URL
+
+| GITHUB_CLIENT_ID
+| Client ID for GitHub
+|
+
+| GITHUB_CLIENT_SECRET
+| Client secret for GitHub
+|
+
+| GITHUB_REDIRECT_URL
+| URL use for the callback for GitHub
+| Computed by default based on OP_URL
+
+| LINKEDIN_CLIENT_ID
+| Client ID for linkedIn
+|
+
+| LINKEDIN_CLIENT_SECRET
+| Client secret for linkedIn
+|
+
+| LINKEDIN_REDIRECT_URL
+| URL use for the callback for linkedIn
+| Computed by default based on OP_URL
+
 |===
 
 ==== RP
