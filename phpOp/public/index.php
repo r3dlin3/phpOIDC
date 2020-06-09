@@ -58,6 +58,57 @@ switch ($path_info) {
         break;
 }
 
+/**
+ * I18n
+ */
+
+// create the accept factory
+$accept_factory = new Aura\Accept\AcceptFactory($_SERVER);
+
+// factory the accept object
+$accept = $accept_factory->newInstance();
+
+// language negotiation
+$available_languages = array('en', 'fr');
+
+if (session_status() == PHP_SESSION_ACTIVE) {
+    if (array_key_exists('locale', $_SESSION)) {
+        $locale = $_SESSION['locale'];
+    }
+}
+
+if (!isset($locale) && array_key_exists('ui_locales', $_GET)) {
+    $locales = explode(' ', $_GET['ui_locales']);
+    foreach ($locales as $l) {
+        if (in_array($l, $available_languages)) {
+            $locale = $l;
+            if (session_status() == PHP_SESSION_ACTIVE) {
+                $_SESSION['locale'] = $locale;
+            }
+            break;
+        }
+        if (strpos($l,'-')!== false) {
+            $l = explode('-',$l, 2)[0];
+            if (in_array($l, $available_languages)) {
+                $locale = $l;
+                if (session_status() == PHP_SESSION_ACTIVE) {
+                    $_SESSION['locale'] = $locale;
+                }
+                break;
+            }
+        }
+    }
+}
+
+if (!isset($locale)) {
+    $language = $accept->negotiateLanguage($available_languages);
+    $locale = $language->getValue();
+}
+if (empty($locale))
+    $locale = 'en';
+// Set language
+include __DIR__ . '/../locales/' . $locale . '.php';
+
 
 logw_debug("Request: %s\nInput: %s\nSession:%s", count($_REQUEST) ? print_r($_REQUEST, true) : 'req[ ]', file_get_contents('php://input'), isset($_SESSION) ? print_r($_SESSION, true) : 'sess[ ]');
 

@@ -196,27 +196,8 @@ foreach ($config['socialite'] as &$provider_config) {
 $config['site']['enable_social_login']
     = array_key_exists('ENABLE_SOCIAL_LOGIN', $_ENV) ? (getenv('ENABLE_SOCIAL_LOGIN') === 'true') : $is_socialite_enabled;
 
-/**
- * I18n
- */
-
-// create the accept factory
-$accept_factory = new Aura\Accept\AcceptFactory($_SERVER);
-
-// factory the accept object
-$accept = $accept_factory->newInstance();
-
-// language negotiation
-$available_languages = array('en', 'fr');
-$language = $accept->negotiateLanguage($available_languages);
-$locale = $language->getValue();
-if (!$locale)
-    $locale = 'en';
-// Set language
-include __DIR__ . '/locales/' . $locale . '.php';
-
 $blade = new BladeOne($config['site']['views_path'], $config['blade']['cache'], BladeOne::MODE_AUTO);
-$blade->missingLog='./missingkey.txt'; // (optional) if a traduction is missing the it will be saved here.
+#$blade->missingLog='./missingkey.txt'; // (optional) if a translation is missing the it will be saved here.
 
 $blade->share('site', $config['site']);
 
