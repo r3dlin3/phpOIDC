@@ -472,7 +472,10 @@ function handle_forgotpassword()
 
     // Ignore use case when user isn't found. Return a success in any case
     // We don't want to reveal that someone has an email in our database
-    $view = $blade->run('forgotpassword_success', []);
+    $view = $blade->run('forgotpassword_success', [
+        "site" => $config['site'] // as this is the second time we use blade, the shared "site"
+                                  // variable is not set anymore...
+    ]);
     echo $view;
 }
 
