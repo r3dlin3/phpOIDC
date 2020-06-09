@@ -9,13 +9,13 @@
     @if (!empty($client['logo_uri']))
     <img src="{!! $client['logo_uri'] !!}" alt="{{ $client['client_name'] }}">
     @else
-    <img src="{!! $site['url'] !!}/img/logo.png" alt="logo">
+    <img src="{!! OP_URL !!}/img/logo.png" alt="logo">
     @endif
 </div>
 <div class="card fat">
     <div class="card-body">
         <h4 class="card-title">@_ef('%s OP Login', $client['client_name'])</h4>
-        @if ($enable_social_login)
+        @if ($enable_social_login && (empty($display_name) || empty($user_id)))
         <div class="container">
             <div class="row">
                 <ul class="social-btns mx-auto">

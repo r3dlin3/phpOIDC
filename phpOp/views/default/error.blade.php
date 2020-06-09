@@ -6,7 +6,7 @@
 
 @section('content')
 <div class="brand">
-    <img src="{!! $site['url'] !!}/img/logo.png" alt="logo">
+    <img src="{!! OP_URL !!}/img/logo.png" alt="logo">
 </div>
 <div class="card fat text-white bg-danger">
     <div class="card-header">@_e('Error')</div>
