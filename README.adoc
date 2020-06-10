@@ -312,6 +312,10 @@ Must be `true` or `false`.
 | Hostname of the database server
 | localhost
 
+| DB_TABLE_PREFIX
+| Prefix for tables
+|
+
 | MAIL_TRANSPORT
 | Using `mail` function or smtp to send mails
 | mail

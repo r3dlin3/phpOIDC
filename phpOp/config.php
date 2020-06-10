@@ -125,7 +125,8 @@ $config = [
         'password' => getenv('DB_PASSWORD') ?: '',
         'host' => getenv('DB_HOST') ?: 'localhost',
         'port' => getenv('DB_PORT') ?: '3306',
-        'database' => getenv('DB_DATABASE') ?: 'phpoidc'
+        'database' => getenv('DB_DATABASE') ?: 'phpoidc',
+        'table_prefix' => getenv('DB_TABLE_PREFIX') ?: null
     ],
 
     'mail' => [
