@@ -3,6 +3,12 @@
 namespace DoctrineExtensions;
 use \Doctrine\ORM\Event\LoadClassMetadataEventArgs;
 
+/**
+ * Class TablePrefix
+ * loadClassMetadata listener to provide a Table Prefix option for your application.
+ * @see https://www.doctrine-project.org/projects/doctrine-orm/en/2.7/cookbook/sql-table-prefixes.html
+ * @package DoctrineExtensions
+ */
 class TablePrefix
 {
     protected $prefix = '';
