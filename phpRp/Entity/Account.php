@@ -170,7 +170,7 @@ Class Account extends BaseEntity implements JsonSerializable, ArrayAccess {
 
     public function offsetExists($offset)
     {
-        return in_array($offset, self::$tableFields);
+        return in_array($offset, self::$tableFields) && (isset($this->offsetGet[$offset]));
     }
 
     public function offsetSet($offset, $value)

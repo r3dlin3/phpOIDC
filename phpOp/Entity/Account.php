@@ -115,7 +115,7 @@ Class Account extends BaseEntity implements JsonSerializable, ArrayAccess, Itera
 
 
     /**
-     * @ORM\OneToMany(targetEntity="Token", mappedBy="account")
+     * @ORM\OneToMany(targetEntity="Token", mappedBy="account", cascade={"remove"})
      */
     private $tokens;
 
@@ -183,7 +183,7 @@ Class Account extends BaseEntity implements JsonSerializable, ArrayAccess, Itera
 
     public function offsetExists($offset)
     {
-        return in_array($offset, self::$tableFields);
+        return in_array($offset, self::$tableFields) && (isset($this->offsetGet[$offset]));
     }
 
     public function offsetSet($offset, $value)
