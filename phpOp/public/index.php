@@ -36,10 +36,6 @@ define("TOKEN_TYPE_REFRESH",   2);
 
 header('Content-Type: text/html; charset=utf8');
 
-// $session_path = session_save_path() . OP_PATH;
-// if(!file_exists($session_path))
-//     mkdir($session_path);
-// session_save_path($session_path);
 session_set_cookie_params(0, OP_PATH);
 // NOTE: null or empty string is causing issue with the switch case & preg_match
 $path_info = array_key_exists('PATH_INFO', $_SERVER) ? $_SERVER['PATH_INFO'] : "/";
@@ -1267,7 +1263,7 @@ function handle_auth()
                 echo confirm_userinfo();
                 exit();
             }
-            if (!db_get_user_trusted_client($_SESSION['username'], $_REQUEST['client_id'])) {
+            if (!$client['trusted'] && !db_get_user_trusted_client($_SESSION['username'], $_REQUEST['client_id'])) {
                 if (!$showUI)
                     throw new OidcException('interaction_required', 'consent needed and prompt set to none');
                 echo confirm_userinfo();
@@ -2150,7 +2146,10 @@ function after_authentication($username, $persist = false) {
         $showUI = false;
     else
         $showUI = true;
-    if (in_array('consent', $prompt) || !db_get_user_trusted_client($username, $_SESSION['rpfA']['client_id'])) {
+    if (in_array('consent', $prompt)
+            || (!$_SESSION['client']['trusted']
+                && !db_get_user_trusted_client($username, $_SESSION['rpfA']['client_id'])))
+    {
         if (!$showUI)
             throw new OidcException('interaction_required', "Unable to show consent page, prompt set to none");
         echo confirm_userinfo();

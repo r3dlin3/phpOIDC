@@ -55,7 +55,7 @@ if (isset($_POST['submitted'])) {
 <tr><td>Request Uris:</td><td><textarea name='request_uris'></textarea>  </td></tr>
 <tr><td>Grant Types:</td><td><input type='text' name='grant_types'/>  </td></tr>
 <tr><td>Response Types:</td><td><input type='text' name='response_types'/>  </td></tr>
-
+<tr><td>Trusted:</td><td><input type='checkbox' name='trusted' value="true" /></td></tr>
 
 </table>
 </div>

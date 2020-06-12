@@ -133,6 +133,13 @@ class Client extends BaseEntity implements JsonSerializable, ArrayAccess
     private $response_types;
 
     /**
+     * No consent will be asked to a use for trusted client (trusted=true)
+     * Trusted client must be very limited to not break trust with users
+     * @ORM\Column(type="boolean",nullable=false) *
+     */
+    private $trusted = false;
+
+    /**
      * @ORM\ManyToMany(targetEntity="Account", mappedBy="trustedclients")
      */
     private $accounts;
@@ -176,7 +183,8 @@ class Client extends BaseEntity implements JsonSerializable, ArrayAccess
         'post_logout_redirect_uri',
         'request_uris',
         'grant_types',
-        'response_types'
+        'response_types',
+        'trusted'
     );
 
     /**
@@ -830,6 +838,22 @@ class Client extends BaseEntity implements JsonSerializable, ArrayAccess
     public function setResponseTypes($response_types)
     {
         $this->response_types = $response_types;
+    }
+
+    /**
+     * @return boolean
+     */
+    public function getTrusted()
+    {
+        return $this->trusted;
+    }
+
+    /**
+     * @param boolean $trusted
+     */
+    public function setTrusted($trusted)
+    {
+        $this->trusted = filter_var($trusted, FILTER_VALIDATE_BOOLEAN);
     }
 
     /**

@@ -59,6 +59,11 @@ $row = db_get_client_by_id($id);
 <tr><td>Request Uris:</td><td><textarea name='request_uris'><?= stripslashes($row['request_uris']) ?></textarea> </td></tr>
 <tr><td>Grant Types:</td><td><input type='text' name='grant_types' value='<?= stripslashes($row['grant_types']) ?>' /> </td></tr>
 <tr><td>Response Types:</td><td><input type='text' name='response_types' value='<?= stripslashes($row['response_types']) ?>' /> </td></tr>
+<tr><td>Trusted:</td><td>
+        <input type='hidden' value='false' name='trusted'>
+        <input type='checkbox' name='trusted' value="true" <?php  if ($row['trusted']) echo "checked"; ?> />
+    </td>
+</tr>
 
 </table>
 </div>
