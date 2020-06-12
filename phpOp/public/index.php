@@ -304,8 +304,6 @@ function handle_socialite_callback($provider)
             db_save_account($account);
         }
 
-
-
         if (!$validation_result) {
             // Save the authenticated user in session
             $_SESSION['login'] = 1;
