@@ -1878,6 +1878,12 @@ function get_all_requested_claims($request, $scope)
 
 function handle_userinfo()
 {
+    header('Access-Control-Allow-Origin: *');
+    header('Access-Control-Allow-Methods: GET, OPTIONS');
+    header('Access-Control-Allow-Headers: Authorization, Content-Type');
+    if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
+        return;
+    }
     try {
         $token = $_REQUEST['access_token'];
         if (!$token) {
@@ -2730,7 +2736,7 @@ function send_response($username, $authorize = false)
             $db_client = db_get_client($client_id);
             if ($db_client) {
                 $sig = $db_client['id_token_signed_response_alg'];
-                if (!isset($sig))
+                if (empty($sig))
                     $sig = 'RS256';
                 $alg = $db_client['id_token_encrypted_response_alg'];
                 $enc = $db_client['id_token_encrypted_response_enc'];

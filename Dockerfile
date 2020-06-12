@@ -40,7 +40,7 @@ RUN useradd -u 1000 -ms /bin/bash -g www www
 
 COPY apache/sites-available/000-default.conf /etc/apache2/sites-available/000-default.conf
 COPY apache/conf-available/z-app.conf /etc/apache2/conf-available/z-app.conf
-RUN a2enmod rewrite remoteip && a2enconf z-app
+RUN a2enmod rewrite remoteip headers && a2enconf z-app
 
 # Copy composer.lock and composer.json
 COPY ./phpRp/composer.lock ./phpRp/composer.json /var/www/phpRp/
