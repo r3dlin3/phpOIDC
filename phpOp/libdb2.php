@@ -275,6 +275,11 @@ function db_get_account_by_id($id): ?Account
     return db_get_object('Account', 'id', $id);
 }
 
+function db_get_account_by_login($login): ?Account
+{
+    return db_get_object('Account', 'login', $login);
+}
+
 function db_get_account_by_email($email): ?Account
 {
     return db_get_object('Account', 'email', $email);
@@ -301,6 +306,23 @@ function db_save_account_by_id($id, $account_values)
     $qb = DbEntity::getInstance()->getEntityManager()->createQueryBuilder();
     $em = $qb->getEntityManager();
     $account = db_get_account_by_id($id);
+    if ($account) {
+        foreach ($account_values as $key => $val) {
+            $account[$key] = $val;
+        }
+        $em->flush();
+        return true;
+    }
+    return false;
+}
+
+function db_save_account_by_login($login, $account_values)
+{
+    if (!is_array($account_values) || !$login)
+        return false;
+    $qb = DbEntity::getInstance()->getEntityManager()->createQueryBuilder();
+    $em = $qb->getEntityManager();
+    $account = db_get_account_by_login($login);
     if ($account) {
         foreach ($account_values as $key => $val) {
             $account[$key] = $val;

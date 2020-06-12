@@ -178,6 +178,9 @@ switch ($path_info) {
     case '/passwordreset':
         handle_passwordreset();
         break;
+    case '/completeprofile':
+        handle_complete_profile();
+        break;
     case (preg_match('/\/client.*/', $path_info) ? true : false):
         handle_client_operations();
         break;
@@ -190,6 +193,9 @@ exit();
 
 /**
  * Will display an error screen if a functionality is not enabled
+ * @param string $flag string Name of the flag to check (e.g. 'enable_registration')
+ * @param string $display_name
+ * @throws Exception
  */
 function check_functionality($flag, $display_name = null)
 {
@@ -212,29 +218,111 @@ function check_functionality($flag, $display_name = null)
     }
 }
 
+/**
+ * Will try to update the account, for compute
+ * @param array $form the register form
+ * @param array $values Array of values
+ * @return boolean true if the account must be updated
+ */
+function populate_form(&$form, $values) {
+    foreach ($form as &$item) {
+        $name = $item['name'];
+        $val = isset($values[$name]) ? trim($values[$name]) : null;
+        $item['value'] = $val;
+        unset($item['error_message']);
+    }
+}
+
+/**
+ * Goes through all fields declared in the register form
+ * Removes ID fields (login&email&username) and password
+ * Removes valid fields.
+ * Clear errors on remaining fields.
+ * @param $form array the register form
+ */
+function remove_unwanted_fields(&$form) {
+    $index = 0;
+    foreach ($form as &$item) {
+        $name = $item['name'];
+        // as this is used for social login, password shall not be requested, as other identifying attributes
+        if (in_array($name, ['login', 'preferred_username', 'email', 'password'])) {
+            unset($form[$index]);
+        }
+        if ((!array_key_exists('error_message', $item)
+                || isNullOrEmptyString($item['error_message']))
+            && !empty($item['value'])) {
+            unset($form[$index]);
+        } else {
+            // Clear error messages before displaying the form for the first time to the user
+            unset($item['error_message']);
+        }
+        $index++;
+    }
+}
+
+/**
+ * Handle the callback from Social Authentication Provider
+ * @param string $provider name (google, linkedin, etc.)
+ * @throws OidcException
+ */
 function handle_socialite_callback($provider)
 {
     try  {
         check_functionality('enable_social_login');
         global $config;
+        global $register_form;
         $provider = Laravel\Socialite\SocialiteManager::driver($provider, $config['socialite']);
         $authenticated_user = $provider->user();
 
         $account = db_get_account($authenticated_user->getLogin());
+        $need_update = false;
+        $need_create = false;
         if($account) {
             // account already exists
-            $need_update = false;
             foreach($authenticated_user as $key=>$val) {
                 if (isset($val) && $account[$key] !== $val) {
                     $account[$key] = $val;
                     $need_update = true;
                 }
             }
-            if ($need_update) {
-                db_save_account($account);
-            }
         } else {
-            $account = db_create_account($authenticated_user);
+            $need_create = true;
+            $account = $authenticated_user;
+        }
+        remove_unwanted_fields($register_form);
+        populate_form($register_form, $account);
+        $validation_result = validate_register_data($register_form);
+        $values = prepare_register_data($register_form); // contains computed value
+
+        // Manual merge as $account is just an ArrayAccess
+        foreach($values as $key=>$val) {
+            if (!empty($val) && empty($account[$key])) {
+                $account[$key] = $val;
+                $need_update = true;
+            }
+        }
+
+        if ($need_create) {
+            $account = db_create_account($account);
+        } elseif ($need_update) {
+            db_save_account($account);
+        }
+
+
+
+        if (!$validation_result) {
+            // Save the authenticated user in session
+            $_SESSION['login'] = 1;
+            $_SESSION['username'] = $authenticated_user->getLogin();
+            $_SESSION['persist'] = 'on';
+            $_SESSION['auth_time'] = time();
+            $_SESSION['ops'] = bin2hex(random_bytes(16));
+            setcookie('ops', $_SESSION['ops'], 0, '/');
+
+            remove_unwanted_fields($register_form);
+            $_SESSION['register_form'] = $register_form;
+            display_complete_profile_form($register_form);
+            return;
         }
     } catch (Exception $e) {
         log_error("handle_socialite_callback exception : %s", $e->getTraceAsString());
@@ -249,7 +337,7 @@ function handle_socialite_callback($provider)
 
 /**
  * Will send an authentication request to the provider
- * @param string provider Provider name (google, linkedin, etc.)
+ * @param string $provider Provider name (google, linkedin, etc.)
  */
 function handle_socialite($provider) 
 {
@@ -266,7 +354,7 @@ function handle_socialite($provider)
 
 /**
  * Show Login form.
- * @return String HTML Login form.
+ * @return string HTML Login form.
  */
 function loginform($display_name = '', $user_id = '', $client = null, $oplogin = false, $error = false)
 {
@@ -289,6 +377,9 @@ function loginform($display_name = '', $user_id = '', $client = null, $oplogin =
     return $str;
 }
 
+/**
+ * After successful registration, the user will be able to authenticate
+ */
 function handle_register_continue()
 {
     echo loginform(
@@ -299,29 +390,57 @@ function handle_register_continue()
     exit();
 }
 
+
+function get_register_form() {
+
+    if (array_key_exists('register_form', $_SESSION)) {
+        return $_SESSION['register_form'];
+    }
+    global $register_form;
+    return $register_form;
+}
+
+/**
+ * If a profile is not complete, display the form
+ * NOTE: The difference with handle_register_form() is that in this context,
+ * the user is authenticated.
+ * @throws Exception
+ */
+function display_complete_profile_form($form)
+{
+    global $blade;
+    $str = $blade->run('register', [
+        'form' => $form,
+        'action_url' => OP_COMPLETE_PROFILE_EP,
+        'login_url' => OP_LOGIN_EP,
+    ]);
+    echo $str;
+    exit;
+}
+
+/**
+ * Display the registration form
+ * @throws Exception
+ */
 function handle_register_form()
 {
     global $blade;
-    global $config;
-    global $register_form;
-
-    if (!$config['site']['enable_registration']) {
-        $str = $blade->run('error', [
-            'error' => "Functionality is disabled",
-            'desc' => "Registration is disabled.",
-        ]);
-        echo $str;
-        return;
-    }
+    check_functionality('enable_registration');
+    $form = get_register_form();
 
     $str = $blade->run('register', [
-        'form' => $register_form,
+        'form' => $form,
         'action_url' => OP_REGISTRATION_EP,
         'login_url' => OP_LOGIN_EP,
     ]);
     echo $str;
 }
 
+/**
+ * Display the registration form
+ * @param bool $error true if the form is invalid
+ * @throws Exception
+ */
 function handle_forgotpassword_form($error = false)
 {
     global $blade;
@@ -351,7 +470,9 @@ function generate_password_reset_code($length = 80)
 
 /**
  * Function for basic field validation (present and neither empty nor only white space)
- * cf. https://stackoverflow.com/a/381275
+ * @see https://stackoverflow.com/a/381275
+ * @param $str string String to check
+ * @return boolean True is null or empty
  */
 function isNullOrEmptyString($str)
 {
@@ -550,8 +671,7 @@ function validate_register_data(&$form)
     $validaton_status = true;
 
     foreach ($form as &$item) {
-        $name = $item['name'];
-        $val = array_key_exists($name, $_POST) ? trim($_POST[$name]) : null;
+        $val = trim($item['value']);
         $rules = array_key_exists('rules', $item) ? $item['rules'] : [];
         if ($item['type'] === 'computed') {
             if (
@@ -569,10 +689,9 @@ function validate_register_data(&$form)
                     // push value
                     $values[] = get_value_from_form_by_property_name($form, $propname);
                 }
-                $item['value'] = join(' ', $values);
+                $item['value'] = trim(join(' ', array_filter($values)));
             }
         } else {
-            $item['value'] = $val;
             if ($item['type'] === 'email') {
                 if (!filter_var($val, FILTER_VALIDATE_EMAIL)) {
                     $item['error_message'] = $item['message'];
@@ -619,21 +738,42 @@ function prepare_register_data($form)
     return $values;
 }
 
+function handle_complete_profile()
+{
+    global $blade;
+
+    $register_form = get_register_form();
+
+    populate_form($register_form, $_POST);
+    if (!validate_register_data($register_form)) {
+        $_SESSION['register_form'] = $register_form;
+        display_complete_profile_form($register_form);
+    }
+    $values = prepare_register_data($register_form);
+    $login = $_SESSION['username'];
+    if (db_save_account_by_login($login , $values)) {
+        after_authentication($login, 'on');
+    } else {
+        $str = $blade->run('error', [
+            'error' => "Something went wrong",
+            'desc' => "Could not save your account",
+        ]);
+        echo $str;
+    }
+}
+
+
 function handle_register()
 {
     global $blade;
-    global $register_form;
-    global $config;
 
-    if (!$config['site']['enable_registration']) {
-        $str = $blade->run('error', [
-            'error' => "Functionality is disabled",
-            'desc' => "Registration is disabled.",
-        ]);
-        echo $str;
-        return;
-    }
+    check_functionality('enable_registration');
+
+    $register_form = get_register_form();
+
+    populate_form($register_form, $_POST);
     if (!validate_register_data($register_form)) {
+        $_SESSION['register_form'] = $register_form;
         handle_register_form();
         return;
     }

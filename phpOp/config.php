@@ -82,6 +82,7 @@ define('OP_PASSWORD_RESET_CODE_CONTINUE_EP', OP_INDEX_PAGE . '/passwordreset');
 define('OP_LOGIN_EP', OP_INDEX_PAGE . '/login');
 define('OP_SOCIALITE_EP', OP_INDEX_PAGE . '/socialite/');
 define('OP_SOCIALITE_REDIRECT_EP', OP_INDEX_PAGE . '/socialitecb/');
+define('OP_COMPLETE_PROFILE_EP', OP_INDEX_PAGE . '/completeprofile');
 
 /**
  * Global config
