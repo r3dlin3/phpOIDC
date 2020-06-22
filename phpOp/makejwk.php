@@ -115,7 +115,7 @@ if($argc > 1) {
     } else {
         $cert = file_get_contents($argv[1]);
         if($cert) {
-            $key_pattern = '/(?m)^-----BEGIN (CERTIFICATE|PUBLIC KEY|RSA PRIVATE KEY)-----$\n((?s).*)\n^-----END (CERTIFICATE|PUBLIC KEY|RSA PRIVATE KEY)-----$/';  // matches whole block,
+            $key_pattern = '/-----BEGIN (CERTIFICATE|PUBLIC KEY|RSA PRIVATE KEY)-----(.*)-----END (CERTIFICATE|PUBLIC KEY|RSA PRIVATE KEY)-----/misu';  // matches whole block,
             if(preg_match($key_pattern, $cert, $matches)) {
                 $encoded_der = $matches[2];
                 $jwk_keys = array();

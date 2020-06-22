@@ -1701,7 +1701,7 @@ function get_mod_exp_from_key($key_contents, $pass_phrase = NULL, $is_private_ke
     else
         $key = openssl_pkey_get_public($key_contents);
 
-    $rsa = new Crypt_RSA();
+    $rsa = new \phpseclib\Crypt\RSA();
     if($rsa) {
         if($is_private_key) {
             $rsa->setPassword($pass_phrase);
