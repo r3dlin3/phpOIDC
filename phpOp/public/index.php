@@ -27,6 +27,11 @@ include_once('../Mailer.php');
 error_reporting(E_ERROR | E_WARNING | E_PARSE);
 //error_reporting(E_ALL);
 
+if (array_key_exists('HTTP_AUTHORIZATION', $_SERVER)) {
+    list($_SERVER['PHP_AUTH_USER'], $_SERVER['PHP_AUTH_PW'])
+        = explode(':' , base64_decode(substr($_SERVER['HTTP_AUTHORIZATION'], 6)));
+}
+
 define("DEBUG", 0);
 
 define("TOKEN_TYPE_AUTH_CODE", 0);
@@ -684,6 +689,8 @@ function validate_register_data(&$form)
                     $values[] = get_value_from_form_by_property_name($form, $propname);
                 }
                 $item['value'] = trim(join(' ', array_filter($values)));
+            } elseif (array_key_exists('constant', $rules)) {
+                $item['value'] = $rules['constant'];
             }
         } else {
             if ($item['type'] === 'email') {
