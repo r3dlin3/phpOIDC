@@ -58,5 +58,12 @@ return [
         'rules' => [
             'join' => ['given_name','family_name']
         ]
+    ],
+    [
+        'name' => 'enabled',
+        'type' => 'computed',
+        'rules' => [
+            'constant' => 1
+        ]
     ]
 ];
