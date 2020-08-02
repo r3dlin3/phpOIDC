@@ -4,3 +4,6 @@ phpOp/libs/*
 phpOp/cache/*.bladec
 phpOp/missingkey.txt
 phpOp/app.log
+infra
+.vscode
+.idea

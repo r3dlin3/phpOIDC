@@ -35,7 +35,10 @@ RUN useradd -u 1000 -ms /bin/bash -g www www
 
 COPY apache/sites-available/phpop-default.conf /etc/apache2/sites-available/000-default.conf
 COPY apache/conf-available/z-app.conf /etc/apache2/conf-available/z-app.conf
-RUN a2enmod rewrite remoteip headers && a2enconf z-app
+# Remove default binding to port 80 by removing ports.conf. 000-default.conf is overwriten above
+RUN a2enmod rewrite remoteip headers && a2enconf z-app \
+    && rm -f /etc/apache2/ports.conf \
+    && sed -i '/ports\.conf/d' /etc/apache2/apache2.conf
 
 # Copy composer.lock and composer.json
 COPY ./phpOp/composer.lock ./phpOp/composer.json /var/www/html/
