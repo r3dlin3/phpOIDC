@@ -21,6 +21,5 @@ jobs:
           path: .
           # Path to the Dockerfile (Default is '{path}/Dockerfile')
           dockerfile: Dockerfile.phpOp
-          add_git_labels: yes
           # Whether to push the image
           push: true
