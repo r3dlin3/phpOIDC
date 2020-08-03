@@ -61,4 +61,4 @@ RUN chown www-data:www-data /var/www/html/cache
 RUN cd /var/www/html/ && composer dump-autoload --no-scripts --no-dev --optimize
 
 # Change current user to www
-USER www
+USER www-data
