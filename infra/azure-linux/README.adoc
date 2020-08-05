@@ -1,4 +1,4 @@
-= Deployment of phpOIDC to an Azure App Service (Windows) 
+= Deployment of phpOIDC to an Azure App Service Linux using Docker
 :icons: font
 
 CAUTION: These templates only deploy the OpenID Connect Provider *without* the testing OpenID Connect Relying Party
@@ -7,7 +7,7 @@ Here are some points worth noting:
 
 * MySQL Server firewall is set to prevent access from Azure and only accept connection coming from the App Service
 * HTTPS is enforced
-* Latest version of PHP is used (7.4)
+* The image from https://hub.docker.com/r/phpoidc/phpoidc[Docker Hub] is used
 
 [WARNING]
 ====
@@ -23,21 +23,21 @@ For instance, here are things that should be fixed for production:
 == What is being deployed
 
 * Azure App Service: The App service will be configured to use PHP
-* App Service plan: In these templates, a *Windows* App Service is used
+* App Service plan: In these templates, a *Linux* App Service is used
 * Azure Database for MySQL: Its firewall is set based on the App Service IP
 
 You can click on the button to visualize the deployed resources:
-image:https://raw.githubusercontent.com/Azure/azure-quickstart-templates/master/1-CONTRIBUTION-GUIDE/images/visualizebutton.svg?sanitize=true[title="Visualize", link="http://armviz.io/#/?load=https%3A%2F%2Fraw.githubusercontent.com%2Fr3dlin3%2FphpOIDC%2Fmaster%2Finfra%2Fazure-win%2Fazuredeploy.json"]
+image:https://raw.githubusercontent.com/Azure/azure-quickstart-templates/master/1-CONTRIBUTION-GUIDE/images/visualizebutton.svg?sanitize=true[title="Visualize", link="http://armviz.io/#/?load=https%3A%2F%2Fraw.githubusercontent.com%2Fr3dlin3%2FphpOIDC%2Fmaster%2Finfra%2Fazure-linux%2Fazuredeploy.json"]
 
 == How to deploy
 
 NOTE: The templates use https://docs.microsoft.com/en-us/azure/azure-resource-manager/templates/linked-templates[nested templates].
 
-It is possible to use the portal (cf. <<One-button click>>), by using <<Powershell>> or Azure CLI.
+It is possible to use the portal (cf. <<One-button click>>), by using <<Powershell>> or <<Azure CLI>>.
 
 In any case, the following tables describes the parameters.
 
-After deployment of the resources, there is an additional step described in the paragraph <<Post-deployment>>.
+After deployment of the resources, there is an additional step described in the paragraph <<Post-deployment>> to create the database schema.
 
 [cols="3", options="header"]
 |===
@@ -102,7 +102,7 @@ After deployment of the resources, there is an additional step described in the 
 
 . Click on the button below:
 
-image::https://raw.githubusercontent.com/Azure/azure-quickstart-templates/master/1-CONTRIBUTION-GUIDE/images/deploytoazure.svg?sanitize=true["Deploy To Azure", link="https://portal.azure.com/#create/Microsoft.Template/uri/https%3A%2F%2Fraw.githubusercontent.com%2Fr3dlin3%2FphpOIDC%2Fmaster%2Finfra%2Fazure-win%2Fazuredeploy.json"]
+image::https://raw.githubusercontent.com/Azure/azure-quickstart-templates/master/1-CONTRIBUTION-GUIDE/images/deploytoazure.svg?sanitize=true["Deploy To Azure", link="https://portal.azure.com/#create/Microsoft.Template/uri/https%3A%2F%2Fraw.githubusercontent.com%2Fr3dlin3%2FphpOIDC%2Fmaster%2Finfra%2Fazure-linux%2Fazuredeploy.json"]
 
 [start=2]
 . Fill the form with the parameters as described in the table above. 
@@ -151,8 +151,8 @@ $administratorPassword=Read-Host -AsSecureString
 # Hardcoded
 $administratorPassword=ConvertTo-SecureString 'MySuperSecretP@ssw0rd!' –asplaintext –force 
 $databaseForMySqlName=""
-$databaseSkuName=""
-$templateuri = "https://raw.githubusercontent.com/r3dlin3/phpOIDC/master/infra/azure-win/azuredeploy.json"
+$databaseSkuName="phpoidc"
+$templateuri = "https://raw.githubusercontent.com/r3dlin3/phpOIDC/master/infra/azure-linux/azuredeploy.json"
 
 New-AzResourceGroupDeployment -ResourceGroupName $rg `
                               -TemplateUri $templateUri `
@@ -168,18 +168,59 @@ New-AzResourceGroupDeployment -ResourceGroupName $rg `
                               -Verbose
 ----
 
+
+=== Azure CLI
+
+The following commands are provided for Bash.
+It must be adapted to be run on Windows.
+
+[source, bash]
+----
+# Create a resource group if not already exists
+# Specify a name for the resource group
+rg="" 
+az group create --name $rg --location FranceCentral
+
+# Define parameters for template deployment - remember to change the values!
+siteName=""
+appServicePlanName=""
+skuName="B1"
+mysqlServerName=""
+administratorLogin=""
+# To prompt to get the password
+administratorPassword=""
+databaseForMySqlName="phpoidc"
+databaseSkuName="B_Gen5_1"
+
+
+# Create MySQL 
+az mysql server create --resource-group $rg --name $mysqlServerName  --admin-user $administratorLogin --admin-password $administratorPassword --sku-name $databaseSkuName 
+
+# Create The App Service Plan
+az appservice plan create --name $appServicePlanName --resource-group $rg --is-linux --sku $skuName
+
+# Create the web app
+az webapp create --resource-group $rg --plan $appServicePlanName --name $siteName --deployment-container-image-name phpoidc/phpoidc:phpop
+
+az webapp config appsettings set --resource-group $rg --name $siteName --settings WEBSITES_PORT=8001  OP_URL="https://$siteName.azurewebsites.net" DB_DATABASE=$databaseForMySqlName DB_HOST="$mysqlServerName.mysql.database.azure.com" DB_PORT=3306 DB_TYPE=mysql DB_USER=$administratorLogin DB_PASSWORD=$administratorPassword  
+----
+
 == Post-deployment
 
 The database schema must be initialized. 
 There are several ways to create the schema.
 
-One way is to:
 
-1. Go to the Azure Portal, on the App Service.
-2. Go to the blade "Console".
-3. Type the following commands:
-----
-cd phpOp
-libs\bin\doctrine orm:schema-tool:create
-----
-image::assets/azure-app-service-console.png[Console]
+One way is to run the SQL script to create the database use MySQL client. You can use https://docs.microsoft.com/en-us/azure/mysql/connect-workbench[MySQL Workbench].
+
+The script is available in this repo in `phpOp\create_db.sql`.
+
+NOTE: Under Windows, I have used the docker image `mysql:latest` to execute the SQL script.
+
+
+[TIP]
+====
+You can go in the Azure portal to look for the exact server name and the user name to use with the MySQL client:
+
+image::assets/mysql-overview.png[purchase]
+====

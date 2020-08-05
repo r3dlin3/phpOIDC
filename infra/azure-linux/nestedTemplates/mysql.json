@@ -1,0 +1,216 @@
+{
+    "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+    "contentVersion": "1.0.0.0",
+    "parameters": {
+        "mysqlServerName": {
+            "type": "string",
+            "metadata": {
+                "description": "Server Name for Azure database for MySQL"
+            }
+        },
+        "administratorLogin": {
+            "type": "string",
+            "minLength": 1,
+            "metadata": {
+                "description": "Database administrator login name"
+            }
+        },
+        "administratorPassword": {
+            "type": "securestring",
+            "minLength": 8,
+            "metadata": {
+                "description": "Database administrator password"
+            }
+        },
+        "firewallRules": {
+            "type": "array",
+            "metadata": {
+                "description": "Array of firewall rules (JSON object) with firewallRulesName, firewallRulesStartIpAddress and firewallRulesEndIpAddress"
+            }
+        },
+        "allowAzureIps": {
+            "type": "string",
+            "defaultValue": "Enabled",
+            "allowedValues": [
+                "Enabled",
+                "Disabled"
+            ],
+            "metadata": {
+                "description": "Allow access from Azure services"
+            }
+        },
+        "databaseForMySqlName": {
+            "type": "string",
+            "metadata": {
+                "description": "Name of the Azure Database for MySQL"
+            }
+        },
+        "databaseSizeMB": {
+            "type": "int",
+            "defaultValue": 5120,
+            "metadata": {
+                "description": "Max storage allowed for a server."
+            }
+        },
+        "storageAutogrow": {
+            "type": "string",
+            "defaultValue": "Enabled",
+            "allowedValues": [
+                "Enabled",
+                "Disabled"
+            ],
+            "metadata": {
+                "description": "Enable Storage Auto Grow. "
+            }
+        },
+        "databaseSkuName": {
+            "type": "string",
+            "defaultValue": "GP_Gen5_2",
+            "allowedValues": [
+                "B_Gen5_1",
+                "B_Gen5_2",
+                "GP_Gen5_2",
+                "GP_Gen5_4",
+                "GP_Gen5_8",
+                "GP_Gen5_16",
+                "GP_Gen5_32",
+                "MO_Gen5_2",
+                "MO_Gen5_4",
+                "MO_Gen5_8",
+                "MO_Gen5_16",
+                "MO_Gen5_32"
+            ],
+            "metadata": {
+                "description": "Azure database for MySQL sku name "
+            }
+        },
+        "backupRetentionDays": {
+            "type": "int",
+            "defaultValue": 7,
+            "metadata": {
+                "description": "MySQL Server backup retention days"
+            }
+        },
+        "geoRedundantBackup": {
+            "type": "string",
+            "defaultValue": "Disabled",
+            "allowedValues": [
+                "Enabled",
+                "Disabled"
+            ],
+            "metadata": {
+                "description": "Geo-Redundant Backup setting"
+            }
+        },
+        "sslEnforcement": {
+            "type": "string",
+            "defaultValue": "Enabled",
+            "allowedValues": [
+                "Enabled",
+                "Disabled"
+            ],
+            "metadata": {
+                "description": "Enable ssl enforcement or not when connect to server"
+            }
+        },
+        "mysqlVersion": {
+            "type": "string",
+            "allowedValues": [
+                "5.6",
+                "5.7",
+                "8.0"
+            ],
+            "defaultValue": "8.0",
+            "metadata": {
+                "description": "MySQL version"
+            }
+        },
+        "location": {
+            "type": "string",
+            "defaultValue": "[resourceGroup().location]",
+            "metadata": {
+                "description": "The region to deploy the resources into"
+            }
+        }
+    },
+    "variables": {
+    },
+    "resources": [
+        {
+            "apiVersion": "2017-12-01",
+            "type": "Microsoft.DBforMySQL/servers",
+            "location": "[parameters('location')]",
+            "name": "[parameters('mysqlServerName')]",
+            "sku": {
+                "name": "[parameters('databaseSkuName')]",
+                "size": "[parameters('databaseSizeMB')]"
+            },
+            "properties": {
+                "createMode": "Default",
+                "version": "[parameters('mysqlVersion')]",
+                "administratorLogin": "[parameters('administratorLogin')]",
+                "administratorLoginPassword": "[parameters('administratorPassword')]",
+                "storageProfile": {
+                    "storageMB": "[parameters('databaseSizeMB')]",
+                    "storageAutogrow": "[parameters('storageAutogrow')]",
+                    "backupRetentionDays": "[parameters('backupRetentionDays')]",
+                    "geoRedundantBackup": "[parameters('geoRedundantBackup')]"
+                },
+                "sslEnforcement": "[parameters('sslEnforcement')]"
+            }
+        },
+        {
+            "name": "[concat(parameters('mysqlServerName'),'/',parameters('firewallrules')[copyIndex()].name)]",
+            "type": "Microsoft.DBforMySQL/servers/firewallRules",
+            "apiVersion": "2017-12-01",
+            "location": "[parameters('location')]",
+            "dependsOn": [
+                "[concat('Microsoft.DBforMySQL/servers/', parameters('mysqlServerName'))]"
+            ],
+            "copy": {
+                "name": "firewallRulesCopy",
+                "count": "[length(parameters('firewallrules'))]"
+            },
+            "properties": {
+                "StartIpAddress": "[parameters('firewallrules')[copyIndex()].startIpAddress]",
+                "EndIpAddress": "[parameters('firewallrules')[copyIndex()].endIpAddress]"
+            }
+        },
+        {
+            "name": "[concat(parameters('mysqlServerName'),'/AllowAzureIPs')]",
+            "type": "Microsoft.DBforMySQL/servers/firewallRules",
+            "condition": "[equals('Enabled',parameters('allowAzureIPs'))]",
+            "apiVersion": "2017-12-01",
+            "dependsOn": [
+                "[concat('Microsoft.DBforMySQL/servers/', parameters('mysqlServerName'),'/databases/' , parameters('databaseForMySqlName'))]"
+            ],
+            "location": "[parameters('location')]",
+            "properties": {
+                "startIpAddress": "0.0.0.0",
+                "endIpAddress": "0.0.0.0"
+            }
+        },
+        {
+            "name": "[concat(parameters('mysqlServerName'),'/',parameters('databaseForMySqlName'))]",
+            "type": "Microsoft.DBforMySQL/servers/databases",
+            "apiVersion": "2017-12-01",
+            "properties": {
+                "charset": "utf8",
+                "collation": "utf8_general_ci"
+            },
+            "dependsOn": [
+                "[concat('Microsoft.DBforMySQL/servers/', parameters('mysqlServerName'))]"
+            ]
+        }
+    ],
+    "outputs": {
+        "databaseServerFQDN": {
+            "type": "string",
+            "value": "[reference(parameters('mysqlServerName')).fullyQualifiedDomainName]"
+        },
+        "databaseName": {
+            "type": "string",
+            "value": "[parameters('databaseForMySqlName')]"
+        }
+    }
+}

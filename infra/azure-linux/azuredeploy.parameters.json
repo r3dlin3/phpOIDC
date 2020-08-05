@@ -1,0 +1,33 @@
+{
+    "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentParameters.json#",
+    "contentVersion": "1.0.0.0",
+    "parameters": {
+        "siteName": {
+            "value": "phpoidc-lin" // TODO: Fill in parameter value
+        },
+        "appServicePlanName": {
+            "value": "phpoidc-asp-lin" // TODO: Fill in parameter value
+        },
+        "skuName": {
+            "value": "F1"
+        },
+        "capacity": {
+            "value": 1
+        },
+        "mysqlServerName": {
+            "value": "phpoidc-mysql-lin" // TODO: Fill in parameter value
+        },
+        "administratorLogin": {
+            "value": "myadm" // TODO: Fill in parameter value
+        },
+        "administratorPassword": {
+            "value": "'.s44G2.Y/T58,.N" // TODO: Fill in parameter value
+        },
+        "databaseForMySqlName": {
+            "value": "phpoidc" // TODO: Fill in parameter value
+        },
+        "databaseSkuName": {
+            "value": "B_Gen5_1"
+        }
+    }
+}
