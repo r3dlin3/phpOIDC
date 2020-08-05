@@ -146,9 +146,6 @@
                     "linuxFxVersion": {
                         "value": "DOCKER|phpoidc/phpoidc:phpop"
                     },
-                    "dockerStartupCommand": {
-                        "value": "libs/bin/doctrine orm:schema-tool:create"
-                    },
                     "tags": {
                         "value": "[parameters('tags')]"
                     }
