@@ -1,3 +1,6 @@
+<?php
+include_once(__DIR__ . '/../phpOp/config.php');
+?>
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -14,7 +17,16 @@
                     <div class="card">
                         <div class="card-body">
                             <a href="phpRp" class="btn btn-primary btn-block">Go to test Relying Party</a>
+                            <a href="phpRp/admin/provider" class="btn btn-primary btn-block mt-4">Go to test Relying Party Admin pages</a>
                             <a href=".well-known/openid-configuration" class="btn btn-primary btn-block mt-4">Obtaining OpenID Provider Configuration Information</a>
+                            <?php
+                                global $config;
+                                if ($config['site']['enable_admin']) {
+                            ?>
+                            <a href="phpOp/admin" class="btn btn-primary btn-block mt-4">Go to test OP Admin pages</a>
+                            <?php
+                                }
+                            ?>
                         </div>
                     </div>
                     <div class="footer">
