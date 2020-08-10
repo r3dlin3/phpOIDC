@@ -271,6 +271,8 @@ CREATE TABLE `token`
      `issued_at`     DATETIME NOT NULL,
      `expiration_at` DATETIME NOT NULL,
      `info`          TEXT,
+     `created_at`    DATETIME NOT NULL,
+     `updated_at`    DATETIME DEFAULT NULL, 
      PRIMARY KEY (`id`),
      KEY `account_id_idx` (`account_id`),
      CONSTRAINT `tokens_account_id_accounts_id` FOREIGN KEY (`account_id`)
