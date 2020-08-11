@@ -21,7 +21,7 @@ RUN apt-get update \
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/*
 # Install extensions
-RUN docker-php-ext-install -j$(nproc) pdo_mysql mbstring zip \
+RUN docker-php-ext-install -j$(nproc) pdo_mysql mbstring zip opcache\
     && docker-php-source delete
 
 # XDEBUG
@@ -43,6 +43,7 @@ RUN useradd -u 1000 -ms /bin/bash -g www www
 COPY apache/sites-available/000-default.conf /etc/apache2/sites-available/000-default.conf
 COPY apache/conf-available/z-app.conf /etc/apache2/conf-available/z-app.conf
 RUN a2enmod rewrite remoteip headers && a2enconf z-app
+COPY docker/php/conf.d/opcache.ini /usr/local/etc/php/conf.d/opcache.ini
 
 # Copy composer.lock and composer.json
 COPY ./phpRp/composer.lock ./phpRp/composer.json /var/www/phpRp/

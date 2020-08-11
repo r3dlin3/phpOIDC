@@ -21,7 +21,7 @@ RUN apt-get update \
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/*
 # Install extensions
-RUN docker-php-ext-install -j$(nproc) pdo_mysql mbstring zip \
+RUN docker-php-ext-install -j$(nproc) pdo_mysql mbstring zip opcache \
     && docker-php-source delete
 
 # Install composer
@@ -39,6 +39,8 @@ COPY apache/conf-available/z-app.conf /etc/apache2/conf-available/z-app.conf
 RUN a2enmod rewrite remoteip headers && a2enconf z-app \
     && rm -f /etc/apache2/ports.conf \
     && sed -i '/ports\.conf/d' /etc/apache2/apache2.conf
+
+COPY docker/php/conf.d/opcache.ini /usr/local/etc/php/conf.d/opcache.ini
 
 # Copy composer.lock and composer.json
 COPY ./phpOp/composer.lock ./phpOp/composer.json /var/www/html/
