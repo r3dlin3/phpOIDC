@@ -260,6 +260,16 @@ function db_save_user_trusted_client($username, $client_id): void
 
 /////////////////////////////////////////////////////////////////
 
+function db_get_account_count(): int
+{
+    return db_get_object_count('Account');
+}
+
+function db_search_accounts($search, $sort, $order, $limit = null, $offset = null): array
+{
+    return db_search_objects('Account', ['login', 'email', 'name', 'family_name', 'given_name'], $search, $sort, $order, $limit, $offset);
+}
+
 function db_get_accounts(): array
 {
     return db_get_objects('Account', 'login');
@@ -353,7 +363,7 @@ function db_create_account_with_values($username, $account_values)
  */
 function db_create_account($account)
 {
-    $em= DbEntity::getInstance()->getEntityManager();
+    $em = DbEntity::getInstance()->getEntityManager();
     $em->persist($account);
     $em->flush();
     return $account;
@@ -367,7 +377,42 @@ function db_delete_account_by_id($id): bool
 
 ///////////////////////////////////////////////////
 
+function db_get_object_count($object): int
+{
+    $qb = DbEntity::getInstance()->getEntityManager()->createQueryBuilder();
 
+    $qb->select('count(o)')
+        ->from($object, 'o');
+
+    return $qb->getQuery()->getSingleScalarResult();
+}
+
+function db_search_objects($object, $search_criteria, $search, $sort_field, $order, $limit = null, $offset = null): array
+{
+    $qb = DbEntity::getInstance()->getEntityManager()->createQueryBuilder();
+    $qb->select('o')
+        ->from($object, 'o');
+    if ($limit && $offset) {
+        $qb->setFirstResult($offset)
+            ->setMaxResults($limit);
+    }
+    if ($search_criteria && $search) {
+        $first = true;
+        foreach ($search_criteria as $item) {
+            if ($first) {
+                $qb->where($qb->expr()->like('o.' . $item, ':search'));
+                $first = false;
+            } else {
+                $qb->orWhere($qb->expr()->like('o.' . $item, ':search'));
+            }
+        }
+        $qb->setParameter('search', '%'.$search.'%');
+    }
+    if ($sort_field && $order)
+        $qb->orderBy("o.{$sort_field}", $order);
+        
+    return $qb->getQuery()->getResult();
+}
 
 function db_get_objects($object, $sort_field): array
 {

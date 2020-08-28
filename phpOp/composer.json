@@ -1,13 +1,12 @@
 {
-    "name": "nri/phpoidc",
-    "description": "PHP OpenID Connect OP ",
+    "name": "r3dlin3/phpoidc",
+    "description": "PHP OpenID Connect OP",
     "version": "1.0.0",
     "type": "project",
     "authors": [
         {
-            "name": "Author",
-            "email": "author@mycompany.com",
-            "homepage": "http://www.mycompany.com",
+            "name": "r3dLiN3",
+            "email": "r3dlin3@hotmail.com",
             "role": "Developer"
         }
     ],
@@ -32,7 +31,8 @@
         "eftec/bladeone": "^3.44",
         "phpmailer/phpmailer": "^6.1",
         "league/oauth1-client": "^1.7",
-        "guzzlehttp/guzzle": "^6.5"
+        "guzzlehttp/guzzle": "^6.5",
+        "respect/validation": "^2.0"
     },
     "require-dev": {
         "phpunit/phpunit": "^8",

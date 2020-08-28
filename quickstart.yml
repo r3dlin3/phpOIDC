@@ -6,15 +6,16 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
-    image: phpoidc:latest
+    image: phpoidc/phpoidc:latest
     restart: unless-stopped
     tty: true
     working_dir: /var/www/phpOp
     volumes:
-      - ./apache/sites-available:/etc/apache2/sites-enabled
+      # - ./apache/sites-available:/etc/apache2/sites-enabled
       - ./:/var/www/
     environment:
       XDEBUG_CONFIG: remote_host=host.docker.internal remote_port=9002 remote_enable=1
+      LOGLEVEL: ERROR
     networks:
       - app-network
     depends_on:
