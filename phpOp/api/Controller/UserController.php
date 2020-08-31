@@ -1,12 +1,16 @@
 <?php
 
-namespace Controller;
+namespace PhpOidc\PhpOp\Api\Controller;
 
 use Respect\Validation\Validator as v;
 use Respect\Validation\Exceptions\NestedValidationException;
+use Psr\Http\Message\ServerRequestInterface;
 
-include_once('Response.php');
-include(__DIR__ . '/../libdb2.php');
+use PhpOidc\PhpOp\Api\ProblemDetails;
+use PhpOidc\PhpOp\Api\PaginatedResultResponse;
+
+include_once(__DIR__ . '/../Response.php');
+include_once(__DIR__ . '/../../libdb2.php');
 
 
 
@@ -41,10 +45,11 @@ class UserController
         ];
     }
 
-    function getAllUsers($params)
+    function getAllUsers(ServerRequestInterface $request)
     {
-        $paginatedParamsValidator = v::key('limit', v::finite()->positive())
-            ->key('offset', v::finite()->min(0))
+        $params = $request->getQueryParams();
+        $paginatedParamsValidator = v::key('limit', v::finite()->positive(), false)
+            ->key('offset', v::finite()->min(0), false)
             ->key('order', v::in(['asc', 'desc']), false)
             ->key('search', v::stringType(), false)
             ->key('sort', v::stringType(), false);
@@ -52,7 +57,7 @@ class UserController
         try {
             $paginatedParamsValidator->assert($params);
         } catch (NestedValidationException $exception) {
-            return new \Controller\ProblemDetails(
+            return new ProblemDetails(
                 "http://phpoidc.org/validation-error",
                 "Invalid parameters",
                 $exception->getFullMessage()
@@ -62,26 +67,32 @@ class UserController
         $count = db_get_account_count();
         // At this point no limitation on the paginated size
         // This API is dedicated to admin only
-        $limit = $params['limit'];
-        $offset = $params['offset'];
+        $limit = array_key_exists('limit', $params) ? $params['limit'] : null;
+        $offset = array_key_exists('offset', $params) ? $params['offset'] : null;
+        $search = array_key_exists('search', $params) ? $params['search'] : null;
 
-        $sort_field = $params['sort'];
+        $sort_field = array_key_exists('sort', $params) ? $params['sort'] : null;
         if (!$sort_field) {
             $sort_field = 'login';
         }
-
-        $sort_order = $params['order'];
+        
+        $sort_order = array_key_exists('order', $params) ? $params['order'] : null;
         if (!$sort_order) {
             $sort_order = 'asc';
         }
         // Note: $offset can be equal to "0"
         if (isset($limit) && isset($offset)) {
-            $result = db_search_accounts($params['search'], $sort_field, $sort_order, $limit, $offset);
+            $result = db_search_accounts($search, $sort_field, $sort_order, $limit, $offset);
         } else {
-            $result = db_search_accounts($params['search'], $sort_field, $sort_order);
+            $result = db_search_accounts($search, $sort_field, $sort_order);
         }
-        
-        $result = array_map(array('Controller\UserController', 'map_user'), $result);
+
+        $result = array_map(array('PhpOidc\PhpOp\Api\Controller\UserController', 'map_user'), $result);
         return new PaginatedResultResponse($result, $count, $offset);
+    }
+
+    function getUser(ServerRequestInterface $request, array $args)
+    {
+        $id = $args['id'];
     }
 }

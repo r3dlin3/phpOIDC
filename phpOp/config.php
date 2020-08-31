@@ -100,6 +100,7 @@ $config = [
         'registration_url' => getenv('REGISTRATION_URL') ?: OP_REGISTRATION_FORM_EP,
         'enable_admin' => array_key_exists('ENABLE_ADMIN', $_ENV) ? (getenv('ENABLE_ADMIN') === 'true') : true,
         'admin_cors' => getenv('ADMIN_CORS') ?: "*",
+        'admins' => explode(',', (getenv('ADMINS') ?: '')),
         'enable_dynamic_client_registration' => array_key_exists('ENABLE_DYNAMIC_CLIENT_REGISTRATION', $_ENV) ? (getenv('ENABLE_DYNAMIC_CLIENT_REGISTRATION') === 'true') : true,
     ],
 

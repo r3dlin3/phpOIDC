@@ -1,7 +1,6 @@
 <?php
 include_once(__DIR__ . '/../../../config.php');
-include_once(__DIR__ . '/../../../Controller/Response.php');
-include_once(__DIR__ . '/../../../Controller/UserController.php');
+require __DIR__ . '/../../../libs/autoload.php';
 include_once('../../../logging.php');
 error_reporting(E_ERROR | E_WARNING | E_PARSE);
 
@@ -11,51 +10,41 @@ if (!$config['site']['enable_admin']) {
     exit;
 }
 
-header("Access-Control-Allow-Origin: " . $config['site']['admin_cors']);
-header("Access-Control-Allow-Methods: OPTIONS,GET,POST,PUT,DELETE");
-header("Access-Control-Max-Age: 3600");
-header("Access-Control-Allow-Headers: Content-Type, Access-Control-Allow-Headers, Authorization, X-Requested-With");
-
-$request_method = $_SERVER['REQUEST_METHOD'];
-if ($request_method === 'OPTIONS') {
-    exit;
-}
-
-$path_info = array_key_exists('PATH_INFO', $_SERVER) ? $_SERVER['PATH_INFO'] : "/";
-$uri = explode('/', $path_info);
-
-function getQueryParams($queryString)
-{
-    $parameters = [];
-    $explodedQueryString = explode('&', $queryString);
-    foreach ($explodedQueryString as $string) {
-        $values = explode('=', $string);
-        $key = $values[0];
-        $val = $values[1];
-        $parameters[$key] = $val;
-    }
-    return $parameters;
-}
+use Psr\Http\Message\ResponseInterface;
+use Psr\Http\Message\ServerRequestInterface;
+use PhpOidc\PhpOp\Api\Controller\PreflightAction;
 
 
-switch ($uri[1]) {
-    case 'users':
-        $user_controller = new Controller\UserController();
-        switch ($request_method) {
-            case 'GET':
-                $params = getQueryParams($_SERVER['QUERY_STRING']);
-                $response = $user_controller->getAllUsers($params);
-                break;
-            default:
-                $response = new Controller\NotFound();
-        }
-        break;
-    default:
-        $response = new Controller\NotFound();
-}
-header($response->content_type);
-http_response_code($response->status_code);
-$body = $response->get_body();
-if ($body) {
-    echo $body;
-}
+$request = Laminas\Diactoros\ServerRequestFactory::fromGlobals(
+    $_SERVER,
+    $_GET,
+    $_POST,
+    $_COOKIE,
+    $_FILES
+);
+$baseUrl = $_SERVER['SCRIPT_NAME'];
+
+$responseFactory = new \Laminas\Diactoros\ResponseFactory();
+
+$jsonStrategy = new \League\Route\Strategy\JsonStrategy($responseFactory);
+$appStrategy = new \PhpOidc\PhpOp\Api\ApplicationStrategy($responseFactory);
+$router   = (new League\Route\Router)->setStrategy($appStrategy);
+// $router = new \League\Route\Router;
+
+$router->middleware(new PhpOidc\PhpOp\Api\Middleware\AuthMiddleware);
+$router->middleware(new PhpOidc\PhpOp\Api\Middleware\CorsMiddleware);
+
+$router
+    ->group($baseUrl . '/users', function (\League\Route\RouteGroup $route) {
+        $route->map('GET', '/', 'PhpOidc\PhpOp\Api\Controller\UserController::getAllUsers');
+        $route->map('OPTIONS', '/', PreflightAction::class);
+        $route->map('GET', '/user/{id:number}', 'PhpOidc\PhpOp\Api\Controller\UserController::getUser');
+        $route->map('OPTIONS', '/user/{id:number}', PreflightAction::class);
+    })
+    ->setStrategy($jsonStrategy);
+
+
+$response = $router->dispatch($request);
+
+// send the response to the browser
+(new \Laminas\HttpHandlerRunner\Emitter\SapiEmitter)->emit($response);
