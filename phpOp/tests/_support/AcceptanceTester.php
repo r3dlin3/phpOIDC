@@ -1,5 +1,6 @@
 <?php
 
+use Codeception\Step\Argument\PasswordArgument;
 
 /**
  * Inherited Methods
@@ -15,12 +16,10 @@
  * @method void pause()
  *
  * @SuppressWarnings(PHPMD)
-*/
+ */
 class AcceptanceTester extends \Codeception\Actor
 {
     use _generated\AcceptanceTesterActions;
 
-   /**
-    * Define custom actions here
-    */
+    
 }

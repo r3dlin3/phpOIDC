@@ -38,8 +38,8 @@ $router
     ->group($baseUrl . '/users', function (\League\Route\RouteGroup $route) {
         $route->map('GET', '/', 'PhpOidc\PhpOp\Api\Controller\UserController::getAllUsers');
         $route->map('OPTIONS', '/', PreflightAction::class);
-        $route->map('GET', '/user/{id:number}', 'PhpOidc\PhpOp\Api\Controller\UserController::getUser');
-        $route->map('OPTIONS', '/user/{id:number}', PreflightAction::class);
+        $route->map('GET', '/{id:number}', 'PhpOidc\PhpOp\Api\Controller\UserController::getUser');
+        $route->map('OPTIONS', '/{id:number}', PreflightAction::class);
     })
     ->setStrategy($jsonStrategy);
 

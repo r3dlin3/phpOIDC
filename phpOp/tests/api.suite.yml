@@ -2,7 +2,11 @@ actor: ApiTester
 modules:
     enabled:
         - REST:
-            url: http://localhost:8001/
+            url: http://localhost:8001/phpOp/
             depends: PhpBrowser
             part: Json
+        - PhpBrowser:
+            url: http://localhost:8001/phpOp/
+        - Asserts
+        - \Helper\Acceptance
         - \Helper\Api

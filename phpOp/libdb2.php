@@ -392,7 +392,7 @@ function db_search_objects($object, $search_criteria, $search, $sort_field, $ord
     $qb = DbEntity::getInstance()->getEntityManager()->createQueryBuilder();
     $qb->select('o')
         ->from($object, 'o');
-    if ($limit && $offset) {
+    if (isset($limit) && isset($offset)) {
         $qb->setFirstResult($offset)
             ->setMaxResults($limit);
     }

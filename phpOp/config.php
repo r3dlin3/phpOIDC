@@ -20,9 +20,14 @@ require_once(__DIR__ . '/libs/autoload.php');
 use eftec\bladeone\BladeOne;
 
 
+$envfile = '.env';
+if (getenv('APP_ENV')) {
+    $envfile .= '.' . getenv('APP_ENV');
+}
+
 // Load .env
-if (file_exists(__DIR__ . '/.env')) {
-    $dotenv = Dotenv\Dotenv::createImmutable(__DIR__);
+if (file_exists(__DIR__ . '/' . $envfile)) {
+    $dotenv = Dotenv\Dotenv::createImmutable(__DIR__, $envfile);
     $dotenv->load();
 }
 
@@ -38,7 +43,7 @@ if (getenv('OP_SERVER_NAME')) {
     $op_server_name = getenv('OP_SERVER_NAME');
 } else {
     if ($_SERVER['SERVER_NAME'])
-    $op_server_name = $_SERVER['SERVER_NAME'];
+        $op_server_name = $_SERVER['SERVER_NAME'];
     else {
         $pieces = explode(":", $_SERVER['HTTP_HOST']);
         $op_server_name = $pieces[0];
@@ -46,8 +51,7 @@ if (getenv('OP_SERVER_NAME')) {
 }
 
 // variables to construct OP_URL
-$scheme = isset($_SERVER['REQUEST_SCHEME']) ? $_SERVER['REQUEST_SCHEME'] : 
-    (isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] === 'on' ? "https" : "http");
+$scheme = isset($_SERVER['REQUEST_SCHEME']) ? $_SERVER['REQUEST_SCHEME'] : (isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] === 'on' ? "https" : "http");
 
 $protocol = $scheme . '://';
 $port = '';
@@ -129,6 +133,7 @@ $config = [
         'host' => getenv('DB_HOST') ?: 'localhost',
         'port' => getenv('DB_PORT') ?: '3306',
         'database' => getenv('DB_DATABASE') ?: 'phpoidc',
+        'in-memory' => array_key_exists('DB_IN_MEMORY', $_ENV) ? (getenv('DB_IN_MEMORY') === 'true') : false,
         'table_prefix' => getenv('DB_TABLE_PREFIX') ?: null
     ],
 
@@ -148,37 +153,37 @@ $config = [
         'bitbucket' => [
             'client_id' => getenv('BITBUCKET_CLIENT_ID') ?: null,
             'client_secret' => getenv('BITBUCKET_CLIENT_SECRET') ?: null,
-            'redirect' => getenv('BITBUCKET_REDIRECT_URL') ?: OP_SOCIALITE_REDIRECT_EP.'bitbucket/',
+            'redirect' => getenv('BITBUCKET_REDIRECT_URL') ?: OP_SOCIALITE_REDIRECT_EP . 'bitbucket/',
         ],
         'facebook' => [
             'client_id' => getenv('FACEBOOK_CLIENT_ID') ?: null,
             'client_secret' => getenv('FACEBOOK_CLIENT_SECRET') ?: null,
-            'redirect' => getenv('FACEBOOK_REDIRECT_URL') ?: OP_SOCIALITE_REDIRECT_EP.'facebook/',
+            'redirect' => getenv('FACEBOOK_REDIRECT_URL') ?: OP_SOCIALITE_REDIRECT_EP . 'facebook/',
         ],
         'github' => [
             'client_id' => getenv('GITHUB_CLIENT_ID') ?: null,
             'client_secret' => getenv('GITHUB_CLIENT_SECRET') ?: null,
-            'redirect' => getenv('GITHUB_REDIRECT_URL') ?: OP_SOCIALITE_REDIRECT_EP.'github/',
+            'redirect' => getenv('GITHUB_REDIRECT_URL') ?: OP_SOCIALITE_REDIRECT_EP . 'github/',
         ],
         'gitlab' => [
             'client_id' => getenv('GITLAB_CLIENT_ID') ?: null,
             'client_secret' => getenv('GITLAB_CLIENT_SECRET') ?: null,
-            'redirect' => getenv('GITLAB_REDIRECT_URL') ?: OP_SOCIALITE_REDIRECT_EP.'gitlab/',
+            'redirect' => getenv('GITLAB_REDIRECT_URL') ?: OP_SOCIALITE_REDIRECT_EP . 'gitlab/',
         ],
         'linkedin' => [
             'client_id' => getenv('LINKEDIN_CLIENT_ID') ?: null,
             'client_secret' => getenv('LINKEDIN_CLIENT_SECRET') ?: null,
-            'redirect' => getenv('LINKEDIN_REDIRECT_URL') ?: OP_SOCIALITE_REDIRECT_EP.'linkedin/',
+            'redirect' => getenv('LINKEDIN_REDIRECT_URL') ?: OP_SOCIALITE_REDIRECT_EP . 'linkedin/',
         ],
         'twitter' => [
             'client_id' => getenv('TWITTER_CLIENT_ID') ?: null,
             'client_secret' => getenv('TWITTER_CLIENT_SECRET') ?: null,
-            'redirect' => getenv('TWITTER_REDIRECT_URL') ?: OP_SOCIALITE_REDIRECT_EP.'twitter/',
+            'redirect' => getenv('TWITTER_REDIRECT_URL') ?: OP_SOCIALITE_REDIRECT_EP . 'twitter/',
         ],
         'google' => [
             'client_id' => getenv('GOOGLE_CLIENT_ID') ?: null,
             'client_secret' => getenv('GOOGLE_CLIENT_SECRET') ?: null,
-            'redirect' => getenv('GOOGLE_REDIRECT_URL') ?: OP_SOCIALITE_REDIRECT_EP.'google/',
+            'redirect' => getenv('GOOGLE_REDIRECT_URL') ?: OP_SOCIALITE_REDIRECT_EP . 'google/',
         ]
 
     ]

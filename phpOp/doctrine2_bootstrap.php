@@ -29,6 +29,7 @@ class DbEntity {
             'dbname'   => $dbconfig['database'],
             'port'     => $dbconfig['port'],
             'host'     => $dbconfig['host'],
+            'memory'     => $dbconfig['in-memory'],
             'charset'  => 'utf8',
         );
         $evm = new \Doctrine\Common\EventManager;
@@ -38,9 +39,7 @@ class DbEntity {
             $evm->addEventListener(\Doctrine\ORM\Events::loadClassMetadata, $tablePrefix, $evm);
         }
 
-
         $this->entityManager =  EntityManager::create($dbParams, $metadataconfig, $evm);
-
     }
 
     public static function getInstance()
