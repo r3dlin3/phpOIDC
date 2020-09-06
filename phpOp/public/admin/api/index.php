@@ -36,12 +36,15 @@ $router->middleware(new PhpOidc\PhpOp\Api\Middleware\CorsMiddleware);
 
 $router
     ->group($baseUrl . '/users', function (\League\Route\RouteGroup $route) {
-        $route->map('GET', '/', 'PhpOidc\PhpOp\Api\Controller\UserController::getAllUsers');
+        $route->map('GET', '/', 'PhpOidc\PhpOp\Api\Controller\UserController::list');
+        $route->map('POST', '/', 'PhpOidc\PhpOp\Api\Controller\UserController::create');
         $route->map('OPTIONS', '/', PreflightAction::class);
-        $route->map('GET', '/{id:number}', 'PhpOidc\PhpOp\Api\Controller\UserController::getUser');
+        $route->map('GET', '/{id:number}', 'PhpOidc\PhpOp\Api\Controller\UserController::show');
+        $route->map('DELETE', '/{id:number}', 'PhpOidc\PhpOp\Api\Controller\UserController::delete');
+        $route->map('PATCH', '/{id:number}', 'PhpOidc\PhpOp\Api\Controller\UserController::update');
         $route->map('OPTIONS', '/{id:number}', PreflightAction::class);
-    })
-    ->setStrategy($jsonStrategy);
+    });
+    // ->setStrategy($jsonStrategy);
 
 
 $response = $router->dispatch($request);

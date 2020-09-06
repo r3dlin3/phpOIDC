@@ -167,6 +167,7 @@ Class Account extends BaseEntity implements JsonSerializable, ArrayAccess, Itera
         'phone_number_verified',
         'address',
         'updated_at',
+        'created_at',
         'reset_password_code',
         'reset_password_code_timeout'
     );

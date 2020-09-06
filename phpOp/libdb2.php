@@ -321,7 +321,7 @@ function db_save_account_by_id($id, $account_values)
             $account[$key] = $val;
         }
         $em->flush();
-        return true;
+        return $account;
     }
     return false;
 }
@@ -479,7 +479,7 @@ function db_save_object($object, $object_field, $object_value, $object_values)
     }
     $dbObject[$object_field] = $object_value;
     $em->flush();
-    return true;
+    return $dbObject;
 }
 
 
