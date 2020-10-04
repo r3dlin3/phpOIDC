@@ -153,6 +153,22 @@ function db_get_user_tokens($username): ?\Doctrine\Common\Collections\Collection
         return null;
 }
 
+function db_get_user_tokens_by_user_id($id): ?array
+{
+    $qb = DbEntity::getInstance()->getEntityManager()->createQueryBuilder();
+    $qb->select('t')
+        ->from('Token', 't')
+        ->where('t.account_id = :id')
+        ->setParameters(new \Doctrine\Common\Collections\ArrayCollection(array(
+            new \Doctrine\ORM\Query\Parameter('id', $id)
+        )));
+    $result = $qb->getQuery()->getResult();
+    if ($result && count($result))
+        return $result;
+    else
+        return null;
+}
+
 function db_get_user_token($username, $token)
 {
     $qb = DbEntity::getInstance()->getEntityManager()->createQueryBuilder();
@@ -406,11 +422,11 @@ function db_search_objects($object, $search_criteria, $search, $sort_field, $ord
                 $qb->orWhere($qb->expr()->like('o.' . $item, ':search'));
             }
         }
-        $qb->setParameter('search', '%'.$search.'%');
+        $qb->setParameter('search', '%' . $search . '%');
     }
     if ($sort_field && $order)
         $qb->orderBy("o.{$sort_field}", $order);
-        
+
     return $qb->getQuery()->getResult();
 }
 
@@ -577,7 +593,7 @@ function db_get_client_by_id($id): ?Client
     return db_get_object($object, $object_field, $object_value);
 }
 
-function db_save_client($name, $client_values): bool
+function db_save_client($name, $client_values)
 {
     $object = 'Client';
     $object_field = 'client_id';
@@ -587,7 +603,7 @@ function db_save_client($name, $client_values): bool
 }
 
 
-function db_save_client_by_id($id, $client_values): bool
+function db_save_client_by_id($id, $client_values)
 {
     $object = 'Client';
     $object_field = 'id';

@@ -2,6 +2,10 @@
 
 namespace PhpOidc\PhpOp\Api\Controller;
 
+include_once(__DIR__ . '/../../libs/autoload.php');
+include_once(__DIR__ . '/../../libdb2.php');
+require_once __DIR__ . '/../../PasswordHash.php';
+
 use Laminas\Diactoros\Response;
 use League\Route\Http\Exception\{NotFoundException, BadRequestException};
 use Psr\Http\Message\ServerRequestInterface;
@@ -10,12 +14,9 @@ use Respect\Validation\Validator as v;
 use JsonException;
 
 use Account;
-use PhpOidc\PhpOp\Api\ProblemDetails;
-use PhpOidc\PhpOp\Api\PaginatedResultResponse;
+use PhpOidc\PhpOp\Api\Response\{ProblemDetails,PaginatedResultResponse};
 
-include_once(__DIR__ . '/../Response.php');
-include_once(__DIR__ . '/../../libdb2.php');
-require_once __DIR__ . '/../../PasswordHash.php';
+
 
 
 class UserController

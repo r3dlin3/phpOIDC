@@ -42,7 +42,7 @@ $theme_name = getenv('THEME_NAME') ?: 'default';
 if (getenv('OP_SERVER_NAME')) {
     $op_server_name = getenv('OP_SERVER_NAME');
 } else {
-    if ($_SERVER['SERVER_NAME'])
+    if ($_SERVER && array_key_exists('SERVER_NAME', $_SERVER))
         $op_server_name = $_SERVER['SERVER_NAME'];
     else {
         $pieces = explode(":", $_SERVER['HTTP_HOST']);
@@ -56,8 +56,8 @@ $scheme = isset($_SERVER['REQUEST_SCHEME']) ? $_SERVER['REQUEST_SCHEME'] : (isse
 $protocol = $scheme . '://';
 $port = '';
 if (
-    !($scheme === "http" && $_SERVER['SERVER_PORT'] == 80)
-    && !($scheme === "https" && $_SERVER['SERVER_PORT'] == 443)
+    !($scheme === "http" && $_SERVER && array_key_exists('SERVER_PORT', $_SERVER) && $_SERVER['SERVER_PORT'] == 80)
+    && !($scheme === "https" && $_SERVER && array_key_exists('SERVER_PORT', $_SERVER) && $_SERVER['SERVER_PORT'] == 443)
 ) {
     $port = ':' . $_SERVER['SERVER_PORT'];
 }

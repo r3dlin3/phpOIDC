@@ -43,6 +43,11 @@ $router
         $route->map('DELETE', '/{id:number}', 'PhpOidc\PhpOp\Api\Controller\UserController::delete');
         $route->map('PATCH', '/{id:number}', 'PhpOidc\PhpOp\Api\Controller\UserController::update');
         $route->map('OPTIONS', '/{id:number}', PreflightAction::class);
+
+        $route->map('OPTIONS', '/{id:number}/tokens', PreflightAction::class);
+        $route->map('GET', '/{id:number}/tokens', 'PhpOidc\PhpOp\Api\Controller\UserTokenController::list');
+        $route->map('OPTIONS', '/{id:number}/tokens/{token_id:number}', PreflightAction::class);
+        $route->map('DELETE', '/{id:number}/tokens/{token_id:number}', 'PhpOidc\PhpOp\Api\Controller\UserTokenController::delete');
     });
     // ->setStrategy($jsonStrategy);
 
