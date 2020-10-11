@@ -542,12 +542,12 @@ function db_delete_provider_by_id($id): bool
     return db_delete_object('Provider', 'id', $id);
 }
 
-function db_save_provider($name, $provider_values): bool
+function db_save_provider($name, $provider_values)
 {
     return db_save_object('Provider', 'name', $name, $provider_values);
 }
 
-function db_save_provider_by_id($id, $provider_values): bool
+function db_save_provider_by_id($id, $provider_values)
 {
     return db_save_object('Provider', 'id', $id, $provider_values);
 }
@@ -646,7 +646,7 @@ function db_get_request_file($fileid): ?RequestFile
     return db_get_object($object, $object_field, $object_value);
 }
 
-function db_save_request_file($fileid, $request_file_values): bool
+function db_save_request_file($fileid, $request_file_values)
 {
     $object = 'RequestFile';
     $object_field = 'fileid';
